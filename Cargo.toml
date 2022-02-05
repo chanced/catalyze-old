@@ -1,0 +1,17 @@
+[package]
+name = "catalyze"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+prost = "0.9"
+prost-types = "0.9"
+tonic = "0.6"
+tonic-types = "0.4"
+heck = "0.4"
+glob = "0.3"
+anyhow = "1.0.53"
+[build-dependencies]
+which = { version = "4", default-features = false }
