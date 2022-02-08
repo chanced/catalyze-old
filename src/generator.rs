@@ -1,7 +1,7 @@
-struct Generator {}
+pub struct Generator {}
 
 impl Generator {
-    pub fn New() -> Self {
+    pub fn new() -> Self {
         Self {}
     }
 }

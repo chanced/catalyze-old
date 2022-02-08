@@ -22,42 +22,26 @@ pub enum Keyword {
     None,
 }
 
-pub trait Language: Sized + Clone {
+pub trait Lang: Sized + Clone {
+    fn name() -> &'static str;
+
     fn is_keyword<T: ToString>(&self, s: T) -> Result<Keyword>;
     fn to_screaming_kebab_case(&self, name: &Name<Self>) -> Name<Self> {
-        Name {
-            val: name.val.to_shouty_kebab_case(),
-            lang: self.clone(),
-        }
+        Name::new(&name.to_string().to_shouty_kebab_case(), self.clone())
     }
     fn to_screaming_snake_case(&self, name: &Name<Self>) -> Name<Self> {
-        Name {
-            val: name.val.to_shouty_kebab_case(),
-            lang: self.clone(),
-        }
+        Name::new(&name.to_string().to_shouty_snake_case(), self.clone())
     }
     fn to_kebab_case(&self, name: &Name<Self>) -> Name<Self> {
-        Name {
-            val: name.val.to_kebab_case(),
-            lang: self.clone(),
-        }
+        Name::new(&name.to_string().to_kebab_case(), self.clone())
     }
     fn to_camel_case(&self, name: &Name<Self>) -> Name<Self> {
-        Name {
-            val: name.val.to_kebab_case(),
-            lang: self.clone(),
-        }
+        Name::new(&name.to_string().to_lower_camel_case(), self.clone())
     }
     fn to_pascal_case(&self, name: &Name<Self>) -> Name<Self> {
-        Name {
-            val: name.val.to_kebab_case(),
-            lang: self.clone(),
-        }
+        Name::new(&name.to_string().to_pascal_case(), self.clone())
     }
     fn to_snake_case(&self, name: &Name<Self>) -> Name<Self> {
-        Name {
-            val: name.val.to_kebab_case(),
-            lang: self.clone(),
-        }
+        Name::new(&name.to_string().to_snake_case(), self.clone())
     }
 }

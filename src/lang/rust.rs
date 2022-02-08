@@ -1,13 +1,17 @@
+use heck::ToSnakeCase;
 use heck::{ToLowerCamelCase, ToPascalCase};
-use tonic::codegen::ok;
 
-use super::Language;
-use crate::{Keyword, Name};
+use crate::lang::Keyword;
+use crate::lang::Lang;
+use crate::Name;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 
 pub struct Rust;
 
-impl Language for Rust {
+impl Lang for Rust {
+    fn name() -> &'static str {
+        "rust"
+    }
     fn is_keyword<T: ToString>(&self, s: T) -> anyhow::Result<Keyword> {
         let k = match s.to_string().to_lower_camel_case().as_str() {
             // 2015 strict keywords.
@@ -36,10 +40,10 @@ impl Language for Rust {
         }
     }
     fn to_snake_case(&self, name: &Name<Self>) -> Name<Self> {
-        let val = name.val.to_string();
         // Use a raw identifier if the identifier matches a Rust keyword:
         // https://doc.rust-lang.org/reference/keywords.html.
-        let string = match val.as_str() {
+        let name = Name::new(&name.as_str().to_snake_case(), name.lang());
+        match name.as_str() {
             // 2015 strict keywords.
             | "as" | "break" | "const" | "continue" | "else" | "enum" | "false"
             | "fn" | "for" | "if" | "impl" | "in" | "let" | "loop" | "match" | "mod" | "move" | "mut"
@@ -51,26 +55,20 @@ impl Language for Rust {
             | "abstract" | "become" | "box" | "do" | "final" | "macro" | "override" | "priv" | "typeof"
             | "unsized" | "virtual" | "yield"
             // 2018 reserved keywords.
-            | "async" | "await" | "try" => format!("#r{}",val),
+            | "async" | "await" | "try" => Name::new(&format!("r#{}",name), name.lang()),
             // the following keywords are not supported as raw identifiers and are therefore suffixed with an underscore.
-            "self" | "super" | "extern" | "crate" => format!("{}_", val),
-            _ => val,
-        };
-        Name {
-            lang: self.clone(),
-            val: string,
+            "self" | "super" | "extern" | "crate" => Name::new(&format!("{}_", name),name.lang()),
+            _ => name,
         }
     }
 
     fn to_pascal_case(&self, name: &Name<Self>) -> Name<Self> {
-        let mut val = name.val.to_pascal_case();
+        // the language needs to operate on the string value so not to cause a recursive loop.
+        let mut val = name.to_string().to_pascal_case();
         // Suffix an underscore for the `Self` Rust keyword as it is not allowed as raw identifier.
         if val == "Self" {
             val += "_";
         }
-        Name {
-            lang: self.clone(),
-            val,
-        }
+        Name::new(&val, name.lang())
     }
 }
