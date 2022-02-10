@@ -6,9 +6,8 @@ use std::str::FromStr;
 use crate::entity::BuildTarget;
 use crate::lang::Lang;
 use crate::name::Named;
-use crate::protobuf::WellKnownType;
-use crate::Package;
 use crate::{entity::Container, entity::InternalContainer, Field, Name, OneOf};
+use crate::{Package, WellKnownType};
 
 /// Message describes a proto message. Messages can be contained in either
 /// another Message or File, and may house further Messages and/or Enums. While
@@ -71,7 +70,7 @@ impl<L: Lang> Message<L> {
             wkt,
             desc,
             name: Name::new(desc.name(), lang),
-            is_map: desc.options.is_some().map_entry(),
+            is_map: desc.options,
             preserved_messages: RefCell::new(Vec::new()),
             messages: RefCell::new(Vec::new()),
             fields: RefCell::new(Vec::new()),

@@ -1,3 +1,4 @@
+#[derive(Clone, Debug, PartialEq)]
 pub struct SourceCodeInfo {
     /// A Location identifies a piece of source code in a .proto file which
     /// corresponds to a particular definition.  This information is intended

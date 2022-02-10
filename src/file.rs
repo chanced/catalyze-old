@@ -1,14 +1,11 @@
 use crate::entity::BuildTarget;
 use crate::lang::Lang;
-use crate::name::Named;
 use crate::{Enum, Extension, Message, Name, Package, Service};
-use std::borrow::Borrow;
 use std::cell::RefCell;
-use std::collections::HashMap;
-use std::ops::Deref;
 use std::path::PathBuf;
 // use std::path::PathBuf;
 use std::rc::{Rc, Weak};
+
 #[derive(Debug, Clone)]
 pub struct File<L: Lang> {
     fqn: String,

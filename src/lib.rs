@@ -15,6 +15,7 @@ mod package;
 pub mod protobuf;
 mod service;
 pub mod visit;
+mod well_known_type;
 pub use enum_value::*;
 pub use extension::*;
 pub use field::*;
@@ -30,6 +31,8 @@ pub use package::Package;
 pub use r#enum::*;
 pub use service::*;
 pub use visit::*;
+pub use well_known_type::*;
+
 #[cfg(test)]
 mod tests {
     #[test]

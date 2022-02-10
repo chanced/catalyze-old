@@ -1,4 +1,4 @@
-use super::{ReservedRange, UninterpretedOption};
+use super::{Opt, ReservedRange, UninterpretedOption};
 
 /// Range of reserved numeric values. Reserved values may not be used by
 /// entries in the same enum. Reserved ranges may not overlap.
@@ -9,9 +9,9 @@ use super::{ReservedRange, UninterpretedOption};
 #[derive(Clone, PartialEq, Debug)]
 pub struct EnumReservedRange {
     /// Inclusive.
-    start: Option<i32>,
+    pub start: Option<i32>,
     /// Inclusive.
-    end: Option<i32>,
+    pub end: Option<i32>,
 }
 
 impl EnumReservedRange {
@@ -21,29 +21,21 @@ impl EnumReservedRange {
             end: desc.end,
         }
     }
-    // Inclusive
-    pub fn start(&self) -> Option<i32> {
-        self.start
-    }
-    // Inclusive
-    pub fn end(&self) -> Option<i32> {
-        self.end
-    }
 }
 
 /// Describes an enum type.
 #[derive(Clone, PartialEq, Debug)]
 pub struct EnumDescriptor {
-    name: Option<String>,
-    values: Vec<EnumValueDescriptor>,
-    options: Option<EnumOptions>,
+    pub name: Option<String>,
+    pub values: Vec<EnumValueDescriptor>,
+    pub options: Option<EnumOptions>,
     /// Range of reserved numeric values. Reserved numeric values may not be used
     /// by enum values in the same enum declaration. Reserved ranges may not
     /// overlap.
-    reserved_ranges: Vec<EnumReservedRange>,
+    pub reserved_ranges: Vec<EnumReservedRange>,
     /// Reserved enum value names, which may not be reused. A given name may only
     /// be reserved once.
-    reserved_names: Vec<String>,
+    pub reserved_names: Vec<String>,
 }
 
 impl EnumDescriptor {
@@ -64,32 +56,17 @@ impl EnumDescriptor {
             reserved_names: ed.reserved_name.iter().map(|r| r.clone()).collect(),
         }
     }
-    pub fn name(&self) -> Option<String> {
-        self.name.clone()
-    }
-    pub fn values(&self) -> Vec<EnumValueDescriptor> {
-        self.values.clone()
-    }
-    pub fn options(&self) -> Option<EnumOptions> {
-        self.options.clone()
-    }
-    pub fn reserved_ranges(&self) -> Vec<EnumReservedRange> {
-        self.reserved_ranges.clone()
-    }
-    pub fn reserved_names(&self) -> Vec<String> {
-        self.reserved_names.clone()
-    }
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct EnumOptions {
-    allow_alias: Option<bool>,
+    pub allow_alias: Option<bool>,
     /// Is this enum deprecated?
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for the enum, or it will be completely ignored; in the very least, this
     /// is a formalization for deprecating enums.
-    deprecated: Option<bool>,
-    uninterpreted_options: Vec<UninterpretedOption>,
+    pub deprecated: Option<bool>,
+    pub uninterpreted_options: Vec<UninterpretedOption>,
 }
 
 impl EnumOptions {
@@ -104,27 +81,14 @@ impl EnumOptions {
                 .collect(),
         }
     }
-    pub fn allow_alias(&self) -> Option<bool> {
-        self.allow_alias.clone()
-    }
-    /// Is this enum deprecated?
-    /// Depending on the target platform, this can emit Deprecated annotations
-    /// for the enum, or it will be completely ignored; in the very least, this
-    /// is a formalization for deprecating enums.
-    pub fn deprecated(&self) -> Option<bool> {
-        self.deprecated.clone()
-    }
-    pub fn uninterpreted_options(&self) -> Vec<UninterpretedOption> {
-        self.uninterpreted_options.clone()
-    }
 }
 
 /// Describes a value within an enum.
 #[derive(Clone, PartialEq, Debug)]
 pub struct EnumValueDescriptor {
-    name: Option<String>,
-    number: Option<i32>,
-    options: Option<EnumValueOptions>,
+    pub name: Option<String>,
+    pub number: Option<i32>,
+    pub options: Option<EnumValueOptions>,
 }
 impl EnumValueDescriptor {
     pub(crate) fn new(evd: &prost_types::EnumValueDescriptorProto) -> Self {
@@ -134,15 +98,6 @@ impl EnumValueDescriptor {
             options: evd.options.map(|o| EnumValueOptions::new(&o)),
         }
     }
-    pub fn name(&self) -> Option<String> {
-        self.name.clone()
-    }
-    pub fn number(&self) -> Option<i32> {
-        self.number.clone()
-    }
-    pub fn options(&self) -> Option<EnumValueOptions> {
-        self.options.clone()
-    }
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct EnumValueOptions {
@@ -150,26 +105,34 @@ pub struct EnumValueOptions {
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for the enum value, or it will be completely ignored; in the very least,
     /// this is a formalization for deprecating enum values.
-    deprecated: Option<bool>,
+    pub deprecated: Option<bool>,
     /// The parser stores options it doesn't recognize here. See above.
-    uninterpreted_option: Vec<UninterpretedOption>,
+    pub uninterpreted_options: Vec<UninterpretedOption>,
 }
 
 impl EnumValueOptions {
     pub(crate) fn new(evo: &prost_types::EnumValueOptions) -> Self {
         EnumValueOptions {
             deprecated: evo.deprecated.clone(),
-            uninterpreted_option: evo
+            uninterpreted_options: evo
                 .uninterpreted_option
                 .iter()
                 .map(|uo| UninterpretedOption::new(uo))
                 .collect(),
         }
     }
-    pub fn deprecated(&self) -> Option<bool> {
-        self.deprecated.clone()
-    }
-    pub fn uninterpreted_option(&self) -> Vec<UninterpretedOption> {
-        self.uninterpreted_option.clone()
-    }
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct Enum {
+    pub name: String,
+    pub values: Vec<EnumValue>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct EnumValue {
+    pub name: String,
+    pub number: i32,
+    /// Protocol buffer options.
+    pub options: Vec<Opt>,
 }

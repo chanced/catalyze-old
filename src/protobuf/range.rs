@@ -17,7 +17,7 @@ impl ExtensionRange {
         ExtensionRange {
             start: desc.start.clone(),
             end: desc.end.clone(),
-            options: desc.options.map(|o| ExtensionRangeOptions::new(o)),
+            options: desc.options.map(ExtensionRangeOptions::new),
         }
     }
     pub fn start(&self) -> Option<i32> {
@@ -42,7 +42,7 @@ impl ExtensionRangeOptions {
             uninterpreted_options: ero
                 .uninterpreted_option
                 .iter()
-                .map(|uo| UninterpretedOption::new(uo))
+                .map(UninterpretedOption::new)
                 .collect(),
         }
     }
