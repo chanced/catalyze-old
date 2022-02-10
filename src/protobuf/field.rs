@@ -3,27 +3,27 @@ use anyhow::bail;
 
 pub struct Field {
     /// The field type.
-    kind: FieldKind,
+    pub kind: FieldKind,
     /// The field cardinality.
-    cardinality: Cardinality,
+    pub cardinality: Cardinality,
     /// The field number.
-    number: i32,
+    pub number: i32,
     /// The field name.
-    name: String,
+    pub name: String,
     /// The field type URL, without the scheme, for message or enumeration
     /// types. Example: `"type.googleapis.com/google.protobuf.Timestamp"`.
-    type_url: String,
+    pub type_url: String,
     /// The index of the field type in `Type.oneofs`, for message or enumeration
     /// types. The first type has index 1; zero means the type is not in the list.
-    one_of_index: i32,
+    pub one_of_index: i32,
     /// Whether to use alternative packed wire representation.
-    packed: bool,
+    pub packed: bool,
     /// The protocol buffer options.
-    options: Vec<Opt>,
+    pub options: Vec<Opt>,
     /// The field JSON name.
-    json_name: String,
+    pub json_name: String,
     /// The string value of the default value of this field. Proto2 syntax only.
-    default_value: String,
+    pub default_value: String,
 }
 
 impl Field {
@@ -40,48 +40,6 @@ impl Field {
             json_name: field.json_name,
             default_value: field.default_value,
         }
-    }
-    /// The field type.
-    pub fn kind(&self) -> FieldKind {
-        self.kind.clone()
-    }
-    /// The field cardinality.
-    pub fn cardinality(&self) -> Cardinality {
-        self.cardinality.clone()
-    }
-    /// The field number.
-    pub fn number(&self) -> i32 {
-        self.number.clone()
-    }
-    /// The field name.
-    pub fn name(&self) -> String {
-        self.name.clone()
-    }
-    /// The field type URL, without the scheme, for message or enumeration
-    /// types. Example: `"type.googleapis.com/google.protobuf.Timestamp"`.
-    pub fn type_url(&self) -> String {
-        self.type_url.clone()
-    }
-    /// The index of the field type in `Type.oneofs`, for message or enumeration
-    /// types. The first type has index 1; zero means the type is not in the list.
-    pub fn one_of_index(&self) -> i32 {
-        self.one_of_index.clone()
-    }
-    /// Whether to use alternative packed wire representation.
-    pub fn packed(&self) -> bool {
-        self.packed.clone()
-    }
-    /// The protocol buffer options.
-    pub fn options(&self) -> Vec<Opt> {
-        self.options.clone()
-    }
-    /// The field JSON name.
-    pub fn json_name(&self) -> String {
-        self.json_name.clone()
-    }
-    /// The string value of the default value of this field. Proto2 syntax only.
-    pub fn default_value(&self) -> String {
-        self.default_value.clone()
     }
 }
 
@@ -272,26 +230,26 @@ impl TryFrom<&Option<i32>> for FieldType {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct FieldDescriptor {
     /// tag: 1
-    name: Option<String>,
+    pub name: Option<String>,
     /// tag: 3
-    number: Option<i32>,
+    pub number: Option<i32>,
     /// tag: 4
-    label: Option<Label>,
+    pub label: Option<Label>,
     /// tag: 5
     /// If type_name is set, this need not be set.  If both this and type_name
     /// are set, this must be one of `Type::Enum`, `Type::Message` or `Type::Group`.
-    r#type: Option<FieldType>,
+    pub r#type: Option<FieldType>,
     /// tag: 6
     /// For message and enum types, this is the name of the type.  If the name
     /// starts with a '.', it is fully-qualified.  Otherwise, C++-like scoping
     /// rules are used to find the type (i.e. first the nested types within this
     /// message are searched, then within the parent, on up to the root
     /// namespace).
-    type_name: Option<String>,
+    pub type_name: Option<String>,
     /// tag: 2
     /// For extensions, this is the name of the type being extended.  It is
     /// resolved in the same manner as type_name.
-    extendee: Option<String>,
+    pub extendee: Option<String>,
     /// tag: 7
     /// For numeric types, contains the original text representation of the value.
     ///
@@ -300,10 +258,10 @@ pub struct FieldDescriptor {
     /// For strings, contains the default text contents (not escaped in any way).
     ///
     /// For bytes, contains the C escaped value.  All bytes >= 128 are escaped.
-    default_value: Option<String>,
+    pub default_value: Option<String>,
     /// If set, gives the index of a oneof in the containing type's oneof_decl
     /// list.  This field is a member of that oneof.
-    oneof_index: Option<i32>,
+    pub one_of_index: Option<i32>,
 }
 
 impl FieldDescriptor {
@@ -316,55 +274,7 @@ impl FieldDescriptor {
             type_name: desc.type_name.clone(),
             extendee: desc.extendee.clone(),
             default_value: desc.default_value.clone(),
-            oneof_index: desc.oneof_index.clone(),
+            one_of_index: desc.oneof_index.clone(),
         }
-    }
-
-    pub fn name(&self) -> Option<String> {
-        self.name.clone()
-    }
-    pub fn number(&self) -> Option<i32> {
-        self.number.clone()
-    }
-    pub fn label(&self) -> Option<Label> {
-        self.label.clone()
-    }
-    /// If type_name is set, this need not be set.  If both this and type_name
-    /// are set, this must be one of `Type::Enum`, `Type::Message` or `Type::Group`.
-    pub fn r#type(&self) -> Option<FieldType> {
-        self.r#type.clone()
-    }
-    /// alias for `r#type()`
-    ///
-    /// If type_name is set, this need not be set.  If both this and type_name
-    /// are set, this must be one of `Type::Enum`, `Type::Message` or `Type::Group`.
-    pub fn field_type(&self) -> Option<FieldType> {
-        self.r#type()
-    }
-    /// For message and enum types, this is the name of the type.  If the name
-    /// starts with a '.', it is fully-qualified.  Otherwise, C++-like scoping
-    /// rules are used to find the type (i.e. first the nested types within this
-    /// message are searched, then within the parent, on up to the root
-    /// namespace).
-    pub fn type_name(&self) -> Option<String> {
-        self.type_name.clone()
-    }
-    /// For extensions, this is the name of the type being extended.  It is
-    /// resolved in the same manner as type_name.
-    pub fn extendee(&self) -> Option<String> {
-        self.extendee.clone()
-    }
-    /// For numeric types, contains the original text representation of the value.
-    ///
-    /// For booleans, `"true"` or `"false"`.
-    ///
-    /// For strings, contains the default text contents (not escaped in any way).
-    ///
-    /// For bytes, contains the C escaped value.  All bytes >= 128 are escaped.
-    pub fn default_value(&self) -> Option<String> {
-        self.default_value.clone()
-    }
-    pub fn oneof_index(&self) -> Option<i32> {
-        self.oneof_index.clone()
     }
 }

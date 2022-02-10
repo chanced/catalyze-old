@@ -12,7 +12,7 @@ mod method;
 mod name;
 mod one_of;
 mod package;
-pub mod protobuf;
+// pub mod protobuf;
 mod service;
 pub mod visit;
 mod well_known_type;

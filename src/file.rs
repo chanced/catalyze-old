@@ -8,9 +8,9 @@ use std::rc::{Rc, Weak};
 
 #[derive(Debug, Clone)]
 pub struct File<L: Lang> {
-    fqn: String,
-    desc: Rc<prost_types::FileDescriptorProto>,
-    name: Name<L>,
+    pub fully_qualified_name: String,
+    pub descriptor: prost_types::FileDescriptorProto,
+    pub lang: L,
     pkg: Weak<Package<L>>,
     dependents: RefCell<Vec<Weak<File<L>>>>,
     dependencies: RefCell<Vec<Weak<File<L>>>>,
@@ -32,29 +32,28 @@ impl<L: Lang> BuildTarget for File<L> {
 
 impl<L: Lang> File<L> {
     pub fn name(&self) -> Name<L> {
-        self.name.clone()
+        Name::new(self.descriptor.name(), self.lang.clone())
     }
     pub(crate) fn new(
         build_target: bool,
-        desc: prost_types::FileDescriptorProto,
+        descriptor: prost_types::FileDescriptorProto,
         package: Rc<Package<L>>,
         lang: L,
     ) -> Self {
-        let desc = Rc::new(desc);
         let pkg = Rc::downgrade(&package);
-        let name = Name::new(desc.name(), lang);
-        let fqn = match desc.package() {
+        let name = Name::new(descriptor.name(), lang);
+        let fully_qualified_name = match descriptor.package() {
             "" => String::from(""),
             p => format!(".{}", p),
         };
-        let file_path = PathBuf::from(desc.name());
+        let file_path = PathBuf::from(descriptor.name());
         Self {
-            desc,
-            name,
+            descriptor,
             pkg,
-            fqn,
+            fully_qualified_name,
             build_target,
             file_path,
+            lang,
             dependents: RefCell::new(Vec::new()),
             dependencies: RefCell::new(Vec::new()),
             exts: RefCell::new(Vec::new()),
@@ -78,16 +77,11 @@ impl<L: Lang> File<L> {
     pub fn source_code_info(&self) -> Option<Rc<prost_types::SourceCodeInfo>> {
         self.src_info.borrow().clone()
     }
-    pub fn descriptor(&self) -> Rc<prost_types::FileDescriptorProto> {
-        self.desc.clone()
-    }
 
     pub fn all_messages(&self) -> Vec<Rc<Message<L>>> {
         todo!()
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.fqn.clone()
-    }
+
     pub fn messages(&self) -> Vec<Rc<Message<L>>> {
         self.msgs.borrow().iter().map(Rc::clone).collect()
     }

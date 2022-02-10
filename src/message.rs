@@ -1,11 +1,9 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::{Rc, Weak};
 use std::str::FromStr;
 
 use crate::entity::BuildTarget;
 use crate::lang::Lang;
-use crate::name::Named;
 use crate::{entity::Container, entity::InternalContainer, Field, Name, OneOf};
 use crate::{Package, WellKnownType};
 
@@ -15,24 +13,19 @@ use crate::{Package, WellKnownType};
 /// OneOf blocks.
 #[derive(Debug)]
 pub struct Message<L: Lang> {
-    name: Name<L>,
-    fqn: String,
-    desc: Rc<prost_types::DescriptorProto>,
+    pub fully_qualified_name: String,
+    pub descriptor: prost_types::DescriptorProto,
+    pub is_map_entry: bool,
+    pub lang: L,
+    pub well_known_type: Option<WellKnownType>, // dependents_cache: RefCell<HashMap<String, Weak<Message<L>>>>,
     preserved_messages: RefCell<Vec<Rc<Message<L>>>>,
     messages: RefCell<Vec<Rc<Message<L>>>>,
     fields: RefCell<Vec<Rc<Field<L>>>>,
     one_ofs: RefCell<Vec<Rc<OneOf<L>>>>,
     dependents: RefCell<Vec<Weak<Message<L>>>>,
-    is_map: bool,
     container: InternalContainer<L>,
-    wkt: Option<WellKnownType>, // dependents_cache: RefCell<HashMap<String, Weak<Message<L>>>>,
 }
 
-impl<L: Lang> Named<L> for Message<L> {
-    fn name(&self) -> Name<L> {
-        self.name.clone()
-    }
-}
 impl<L: Lang> BuildTarget for Message<L> {
     fn build_target(&self) -> bool {
         self.container.build_target()
@@ -41,36 +34,37 @@ impl<L: Lang> BuildTarget for Message<L> {
 
 impl<L: Lang> Message<L> {
     pub(crate) fn new(
-        desc: prost_types::DescriptorProto,
+        descriptor: prost_types::DescriptorProto,
         container: InternalContainer<L>,
         lang: L,
     ) -> Self {
-        let desc = Rc::new(desc);
-        let fqn = match desc.name() {
+        let fully_qualified_name = match descriptor.name() {
             "" => String::from(""),
             n => format!("{}.{}", container.fully_qualified_name(), n),
         };
-
-        let wkt = if container.package().is_well_known() {
-            match WellKnownType::from_str(desc.name()) {
+        let well_known_type = if container.package().is_well_known() {
+            match WellKnownType::from_str(descriptor.name()) {
                 Ok(wkt) => Some(wkt),
                 Err(_) => None,
             }
         } else {
             None
         };
-        let is_map = match desc.options {
+        let is_map = match descriptor.options {
             Some(o) => o.map_entry(),
             None => false,
         };
-
+        let is_map_entry = match descriptor.options {
+            Some(o) => o.map_entry(),
+            None => false,
+        };
         Message {
             container,
-            fqn,
-            wkt,
-            desc,
-            name: Name::new(desc.name(), lang),
-            is_map: desc.options,
+            fully_qualified_name,
+            well_known_type,
+            descriptor,
+            lang,
+            is_map_entry,
             preserved_messages: RefCell::new(Vec::new()),
             messages: RefCell::new(Vec::new()),
             fields: RefCell::new(Vec::new()),
@@ -78,25 +72,15 @@ impl<L: Lang> Message<L> {
             dependents: RefCell::new(Vec::new()),
         }
     }
+    pub fn name(&self) -> Name<L> {
+        return Name::new(self.descriptor.name(), self.lang.clone());
+    }
     pub fn package(&self) -> Rc<Package<L>> {
         return self.container.package();
     }
 
-    pub fn fully_qualified_name(&self) -> String {
-        self.fqn.clone()
-    }
-    /// returns the underlying proto descriptor for this message
-    pub fn descriptor(&self) -> &prost_types::DescriptorProto {
-        return &self.desc;
-    }
-    pub fn is_map(&self) -> bool {
-        self.is_map
-    }
     pub fn is_well_known_type(&self) -> bool {
-        self.wkt.is_some()
-    }
-    pub fn well_known_type(&self) -> Option<WellKnownType> {
-        self.wkt.clone()
+        self.well_known_type.is_some()
     }
 
     pub fn fields(&self) -> Vec<Rc<Field<L>>> {

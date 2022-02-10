@@ -1,5 +1,6 @@
 /// `SourceContext` represents information about the source of a
 /// protobuf element, like the file in which it is defined.
+#[derive(Debug, Clone, PartialEq)]
 pub struct SourceContext {
     /// The path-qualified name of the .proto file that contained the associated
     /// protobuf element.  For example: `"google/protobuf/source_context.proto"`.

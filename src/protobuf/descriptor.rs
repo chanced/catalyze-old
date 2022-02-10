@@ -41,7 +41,7 @@ impl Descriptor {
                 .map(ExtensionRange::new)
                 .collect(),
             extensions: desc.extension.iter().map(FieldDescriptor::new).collect(),
-            options: desc.options.map(MessageOptions::new),
+            options: MessageOptions::try_from(desc.options).ok(),
             one_ofs: desc.oneof_decl.iter().map(OneOfDescriptor::new).collect(),
             reserved_ranges: desc.reserved_range.iter().map(ReservedRange::new).collect(),
             reserved_names: desc.reserved_name.iter().map(|r| r.clone()).collect(),

@@ -1,3 +1,5 @@
+use anyhow::bail;
+
 use super::UninterpretedOption;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -74,6 +76,15 @@ impl MessageOptions {
                 .iter()
                 .map(UninterpretedOption::new)
                 .collect(),
+        }
+    }
+}
+impl TryFrom<Option<prost_types::MessageOptions>> for MessageOptions {
+    type Error = anyhow::Error;
+    fn try_from(mo: Option<prost_types::MessageOptions>) -> Result<Self, Self::Error> {
+        match mo {
+            Some(mo) => Ok(MessageOptions::new(&mo)),
+            None => bail!("MessageOptions is not set"),
         }
     }
 }

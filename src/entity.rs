@@ -1,6 +1,6 @@
 use std::rc::{Rc, Weak};
 
-use crate::{lang::Lang, name::Named, File, Message, Package};
+use crate::{lang::Lang, File, Message, Name, Package};
 
 // pub enum Entity {
 
@@ -21,8 +21,8 @@ impl<L: Lang> InternalContainer<L> {
     }
     pub(crate) fn fully_qualified_name(&self) -> String {
         match self {
-            InternalContainer::File(f) => f.upgrade().unwrap().fully_qualified_name(),
-            InternalContainer::Message(m) => m.upgrade().unwrap().fully_qualified_name(),
+            InternalContainer::File(f) => f.upgrade().unwrap().fully_qualified_name,
+            InternalContainer::Message(m) => m.upgrade().unwrap().fully_qualified_name,
         }
     }
 
@@ -42,14 +42,23 @@ pub enum Container<L: Lang> {
 impl<L: Lang> Container<L> {
     pub fn fully_qualified_name(&self) -> String {
         match self {
-            Container::File(f) => f.fully_qualified_name(),
-            Container::Message(m) => m.fully_qualified_name(),
+            Container::File(f) => f.fully_qualified_name,
+            Container::Message(m) => m.fully_qualified_name,
         }
     }
     pub fn package(&self) -> Rc<Package<L>> {
         match self {
             Container::File(f) => f.package(),
             Container::Message(m) => m.package(),
+        }
+    }
+}
+
+impl<L: Lang> Container<L> {
+    fn name(&self) -> Name<L> {
+        match self {
+            Container::File(f) => f.name(),
+            Container::Message(m) => m.name(),
         }
     }
 }
@@ -84,8 +93,8 @@ impl<L: Lang> BuildTarget for InternalContainer<L> {
     }
 }
 
-impl<L: Lang> Named<L> for InternalContainer<L> {
-    fn name(&self) -> crate::Name<L> {
+impl<L: Lang> InternalContainer<L> {
+    fn name(&self) -> Name<L> {
         match self {
             InternalContainer::File(f) => f.upgrade().unwrap().name(),
             InternalContainer::Message(m) => m.upgrade().unwrap().name(),

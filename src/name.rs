@@ -1,14 +1,10 @@
 use crate::lang::Lang;
-use crate::protobuf::WELL_KNNOWN_TYPE_PACKAGE;
+use crate::WELL_KNNOWN_TYPE_PACKAGE;
 pub use heck::{
     AsLowerCamelCase, ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase,
     ToShoutySnakeCase, ToSnakeCase, ToTitleCase, ToUpperCamelCase,
 };
 use std::{fmt, ops::Add};
-
-pub trait Named<L: Lang> {
-    fn name(&self) -> Name<L>;
-}
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Name<L: Lang> {

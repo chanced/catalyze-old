@@ -1,3 +1,7 @@
+use prost_types::Syntax;
+
+use super::{Method, Opt, SourceContext};
+
 /// Api is a light-weight descriptor for an API Interface.
 ///
 /// Interfaces are also described as "protocol buffer services" in some contexts,
@@ -11,9 +15,9 @@
 pub struct Api {
     /// The fully qualified name of this interface, including package name
     /// followed by the interface's simple name.
-    pub name: ::prost::alloc::string::String,
+    pub name: String,
     /// The methods of this interface, in unspecified order.
-    pub methods: ::prost::alloc::vec::Vec<Method>,
+    pub methods: Vec<Method>,
     /// Any metadata attached to the interface.
     pub options: Vec<Opt>,
     /// A version string for this interface. If specified, must have the form
@@ -37,18 +41,14 @@ pub struct Api {
     /// experimental, non-GA interfaces.
     ///
     ///
-    #[prost(string, tag = "4")]
-    pub version: ::prost::alloc::string::String,
+    pub version: String,
     /// Source context for the protocol buffer service represented by this
     /// message.
-    #[prost(message, optional, tag = "5")]
-    pub source_context: ::core::option::Option<SourceContext>,
+    pub source_context: Option<SourceContext>,
     /// Included interfaces. See \[Mixin][\].
-    #[prost(message, repeated, tag = "6")]
-    pub mixins: ::prost::alloc::vec::Vec<Mixin>,
+    pub mixins: Vec<Mixin>,
     /// The source syntax of the service.
-    #[prost(enumeration = "Syntax", tag = "7")]
-    pub syntax: i32,
+    pub syntax: Syntax,
 }
 
 /// Declares an API Interface to be included in this interface. The including
@@ -129,13 +129,11 @@ pub struct Api {
 ///       }
 ///       ...
 ///     }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq)]
 pub struct Mixin {
     /// The fully qualified name of the interface which is included.
-    #[prost(string, tag = "1")]
-    pub name: ::prost::alloc::string::String,
+    pub name: String,
     /// If non-empty specifies a path under which inherited HTTP paths
     /// are rooted.
-    #[prost(string, tag = "2")]
-    pub root: ::prost::alloc::string::String,
+    pub root: String,
 }
