@@ -3,7 +3,7 @@
 protoc-gen-echo is a protoc plugin which simply echos the incoming `CodeGeneratorRequest` to stderr.
 
 ```bash
-$ protoc --plugin=protoc-gen-echo -I proto --echo_out=. proto/example.proto
+$ protoc -I proto --echo_out=. proto/example.proto
 
 [echo start]
 # CodeGeneratorRequest will be available here to read in.

@@ -1,7 +1,0 @@
-package kitchen;
-
-import "kitchen/sink.proto";
-message Kitchen {
-    optional Sink  sink       = 1;
-}
-
