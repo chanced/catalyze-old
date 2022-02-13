@@ -1,1 +1,0 @@
-["./target/release/protoc-gen-capture"]

@@ -1,9 +1,7 @@
-syntax = "proto3";
-
 package kitchen;
 
 import "kitchen/sink.proto";
 message Kitchen {
-    Sink  sink       = 1;
+    optional Sink  sink       = 1;
 }
 
