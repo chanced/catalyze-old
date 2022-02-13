@@ -5,10 +5,22 @@ use crate::{lang::Lang, File, Message, Name, Package};
 // pub enum Entity {
 
 // }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum InternalContainer<L: Lang> {
     File(Weak<File<L>>),
     Message(Weak<Message<L>>),
+}
+
+impl<L: Lang> From<Rc<File<L>>> for InternalContainer<L> {
+    fn from(file: Rc<File<L>>) -> Self {
+        InternalContainer::File(Rc::downgrade(&file))
+    }
+}
+
+impl<L: Lang> From<Rc<Message<L>>> for InternalContainer<L> {
+    fn from(message: Rc<Message<L>>) -> Self {
+        InternalContainer::Message(Rc::downgrade(&message))
+    }
 }
 
 impl<L: Lang> InternalContainer<L> {
@@ -19,10 +31,20 @@ impl<L: Lang> InternalContainer<L> {
             InternalContainer::Message(m) => Container::Message(m.upgrade().unwrap()),
         }
     }
+    pub(crate) fn add_message(&self, message: Rc<Message<L>>) {
+        match self {
+            InternalContainer::File(f) => {
+                f.upgrade().unwrap().add_message(message);
+            }
+            InternalContainer::Message(m) => {
+                m.upgrade().unwrap().add_message(message);
+            }
+        }
+    }
     pub(crate) fn fully_qualified_name(&self) -> String {
         match self {
-            InternalContainer::File(f) => f.upgrade().unwrap().fully_qualified_name,
-            InternalContainer::Message(m) => m.upgrade().unwrap().fully_qualified_name,
+            InternalContainer::File(f) => f.upgrade().unwrap().fully_qualified_name.clone(),
+            InternalContainer::Message(m) => m.upgrade().unwrap().fully_qualified_name.clone(),
         }
     }
 
@@ -33,17 +55,17 @@ impl<L: Lang> InternalContainer<L> {
         }
     }
 }
-
+#[derive(Debug, Clone)]
 pub enum Container<L: Lang> {
     File(Rc<File<L>>),
     Message(Rc<Message<L>>),
 }
 
 impl<L: Lang> Container<L> {
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         match self {
-            Container::File(f) => f.fully_qualified_name,
-            Container::Message(m) => m.fully_qualified_name,
+            Container::File(f) => &f.fully_qualified_name,
+            Container::Message(m) => &m.fully_qualified_name,
         }
     }
     pub fn package(&self) -> Rc<Package<L>> {
@@ -52,13 +74,19 @@ impl<L: Lang> Container<L> {
             Container::Message(m) => m.package(),
         }
     }
+    pub(crate) fn downgrade(&self) -> InternalContainer<L> {
+        match self {
+            Container::File(f) => InternalContainer::File(Rc::downgrade(&f)),
+            Container::Message(m) => InternalContainer::Message(Rc::downgrade(&m)),
+        }
+    }
 }
 
 impl<L: Lang> Container<L> {
-    fn name(&self) -> Name<L> {
+    pub fn name(&self) -> Name<L> {
         match self {
-            Container::File(f) => f.name(),
-            Container::Message(m) => m.name(),
+            Container::File(f) => f.name.clone(),
+            Container::Message(m) => m.name.clone(),
         }
     }
 }
@@ -67,14 +95,6 @@ pub trait BuildTarget {
     fn build_target(&self) -> bool;
 }
 
-impl<L: Lang> InternalContainer<L> {
-    pub(crate) fn new_file(target: Rc<File<L>>) -> Self {
-        InternalContainer::File(Rc::downgrade(&target))
-    }
-    pub(crate) fn new_message(target: Rc<Message<L>>) -> Self {
-        InternalContainer::Message(Rc::downgrade(&target))
-    }
-}
 impl<L: Lang> BuildTarget for Container<L> {
     fn build_target(&self) -> bool {
         match self {
@@ -94,10 +114,10 @@ impl<L: Lang> BuildTarget for InternalContainer<L> {
 }
 
 impl<L: Lang> InternalContainer<L> {
-    fn name(&self) -> Name<L> {
+    pub(crate) fn name(&self) -> Name<L> {
         match self {
-            InternalContainer::File(f) => f.upgrade().unwrap().name(),
-            InternalContainer::Message(m) => m.upgrade().unwrap().name(),
+            InternalContainer::File(f) => f.upgrade().unwrap().name.clone(),
+            InternalContainer::Message(m) => m.upgrade().unwrap().name.clone(),
         }
     }
 }

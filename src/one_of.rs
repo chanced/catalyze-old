@@ -1,7 +1,39 @@
-use crate::{lang::Lang, Name};
+use std::{cell::RefCell, rc::Rc};
+
+use crate::{
+    container::{Container, InternalContainer},
+    lang::Lang,
+    Field, Name,
+};
 
 #[derive(Debug, Clone)]
 pub struct OneOf<L: Lang> {
-    name: Name<L>,
-    desc: prost_types::OneofDescriptorProto
+    pub name: Name<L>,
+    pub desc: prost_types::OneofDescriptorProto,
+    fields: RefCell<Vec<Rc<Field<L>>>>,
+    container: InternalContainer<L>,
+}
+
+impl<L: Lang> OneOf<L> {
+    pub(crate) fn new(
+        desc: prost_types::OneofDescriptorProto,
+        container: Container<L>,
+        lang: L,
+    ) -> Self {
+        Self {
+            name: Name::new(desc.name(), lang),
+            desc,
+            fields: RefCell::new(Vec::new()),
+            container: container.downgrade(),
+        }
+    }
+    pub fn fields(&self) -> Vec<Rc<Field<L>>> {
+        self.fields.borrow().clone()
+    }
+    pub fn container(&self) -> Container<L> {
+        self.container.upgrade()
+    }
+    pub(crate) fn add_field(&self, field: Rc<Field<L>>) {
+        self.fields.borrow_mut().push(field);
+    }
 }

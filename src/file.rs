@@ -1,16 +1,21 @@
-use crate::entity::BuildTarget;
+use crate::container::BuildTarget;
 use crate::lang::Lang;
 use crate::{Enum, Extension, Message, Name, Package, Service};
 use std::cell::RefCell;
+use std::collections::VecDeque;
+use std::iter::Map;
 use std::path::PathBuf;
 // use std::path::PathBuf;
 use std::rc::{Rc, Weak};
+use std::slice::Iter;
 
 #[derive(Debug, Clone)]
 pub struct File<L: Lang> {
     pub fully_qualified_name: String,
     pub descriptor: prost_types::FileDescriptorProto,
-    pub lang: L,
+    pub name: Name<L>,
+    pub file_path: PathBuf,
+    pub build_target: bool,
     pkg: Weak<Package<L>>,
     dependents: RefCell<Vec<Weak<File<L>>>>,
     dependencies: RefCell<Vec<Weak<File<L>>>>,
@@ -20,8 +25,6 @@ pub struct File<L: Lang> {
     services: RefCell<Vec<Rc<Service<L>>>>,
     src_info: RefCell<Option<Rc<prost_types::SourceCodeInfo>>>,
     pkg_info: RefCell<Option<Rc<prost_types::SourceCodeInfo>>>,
-    build_target: bool,
-    file_path: PathBuf,
 }
 
 impl<L: Lang> BuildTarget for File<L> {
@@ -31,9 +34,6 @@ impl<L: Lang> BuildTarget for File<L> {
 }
 
 impl<L: Lang> File<L> {
-    pub fn name(&self) -> Name<L> {
-        Name::new(self.descriptor.name(), self.lang.clone())
-    }
     pub(crate) fn new(
         build_target: bool,
         descriptor: prost_types::FileDescriptorProto,
@@ -48,12 +48,12 @@ impl<L: Lang> File<L> {
         };
         let file_path = PathBuf::from(descriptor.name());
         Self {
+            name,
             descriptor,
             pkg,
             fully_qualified_name,
             build_target,
             file_path,
-            lang,
             dependents: RefCell::new(Vec::new()),
             dependencies: RefCell::new(Vec::new()),
             exts: RefCell::new(Vec::new()),
@@ -77,22 +77,32 @@ impl<L: Lang> File<L> {
     pub fn source_code_info(&self) -> Option<Rc<prost_types::SourceCodeInfo>> {
         self.src_info.borrow().clone()
     }
-
+    // AllMessages returns all the top-level and nested messages from this
+    // Entity.
     pub fn all_messages(&self) -> Vec<Rc<Message<L>>> {
-        todo!()
+        let mut res: Vec<Rc<Message<L>>> = Vec::default();
+        let mut stack: VecDeque<Rc<Message<L>>> = VecDeque::default();
+        stack.extend(self.messages());
+        res.extend(self.messages());
+        while let Some(next) = stack.pop_front() {
+            stack.extend(next.messages());
+            res.extend(next.messages());
+        }
+        res
     }
-
+    /// Returns top-level messages for this Message. Nested messages are not
+    /// included.
     pub fn messages(&self) -> Vec<Rc<Message<L>>> {
-        self.msgs.borrow().iter().map(Rc::clone).collect()
+        self.msgs.borrow().iter().cloned().collect()
     }
     pub fn enums(&self) -> Vec<Rc<Enum<L>>> {
-        self.enums.borrow().iter().map(Rc::clone).collect()
+        self.enums.borrow().iter().cloned().collect()
     }
     pub fn services(&self) -> Vec<Rc<Service<L>>> {
-        self.services.borrow().iter().map(Rc::clone).collect()
+        self.services.borrow().iter().cloned().collect()
     }
     pub fn extensions(&self) -> Vec<Rc<Extension<L>>> {
-        self.exts.borrow().iter().map(Rc::clone).collect()
+        self.exts.borrow().iter().cloned().collect()
     }
     pub fn dependencies(&self) -> Vec<Rc<File<L>>> {
         self.dependencies
