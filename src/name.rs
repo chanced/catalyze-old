@@ -1,4 +1,4 @@
-use crate::lang::Lang;
+use crate::lang::{Lang, Unspecified};
 use crate::WELL_KNNOWN_TYPE_PACKAGE;
 pub use heck::{
     AsLowerCamelCase, ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase,
@@ -10,6 +10,15 @@ use std::{fmt, ops::Add};
 pub struct Name<L: Lang> {
     val: String,
     lang: L,
+}
+
+impl Default for Name<Unspecified> {
+    fn default() -> Self {
+        Self {
+            val: Default::default(),
+            lang: Unspecified {},
+        }
+    }
 }
 
 impl<L: Lang> Name<L> {

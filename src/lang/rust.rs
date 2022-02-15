@@ -9,10 +9,11 @@ use crate::Name;
 pub struct Rust;
 
 impl Lang for Rust {
+    type Error = anyhow::Error;
     fn name() -> &'static str {
         "rust"
     }
-    fn is_keyword<T: ToString>(&self, s: T) -> anyhow::Result<Keyword> {
+    fn is_keyword<T: ToString>(&self, s: T) -> Result<Keyword, Self::Error> {
         let k = match s.to_string().to_lower_camel_case().as_str() {
             // 2015 strict keywords.
             | "as" | "break" | "const" | "continue" | "else" | "enum" | "false"

@@ -1,11 +1,13 @@
 use crate::name::{Name, ToScreamingKebabCase};
-use anyhow::Result;
+// use anyhow::Result;
 
 pub use heck::{
     ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase, ToShoutySnakeCase, ToSnakeCase,
     ToTitleCase, ToUpperCamelCase,
 };
-use std::{fmt::Display, string::ToString};
+use std::string::ToString;
+
+use super::Unspecified;
 
 pub enum Keyword {
     /// SCREAMING-KEBAB-CASE
@@ -23,9 +25,10 @@ pub enum Keyword {
 }
 
 pub trait Lang: Sized + Clone {
+    type Error;
     fn name() -> &'static str;
 
-    fn is_keyword<T: ToString>(&self, s: T) -> Result<Keyword>;
+    fn is_keyword<T: ToString>(&self, s: T) -> Result<Keyword, Self::Error>;
     fn to_screaming_kebab_case(&self, name: &Name<Self>) -> Name<Self> {
         Name::new(&name.to_string().to_shouty_kebab_case(), self.clone())
     }

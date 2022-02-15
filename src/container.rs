@@ -1,5 +1,9 @@
-use std::rc::{Rc, Weak};
+use std::{
+    cell::RefCell,
+    rc::{Rc, Weak},
+};
 
+use crate::iter;
 use crate::{lang::Lang, File, Message, Name, Package};
 
 // pub enum Entity {
@@ -48,7 +52,7 @@ impl<L: Lang> InternalContainer<L> {
         }
     }
 
-    pub(crate) fn package(&self) -> Rc<Package<L>> {
+    pub(crate) fn package(&self) -> Option<Rc<Package<L>>> {
         match self {
             InternalContainer::File(f) => f.upgrade().unwrap().package(),
             InternalContainer::Message(m) => m.upgrade().unwrap().package(),
@@ -61,6 +65,18 @@ pub enum Container<L: Lang> {
     Message(Rc<Message<L>>),
 }
 
+impl<L: Lang> From<Rc<File<L>>> for Container<L> {
+    fn from(file: Rc<File<L>>) -> Self {
+        Container::File(file.clone())
+    }
+}
+
+impl<L: Lang> From<Rc<Message<L>>> for Container<L> {
+    fn from(message: Rc<Message<L>>) -> Self {
+        Container::Message(message.clone())
+    }
+}
+
 impl<L: Lang> Container<L> {
     pub fn fully_qualified_name(&self) -> &str {
         match self {
@@ -68,7 +84,26 @@ impl<L: Lang> Container<L> {
             Container::Message(m) => &m.fully_qualified_name,
         }
     }
-    pub fn package(&self) -> Rc<Package<L>> {
+    pub(crate) fn msgs(&self) -> Rc<RefCell<Vec<Rc<Message<L>>>>> {
+        match self {
+            Container::File(f) => f.messages.clone(),
+            Container::Message(m) => m.messages.clone(),
+        }
+    }
+    pub fn messages(&self) -> iter::Iter<Message<L>> {
+        match self {
+            Container::File(f) => f.messages(),
+            Container::Message(m) => m.messages(),
+        }
+    }
+    pub fn all_messages(&self) -> iter::AllMessages<L> {
+        match self {
+            Container::File(f) => f.all_messages(),
+            Container::Message(m) => m.all_messages(),
+        }
+    }
+
+    pub fn package(&self) -> Option<Rc<Package<L>>> {
         match self {
             Container::File(f) => f.package(),
             Container::Message(m) => m.package(),

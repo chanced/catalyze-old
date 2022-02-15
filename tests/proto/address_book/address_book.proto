@@ -1,0 +1,23 @@
+syntax = "proto3";
+package address_book;
+
+import "google/protobuf/timestamp.proto";
+import "address_book/phone_number.proto";
+
+option java_multiple_files  = true;
+option java_package         = "com.example.address_book.protos";
+option java_outer_classname = "AddressBookProtos";
+option csharp_namespace     = "Example.AddressBook";
+option go_package           = "github.com/example/address_book";
+
+message Person {
+    string name                            = 1;
+    int32 id                               = 2;
+    string email                           = 3;
+    repeated PhoneNumber phones            = 4;
+    google.protobuf.Timestamp last_updated = 5;
+}
+
+message AddressBook {
+    repeated Person people = 1;
+}

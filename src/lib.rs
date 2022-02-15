@@ -6,6 +6,7 @@ mod extension;
 mod field;
 mod file;
 mod generator;
+pub mod iter;
 pub mod lang;
 mod message;
 mod method;

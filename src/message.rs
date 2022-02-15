@@ -4,9 +4,10 @@ use std::rc::{Rc, Weak};
 use std::str::FromStr;
 
 use crate::container::BuildTarget;
-use crate::lang::Lang;
+use crate::iter::{AllMessages, UpgradeIter};
+use crate::lang::{Lang, Unspecified};
 use crate::{container::Container, container::InternalContainer, Field, Name, OneOf};
-use crate::{Package, WellKnownType};
+use crate::{iter::Iter, Package, WellKnownType};
 
 /// Message describes a proto message. Messages can be contained in either
 /// another Message or File, and may house further Messages and/or Enums. While
@@ -19,12 +20,30 @@ pub struct Message<L: Lang> {
     pub is_map_entry: bool,
     pub name: Name<L>,
     pub well_known_type: Option<WellKnownType>, // dependents_cache: RefCell<HashMap<String, Weak<Message<L>>>>,
-    preserved_messages: RefCell<Vec<Rc<Message<L>>>>,
-    messages: RefCell<Vec<Rc<Message<L>>>>,
-    fields: RefCell<Vec<Rc<Field<L>>>>,
-    one_ofs: RefCell<Vec<Rc<OneOf<L>>>>,
-    dependents: RefCell<Vec<Weak<Message<L>>>>,
-    container: InternalContainer<L>,
+    pub(crate) preserved_messages: Rc<RefCell<Vec<Rc<Message<L>>>>>,
+    pub(crate) messages: Rc<RefCell<Vec<Rc<Message<L>>>>>,
+    pub(crate) fields: Rc<RefCell<Vec<Rc<Field<L>>>>>,
+    pub(crate) one_ofs: Rc<RefCell<Vec<Rc<OneOf<L>>>>>,
+    pub(crate) dependents: Rc<RefCell<Vec<Weak<Message<L>>>>>,
+    pub(crate) container: InternalContainer<L>,
+}
+
+impl Default for Message<Unspecified> {
+    fn default() -> Self {
+        Self {
+            fully_qualified_name: Default::default(),
+            descriptor: Default::default(),
+            is_map_entry: Default::default(),
+            name: Name::new("", Unspecified),
+            well_known_type: Default::default(),
+            preserved_messages: Default::default(),
+            messages: Default::default(),
+            fields: Default::default(),
+            one_ofs: Default::default(),
+            dependents: Default::default(),
+            container: InternalContainer::File(Weak::new()),
+        }
+    }
 }
 
 impl<L: Lang> BuildTarget for Message<L> {
@@ -38,12 +57,13 @@ impl<L: Lang> Message<L> {
         descriptor: prost_types::DescriptorProto,
         container: InternalContainer<L>,
         lang: L,
-    ) -> Self {
+    ) -> Rc<Self> {
         let fully_qualified_name = match descriptor.name() {
             "" => String::from(""),
             n => format!("{}.{}", container.fully_qualified_name(), n),
         };
-        let well_known_type = if container.package().is_well_known() {
+
+        let well_known_type = if container.package().map_or(false, |pkg| pkg.is_well_known()) {
             match WellKnownType::from_str(descriptor.name()) {
                 Ok(wkt) => Some(wkt),
                 Err(_) => None,
@@ -61,21 +81,22 @@ impl<L: Lang> Message<L> {
         // };
         let name = Name::new(descriptor.name(), lang);
         let is_map_entry = false;
-        Message {
+        Rc::new(Message {
             name,
             container,
             fully_qualified_name,
             well_known_type,
             descriptor,
             is_map_entry,
-            preserved_messages: RefCell::new(Vec::new()),
-            messages: RefCell::new(Vec::new()),
-            fields: RefCell::new(Vec::new()),
-            one_ofs: RefCell::new(Vec::new()),
-            dependents: RefCell::new(Vec::new()),
-        }
+            preserved_messages: Rc::new(RefCell::new(Vec::new())),
+            messages: Rc::new(RefCell::new(Vec::new())),
+            fields: Rc::new(RefCell::new(Vec::new())),
+            one_ofs: Rc::new(RefCell::new(Vec::new())),
+            dependents: Rc::new(RefCell::new(Vec::new())),
+        })
     }
-    pub fn package(&self) -> Rc<Package<L>> {
+
+    pub fn package(&self) -> Option<Rc<Package<L>>> {
         self.container.package()
     }
 
@@ -89,30 +110,19 @@ impl<L: Lang> Message<L> {
     pub fn container(&self) -> Container<L> {
         self.container.upgrade()
     }
-    pub fn all_messages(&self) -> Vec<Rc<Message<L>>> {
-        let mut res: Vec<Rc<Message<L>>> = Vec::default();
-        let mut stack: VecDeque<Rc<Message<L>>> = VecDeque::default();
-        stack.extend(self.messages());
-        res.extend(self.messages());
-        while let Some(next) = stack.pop_front() {
-            stack.extend(next.messages());
-            res.extend(next.messages());
-        }
-        res
+    pub fn all_messages(&self) -> AllMessages<L> {
+        AllMessages::new(self.messages.clone())
     }
 
-    pub fn messages(&self) -> Vec<Rc<Message<L>>> {
-        self.messages.borrow().clone()
+    pub fn messages(&self) -> Iter<Message<L>> {
+        Iter::new(self.messages.clone())
     }
+
     pub fn one_ofs(&self) -> Vec<Rc<OneOf<L>>> {
         self.one_ofs.borrow().clone()
     }
-    pub fn dependencies(&self) -> Vec<Rc<Message<L>>> {
-        self.dependents
-            .borrow()
-            .iter()
-            .map(|w| w.upgrade().unwrap())
-            .collect()
+    pub fn dependencies(&self) -> UpgradeIter<Message<L>> {
+        UpgradeIter::new(self.dependents.clone())
     }
     pub fn preserved_messages(&self) -> Vec<Rc<Message<L>>> {
         self.preserved_messages.borrow().clone()
