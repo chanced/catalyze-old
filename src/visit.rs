@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 use std::rc::Rc;
 
 use crate::lang::{self, Lang};
-use crate::{Enum, EnumValue, Extension, Field, File, Message, Method, OneOf, Package, Service};
+use crate::{Enum, EnumValue, Extension, Field, File, Message, Method, Oneof, Package, Service};
 
 pub trait Visitor<L: Lang> {
     type Error;
@@ -35,7 +35,7 @@ pub trait Visitor<L: Lang> {
         todo!("not done")
     }
 
-    fn visit_one_of(&mut self, one_of: Rc<OneOf<L>>) -> Result<(), Self::Error> {
+    fn visit_one_of(&mut self, one_of: Rc<Oneof<L>>) -> Result<(), Self::Error> {
         todo!("not done")
     }
 

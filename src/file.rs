@@ -1,12 +1,19 @@
 use crate::container::BuildTarget;
-use crate::iter::{AllMessages, Iter};
+use crate::iter::{AllEnums, AllMessages, Iter};
 use crate::lang::{Lang, Unspecified};
-use crate::{Enum, Extension, Message, Name, Package, Service};
+use crate::{
+    Enum, EnumList, Extension, ExtensionList, Message, MessageList, Name, Package, Service,
+    ServiceList,
+};
 use std::cell::RefCell;
 
 use std::path::PathBuf;
 // use std::path::PathBuf;
 use std::rc::{Rc, Weak};
+
+pub(crate) type WeakFileList<L> = Rc<RefCell<Vec<Weak<File<L>>>>>;
+
+pub(crate) type FileList<L> = Rc<RefCell<Vec<Rc<File<L>>>>>;
 
 #[derive(Debug, Clone)]
 pub struct File<L: Lang> {
@@ -16,12 +23,12 @@ pub struct File<L: Lang> {
     pub file_path: PathBuf,
     pub build_target: bool,
     pub(crate) pkg: Option<Weak<Package<L>>>,
-    pub(crate) dependents: Rc<RefCell<Vec<Weak<File<L>>>>>,
-    pub(crate) dependencies: Rc<RefCell<Vec<Weak<File<L>>>>>,
-    pub(crate) exts: Rc<RefCell<Vec<Rc<Extension<L>>>>>,
-    pub(crate) messages: Rc<RefCell<Vec<Rc<Message<L>>>>>,
-    pub(crate) enums: Rc<RefCell<Vec<Rc<Enum<L>>>>>,
-    pub(crate) services: Rc<RefCell<Vec<Rc<Service<L>>>>>,
+    pub(crate) dependents: WeakFileList<L>,
+    pub(crate) dependencies: WeakFileList<L>,
+    pub(crate) exts: ExtensionList<L>,
+    pub(crate) messages: MessageList<L>,
+    pub(crate) enums: EnumList<L>,
+    pub(crate) services: ServiceList<L>,
     pub(crate) src_info: Rc<RefCell<Option<Rc<prost_types::SourceCodeInfo>>>>,
     pub(crate) pkg_info: Rc<RefCell<Option<Rc<prost_types::SourceCodeInfo>>>>,
 }
@@ -85,12 +92,21 @@ impl<L: Lang> File<L> {
             pkg_info: Rc::new(RefCell::new(None)),
         }
     }
-    // all_messages returns all the top-level and nested messages from this
-    // Entity.
-
+    /// all_messages returns an iterator of all top-level and nested messages from this
+    /// file.
     pub fn all_messages(&self) -> AllMessages<L> {
         AllMessages::new(self.messages.clone())
     }
+
+    pub fn enums(&self) -> Iter<Enum<L>> {
+        Iter::new(self.enums.clone())
+    }
+
+    /// all_enums returns an iterator of all top-level and nested enums from this file.
+    pub fn all_enums(&self) -> AllEnums<L> {
+        AllEnums::new(self.enums.clone(), self.messages.clone())
+    }
+
     pub fn file_path(&self) -> &PathBuf {
         &self.file_path
     }
@@ -110,9 +126,6 @@ impl<L: Lang> File<L> {
         Iter::new(self.messages.clone())
     }
 
-    pub fn enums(&self) -> Vec<Rc<Enum<L>>> {
-        self.enums.borrow().iter().cloned().collect()
-    }
     pub fn services(&self) -> Vec<Rc<Service<L>>> {
         self.services.borrow().iter().cloned().collect()
     }
@@ -132,6 +145,10 @@ impl<L: Lang> File<L> {
             .iter()
             .map(|d| d.upgrade().unwrap())
             .collect()
+    }
+
+    pub(crate) fn add_enum(&self, e: Rc<Enum<L>>) {
+        self.enums.borrow_mut().push(e);
     }
     pub(crate) fn add_dependency(&self, file: Rc<File<L>>) {
         self.dependencies.borrow_mut().push(Rc::downgrade(&file));

@@ -25,7 +25,7 @@ pub use field::*;
 pub use file::File;
 pub use generator::*;
 pub use lang::Lang;
-pub use message::Message;
+pub use message::*;
 pub use method::*;
 pub use method::*;
 pub use name::Name;

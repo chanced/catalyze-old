@@ -6,15 +6,17 @@ use crate::{
     Field, Name,
 };
 
+pub(crate) type OneofList<L> = Rc<RefCell<Vec<Rc<Oneof<L>>>>>;
+
 #[derive(Debug, Clone)]
-pub struct OneOf<L: Lang> {
+pub struct Oneof<L: Lang> {
     pub name: Name<L>,
     pub desc: prost_types::OneofDescriptorProto,
     fields: RefCell<Vec<Rc<Field<L>>>>,
     container: InternalContainer<L>,
 }
 
-impl<L: Lang> OneOf<L> {
+impl<L: Lang> Oneof<L> {
     pub(crate) fn new(
         desc: prost_types::OneofDescriptorProto,
         container: Container<L>,

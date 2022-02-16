@@ -3,7 +3,10 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::iter;
+use crate::{
+    iter::{self, AllEnums, AllMessages, Iter},
+    Enum,
+};
 use crate::{lang::Lang, File, Message, Name, Package};
 
 // pub enum Entity {
@@ -67,13 +70,13 @@ pub enum Container<L: Lang> {
 
 impl<L: Lang> From<Rc<File<L>>> for Container<L> {
     fn from(file: Rc<File<L>>) -> Self {
-        Container::File(file.clone())
+        Container::File(file)
     }
 }
 
 impl<L: Lang> From<Rc<Message<L>>> for Container<L> {
     fn from(message: Rc<Message<L>>) -> Self {
-        Container::Message(message.clone())
+        Container::Message(message)
     }
 }
 
@@ -84,25 +87,37 @@ impl<L: Lang> Container<L> {
             Container::Message(m) => &m.fully_qualified_name,
         }
     }
-    pub(crate) fn msgs(&self) -> Rc<RefCell<Vec<Rc<Message<L>>>>> {
-        match self {
-            Container::File(f) => f.messages.clone(),
-            Container::Message(m) => m.messages.clone(),
-        }
-    }
-    pub fn messages(&self) -> iter::Iter<Message<L>> {
+    // pub(crate) fn msgs(&self) -> Rc<RefCell<Vec<Rc<Message<L>>>>> {
+    //     match self {
+    //         Container::File(f) => f.messages.clone(),
+    //         Container::Message(m) => m.messages.clone(),
+    //     }
+    // }
+
+    pub fn messages(&self) -> Iter<Message<L>> {
         match self {
             Container::File(f) => f.messages(),
             Container::Message(m) => m.messages(),
         }
     }
-    pub fn all_messages(&self) -> iter::AllMessages<L> {
+    pub fn all_messages(&self) -> AllMessages<L> {
         match self {
             Container::File(f) => f.all_messages(),
             Container::Message(m) => m.all_messages(),
         }
     }
-
+    pub fn all_enums(&self) -> AllEnums<L> {
+        match self {
+            Container::File(f) => f.all_enums(),
+            Container::Message(m) => m.all_enums(),
+        }
+    }
+    pub fn enums(&self) -> Iter<Enum<L>> {
+        match self {
+            Container::File(f) => f.enums(),
+            Container::Message(m) => m.enums(),
+        }
+    }
     pub fn package(&self) -> Option<Rc<Package<L>>> {
         match self {
             Container::File(f) => f.package(),
@@ -113,6 +128,20 @@ impl<L: Lang> Container<L> {
         match self {
             Container::File(f) => InternalContainer::File(Rc::downgrade(&f)),
             Container::Message(m) => InternalContainer::Message(Rc::downgrade(&m)),
+        }
+    }
+
+    pub(crate) fn add_message(&self, msg: Rc<Message<L>>) {
+        match self {
+            Container::File(f) => f.add_message(msg),
+            Container::Message(m) => m.add_message(msg),
+        }
+    }
+
+    pub(crate) fn add_enum(&self, e: Rc<Enum<L>>) {
+        match self {
+            Container::File(f) => f.add_enum(e),
+            Container::Message(m) => m.add_enum(e),
         }
     }
 }

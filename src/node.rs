@@ -1,12 +1,12 @@
 use std::rc::Rc;
 
-use crate::{Enum, Field, File, Lang, Message, Method, Name, OneOf, Service};
+use crate::{Enum, Field, File, Lang, Message, Method, Name, Oneof, Service};
 
 #[derive(Debug, Clone)]
 pub enum Node<L: Lang> {
     File(Rc<File<L>>),
     Message(Rc<Message<L>>),
-    OneOf(Rc<OneOf<L>>),
+    OneOf(Rc<Oneof<L>>),
     Enum(Rc<Enum<L>>),
     Service(Rc<Service<L>>),
     Method(Rc<Method<L>>),
@@ -35,8 +35,8 @@ impl<L: Lang> From<Message<L>> for Node<L> {
         Node::Message(Rc::new(message))
     }
 }
-impl<L: Lang> From<OneOf<L>> for Node<L> {
-    fn from(oneof: OneOf<L>) -> Self {
+impl<L: Lang> From<Oneof<L>> for Node<L> {
+    fn from(oneof: Oneof<L>) -> Self {
         Node::OneOf(Rc::new(oneof))
     }
 }

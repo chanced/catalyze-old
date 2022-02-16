@@ -1,10 +1,10 @@
 use std::{
     cell::RefCell,
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     rc::{Rc, Weak},
 };
 
-use crate::{container::Container, Lang, Message};
+use crate::{Enum, EnumList, Lang, Message, MessageList};
 
 pub struct UpgradeIter<T> {
     nodes: Rc<RefCell<Vec<Weak<T>>>>,
@@ -36,18 +36,11 @@ impl<T> Iterator for UpgradeIter<T> {
 pub struct Iter<T> {
     nodes: Rc<RefCell<Vec<Rc<T>>>>,
     idx: usize,
-    size: usize,
 }
 
 impl<T> Iter<T> {
     pub(crate) fn new(nodes: Rc<RefCell<Vec<Rc<T>>>>) -> Self {
-        let nodes = nodes.clone();
-        let size = nodes.clone().borrow().len();
-        Self {
-            size,
-            nodes,
-            idx: 0,
-        }
+        Self { nodes, idx: 0 }
     }
 }
 
@@ -57,7 +50,7 @@ impl<T> Iterator for Iter<T> {
         let nodes = self.nodes.borrow();
         if self.idx < nodes.len() {
             self.idx += 1;
-            nodes.get(self.idx).cloned()
+            nodes.get(self.idx - 1).cloned()
         } else {
             None
         }
@@ -68,15 +61,12 @@ pub struct MapIter<T> {
     nodes: Rc<RefCell<HashMap<String, Rc<T>>>>,
     idx: usize,
     keys: Vec<String>,
-    size: usize,
 }
 impl<T> MapIter<T> {
     pub(crate) fn new(nodes: Rc<RefCell<HashMap<String, Rc<T>>>>) -> Self {
         let keys: Vec<String> = nodes.borrow().keys().cloned().collect();
-        let size = keys.len();
         Self {
             nodes,
-            size,
             keys,
             idx: 0,
         }
@@ -97,17 +87,13 @@ impl<T> Iterator for MapIter<T> {
 }
 
 pub struct AllMessages<L: Lang> {
-    nodes: Rc<RefCell<Vec<Rc<Message<L>>>>>,
-    cur_iter: Option<Box<AllMessages<L>>>,
-    idx: usize,
+    q: VecDeque<Rc<Message<L>>>,
 }
 
 impl<L: Lang> AllMessages<L> {
-    pub(crate) fn new(nodes: Rc<RefCell<Vec<Rc<Message<L>>>>>) -> Self {
+    pub(crate) fn new(msgs: MessageList<L>) -> Self {
         Self {
-            nodes,
-            cur_iter: None,
-            idx: 0,
+            q: VecDeque::from_iter(msgs.borrow().iter().cloned()),
         }
     }
 }
@@ -115,131 +101,166 @@ impl<L: Lang> AllMessages<L> {
 impl<L: Lang> Iterator for AllMessages<L> {
     type Item = Rc<Message<L>>;
     fn next(&mut self) -> Option<Self::Item> {
-        let msgs = self.nodes.borrow();
-        loop {
-            if self.cur_iter.is_none() && self.idx < msgs.len() {
-                let res = Some(msgs[self.idx].clone());
-                self.idx += 1;
-                return res;
-            } else if let Some(mut iter) = self.cur_iter.take() {
-                match iter.next() {
-                    Some(msg) => {
-                        self.cur_iter = Some(iter);
-                        return Some(msg);
-                    }
-                    None => {
-                        self.idx += 1;
-                        if self.idx < msgs.len() {
-                            self.cur_iter = Some(Box::new(AllMessages::new(
-                                self.nodes.borrow().get(self.idx).unwrap().messages.clone(),
-                            )));
-                        } else {
-                            return None;
-                        }
-                    }
-                }
-            } else {
-                if msgs.len() == 0 {
-                    return None;
-                }
-                self.idx = 0;
-                self.cur_iter = Some(Box::new(AllMessages::new(
-                    self.nodes.borrow().get(0).unwrap().messages.clone(),
-                )));
+        if let Some(msg) = self.q.pop_front() {
+            for v in msg.messages() {
+                self.q.push_back(v);
             }
+            Some(msg)
+        } else {
+            None
+        }
+    }
+}
+pub struct AllEnums<L: Lang> {
+    msgs: VecDeque<Rc<Message<L>>>,
+    enums: VecDeque<Rc<Enum<L>>>,
+}
+
+impl<L: Lang> AllEnums<L> {
+    pub(crate) fn new(enums: EnumList<L>, msgs: MessageList<L>) -> Self {
+        Self {
+            msgs: VecDeque::from_iter(msgs.borrow().iter().cloned()),
+            enums: VecDeque::from_iter(enums.borrow().iter().cloned()),
+        }
+    }
+}
+
+impl<L: Lang> Iterator for AllEnums<L> {
+    type Item = Rc<Enum<L>>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(enum_) = self.enums.pop_front() {
+            Some(enum_)
+        } else {
+            while let Some(msg) = self.msgs.pop_front() {
+                for v in msg.messages() {
+                    self.msgs.push_back(v);
+                }
+                for v in msg.enums() {
+                    self.enums.push_back(v);
+                }
+                if let Some(enum_) = self.enums.pop_front() {
+                    return Some(enum_);
+                }
+            }
+            None
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{container::InternalContainer, lang::Unspecified, File, Name};
+
+    use crate::{container::Container, lang::Unspecified, File, Name};
 
     use super::*;
-    #[test]
-    fn test_all_messages() {
-        let file = Rc::new(File {
+    type MsgTable = HashMap<String, Rc<Message<Unspecified>>>;
+    fn init() -> (Rc<File<Unspecified>>, MsgTable) {
+        let mut table = HashMap::new();
+        let f = Rc::new(File {
             name: Name::new("test.rs", Unspecified),
             ..File::<Unspecified>::default()
         });
+        let mut create_msg =
+            |name: &str, container: Container<Unspecified>| -> Rc<Message<Unspecified>> {
+                let m = Rc::new(Message {
+                    name: Name::new(name, Unspecified),
+                    container: container.downgrade(),
+                    ..Message::<Unspecified>::default()
+                });
+                container.add_message(m.clone());
+                table.insert(name.to_string(), m.clone());
+                m
+            };
+        let create_enum =
+            |name: &str, container: Container<Unspecified>| -> Rc<Enum<Unspecified>> {
+                let e = Rc::new(Enum {
+                    name: Name::new(name, Unspecified),
+                    ..Enum::<Unspecified>::default()
+                });
+                container.add_enum(e.clone());
+                e
+            };
+        let r1 = create_msg("r1", Container::from(f.clone()));
+        let r2 = create_msg("r2", Container::from(f.clone()));
 
-        let root = Rc::new(Message {
-            name: Name::new("root", Unspecified),
-            container: InternalContainer::from(file.clone()),
-            ..Message::<Unspecified>::default()
-        });
-        file.add_message(root.clone());
-        let s1 = Rc::new(Message {
-            name: Name::new("s1", Unspecified),
-            container: InternalContainer::from(file.clone()),
-            ..Message::<Unspecified>::default()
-        });
-        root.add_message(s1.clone());
-        let s2 = Rc::new(Message {
-            name: Name::new("s2", Unspecified),
-            container: InternalContainer::from(file.clone()),
-            ..Message::<Unspecified>::default()
-        });
-        root.add_message(s2.clone());
+        let s1 = create_msg("s1", Container::from(r1.clone()));
+        let s2 = create_msg("s2", Container::from(r1.clone()));
+        let s3 = create_msg("s3", Container::from(r1.clone()));
+        let s1s1 = create_msg("s1s1", Container::from(s1.clone()));
+        let s1s2 = create_msg("s1s2", Container::from(s1.clone()));
+        let _s2s1 = create_msg("s1s3", Container::from(s1.clone()));
+        let s2s1 = create_msg("s2s1", Container::from(s2.clone()));
+        let _s2s2 = create_msg("s2s2", Container::from(s2.clone()));
+        let _s3s1 = create_msg("s2s3", Container::from(s2.clone()));
+        let s3s1 = create_msg("s3s1", Container::from(s3.clone()));
+        create_msg("s3s2", Container::from(s3.clone()));
+        create_msg("s3s3", Container::from(s3.clone()));
 
-        let sub3 = Rc::new(Message {
-            name: Name::new("s3", Unspecified),
-            container: InternalContainer::from(file.clone()),
-            ..Message::<Unspecified>::default()
-        });
+        create_enum("e1", Container::from(f.clone()));
+        create_enum("e2", Container::from(f.clone()));
+        create_enum("r1e1", Container::from(r1));
+        create_enum("r1e2", Container::from(r2));
+        create_enum("s1e1", Container::from(s1.clone()));
+        create_enum("s1e2", Container::from(s1));
+        create_enum("s2e1", Container::from(s2.clone()));
+        create_enum("s2e2", Container::from(s2));
+        create_enum("s3e1", Container::from(s3));
+        create_enum("s1s1e1", Container::from(s1s1));
+        create_enum("s1s2e1", Container::from(s1s2));
+        create_enum("s2s1e1", Container::from(s2s1));
+        create_enum("s3s1e1", Container::from(s3s1));
+        (f, table)
+    }
 
-        root.add_message(sub3);
-
-        let s1s1 = Rc::new(Message {
-            name: Name::new("s1s1", Unspecified),
-            container: InternalContainer::from(s1.clone()),
-            ..Message::<Unspecified>::default()
-        });
-        s1.add_message(s1s1);
-        let s1s2 = Rc::new(Message {
-            name: Name::new("s1s2", Unspecified),
-            container: InternalContainer::from(file.clone()),
-            ..Message::<Unspecified>::default()
-        });
-        s1.add_message(s1s2);
-
-        let s1s3 = Rc::new(Message {
-            name: Name::new("s1s3", Unspecified),
-            container: InternalContainer::from(s1.clone()),
-            ..Message::<Unspecified>::default()
-        });
-
-        s1.add_message(s1s3);
-        let s2s1 = Rc::new(Message {
-            name: Name::new("s1s2", Unspecified),
-            container: InternalContainer::from(s2.clone()),
-            ..Message::<Unspecified>::default()
-        });
-        s2.add_message(s2s1);
-        let s2s2 = Rc::new(Message {
-            name: Name::new("s2s2", Unspecified),
-            container: InternalContainer::from(file.clone()),
-            ..Message::<Unspecified>::default()
-        });
-
-        s2.add_message(s2s2);
-        let m: Vec<String> = AllMessages::new(file.messages.clone())
-            .map(|m| m.name.to_string())
-            .collect();
+    #[test]
+    fn test_all_messages() {
+        let (f, _t) = init();
 
         assert_eq!(
-            m,
+            f.all_messages()
+                .map(|msg| msg.name.to_string())
+                .collect::<Vec<String>>(),
             vec![
-                "root".to_string(),
+                "r1".to_string(),
+                "r2".to_string(),
                 "s1".to_string(),
                 "s2".to_string(),
                 "s3".to_string(),
                 "s1s1".to_string(),
                 "s1s2".to_string(),
                 "s1s3".to_string(),
-                "s1s2".to_string(),
-                "s2s2".to_string()
+                "s2s1".to_string(),
+                "s2s2".to_string(),
+                "s2s3".to_string(),
+                "s3s1".to_string(),
+                "s3s2".to_string(),
+                "s3s3".to_string(),
             ]
+        );
+    }
+
+    #[test]
+    fn test_all_enums() {
+        let (f, _t) = init();
+        assert_eq!(
+            f.all_enums()
+                .map(|e| e.name.to_string())
+                .collect::<Vec<String>>(),
+            vec![
+                "e1".to_string(),
+                "e2".to_string(),
+                "r1e1".to_string(),
+                "r1e2".to_string(),
+                "s1e1".to_string(),
+                "s1e2".to_string(),
+                "s2e1".to_string(),
+                "s2e2".to_string(),
+                "s3e1".to_string(),
+                "s1s1e1".to_string(),
+                "s1s2e1".to_string(),
+                "s2s1e1".to_string(),
+                "s3s1e1".to_string(),
+            ],
         );
     }
 }
