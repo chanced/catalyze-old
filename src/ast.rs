@@ -14,7 +14,7 @@ type Packages<L> = Rc<RefCell<HashMap<String, Rc<Package<L>>>>>;
 
 type Nodes<L> = Rc<RefCell<HashMap<String, Node<L>>>>;
 #[derive(Debug)]
-pub struct Ast<L: Lang> {
+pub struct Ast<L> {
     targets: TargetFiles<L>,
     packages: Packages<L>,
     nodes: Nodes<L>,
