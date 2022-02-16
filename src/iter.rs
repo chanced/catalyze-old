@@ -54,20 +54,20 @@ impl<T> Iterator for Iter<T> {
     }
 }
 
-pub struct AllMessages<L> {
-    q: VecDeque<Rc<Message<L>>>,
+pub struct AllMessages<U> {
+    q: VecDeque<Rc<Message<U>>>,
 }
 
-impl<L> AllMessages<L> {
-    pub(crate) fn new(msgs: MessageList<L>) -> Self {
+impl<U> AllMessages<U> {
+    pub(crate) fn new(msgs: MessageList<U>) -> Self {
         Self {
             q: VecDeque::from_iter(msgs.borrow().iter().cloned()),
         }
     }
 }
 
-impl<L> Iterator for AllMessages<L> {
-    type Item = Rc<Message<L>>;
+impl<U> Iterator for AllMessages<U> {
+    type Item = Rc<Message<U>>;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(msg) = self.q.pop_front() {
             for v in msg.messages() {
@@ -79,13 +79,13 @@ impl<L> Iterator for AllMessages<L> {
         }
     }
 }
-pub struct AllEnums<L> {
-    msgs: VecDeque<Rc<Message<L>>>,
-    enums: VecDeque<Rc<Enum<L>>>,
+pub struct AllEnums<U> {
+    msgs: VecDeque<Rc<Message<U>>>,
+    enums: VecDeque<Rc<Enum<U>>>,
 }
 
-impl<L> AllEnums<L> {
-    pub(crate) fn new(enums: EnumList<L>, msgs: MessageList<L>) -> Self {
+impl<U> AllEnums<U> {
+    pub(crate) fn new(enums: EnumList<U>, msgs: MessageList<U>) -> Self {
         Self {
             msgs: VecDeque::from_iter(msgs.borrow().iter().cloned()),
             enums: VecDeque::from_iter(enums.borrow().iter().cloned()),
@@ -93,8 +93,8 @@ impl<L> AllEnums<L> {
     }
 }
 
-impl<L> Iterator for AllEnums<L> {
-    type Item = Rc<Enum<L>>;
+impl<U> Iterator for AllEnums<U> {
+    type Item = Rc<Enum<U>>;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(enum_) = self.enums.pop_front() {
             Some(enum_)
@@ -115,13 +115,13 @@ impl<L> Iterator for AllEnums<L> {
     }
 }
 
-pub struct TransitiveImports<L> {
-    queue: VecDeque<Rc<File<L>>>,
-    processed: HashSet<Name<L>>,
+pub struct TransitiveImports<U> {
+    queue: VecDeque<Rc<File<U>>>,
+    processed: HashSet<Name<U>>,
 }
 
-impl<L> TransitiveImports<L> {
-    pub(crate) fn new(files: WeakFileList<L>) -> Self {
+impl<U> TransitiveImports<U> {
+    pub(crate) fn new(files: WeakFileList<U>) -> Self {
         Self {
             queue: VecDeque::from_iter(files.borrow().iter().map(|f| f.upgrade().unwrap())),
             processed: HashSet::new(),
@@ -129,8 +129,8 @@ impl<L> TransitiveImports<L> {
     }
 }
 
-impl<L: Clone> Iterator for TransitiveImports<L> {
-    type Item = Rc<File<L>>;
+impl<U: Clone> Iterator for TransitiveImports<U> {
+    type Item = Rc<File<U>>;
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(file) = self.queue.pop_front() {
             if !self.processed.contains(&file.name) {

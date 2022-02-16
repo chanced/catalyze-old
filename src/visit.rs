@@ -4,53 +4,53 @@ use std::rc::Rc;
 use crate::util::{self, Lang};
 use crate::{Enum, EnumValue, Extension, Field, File, Message, Method, Oneof, Package, Service};
 
-pub trait Visitor<L> {
+pub trait Visitor<U> {
     type Error;
 
-    fn visit_package(&mut self, pkg: Rc<Package<L>>) -> Result<(), Self::Error> {
+    fn visit_package(&mut self, pkg: Rc<Package<U>>) -> Result<(), Self::Error> {
         visit_package(self, pkg)
     }
 
-    fn visit_file(&mut self, file: Rc<File<L>>) -> Result<(), Self::Error> {
+    fn visit_file(&mut self, file: Rc<File<U>>) -> Result<(), Self::Error> {
         todo!("not done")
     }
 
-    fn visit_message(&mut self, msg: Rc<Message<L>>) -> Result<(), Self::Error> {
+    fn visit_message(&mut self, msg: Rc<Message<U>>) -> Result<(), Self::Error> {
         todo!("not done")
     }
 
-    fn visit_enum(&mut self, e: Rc<Enum<L>>) -> Result<(), Self::Error> {
+    fn visit_enum(&mut self, e: Rc<Enum<U>>) -> Result<(), Self::Error> {
         todo!("not done")
     }
 
-    fn visit_enum_value(&mut self, value: Rc<EnumValue<L>>) -> Result<(), Self::Error> {
+    fn visit_enum_value(&mut self, value: Rc<EnumValue<U>>) -> Result<(), Self::Error> {
         todo!("not done")
     }
 
-    fn visit_field(&mut self, file: Rc<Field<L>>) -> Result<(), Self::Error> {
+    fn visit_field(&mut self, file: Rc<Field<U>>) -> Result<(), Self::Error> {
         todo!("not done")
     }
 
-    fn visit_extension(&mut self, ext: Rc<Extension<L>>) -> Result<(), Self::Error> {
+    fn visit_extension(&mut self, ext: Rc<Extension<U>>) -> Result<(), Self::Error> {
         todo!("not done")
     }
 
-    fn visit_one_of(&mut self, one_of: Rc<Oneof<L>>) -> Result<(), Self::Error> {
+    fn visit_one_of(&mut self, one_of: Rc<Oneof<U>>) -> Result<(), Self::Error> {
         todo!("not done")
     }
 
-    fn visit_service(&mut self, service: Rc<Service<L>>) -> Result<(), Self::Error> {
+    fn visit_service(&mut self, service: Rc<Service<U>>) -> Result<(), Self::Error> {
         todo!("not done")
     }
 
-    fn visit_method(&mut self, method: Rc<Method<L>>) -> Result<(), Self::Error> {
+    fn visit_method(&mut self, method: Rc<Method<U>>) -> Result<(), Self::Error> {
         todo!("not done")
     }
 }
 
-pub fn visit_package<L, V>(v: &mut V, pkg: Rc<Package<L>>) -> Result<(), V::Error>
+pub fn visit_package<U, V>(v: &mut V, pkg: Rc<Package<U>>) -> Result<(), V::Error>
 where
-    V: Visitor<L> + ?Sized,
+    V: Visitor<U> + ?Sized,
 {
     for file in pkg.files() {
         v.visit_file(file)?;
@@ -58,9 +58,9 @@ where
     Ok(())
 }
 
-pub fn visit_file<L, V>(v: &mut V, file: Rc<File<L>>) -> Result<(), V::Error>
+pub fn visit_file<U, V>(v: &mut V, file: Rc<File<U>>) -> Result<(), V::Error>
 where
-    V: Visitor<L> + ?Sized,
+    V: Visitor<U> + ?Sized,
 {
     for msg in file.messages() {
         v.visit_message(msg)?;
@@ -106,12 +106,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::cell::RefCell;
 
-    struct MockVisitor<'a, L: Lang> {
-        pkg: &'a Package<L>,
+    struct MockVisitor<'a, U> {
+        pkg: &'a Package<U>,
     }
-    impl<'a, L: Lang> Visitor<L> for MockVisitor<'a, L> {
+    impl<'a, U> Visitor<U> for MockVisitor<'a, U> {
         type Error = anyhow::Error;
     }
 

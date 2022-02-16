@@ -6,10 +6,10 @@ use crate::Name;
 use std::cell::RefCell;
 use std::rc::Rc;
 #[derive(Debug, Clone)]
-pub struct Package<L> {
+pub struct Package<U> {
     pub descriptor: prost_types::FileDescriptorProto,
-    pub(crate) files: FileList<L>,
-    pub name: Name<L>,
+    pub(crate) files: FileList<U>,
+    pub name: Name<U>,
 }
 
 impl Default for Package<Unspecified> {
@@ -22,8 +22,8 @@ impl Default for Package<Unspecified> {
     }
 }
 
-impl<L> Package<L> {
-    pub(crate) fn new(descriptor: prost_types::FileDescriptorProto, lang: L) -> Rc<Self> {
+impl<U> Package<U> {
+    pub(crate) fn new(descriptor: prost_types::FileDescriptorProto, lang: U) -> Rc<Self> {
         let name = Name::new(descriptor.name(), lang);
         Rc::new(Self {
             name,
@@ -32,13 +32,13 @@ impl<L> Package<L> {
         })
     }
 
-    pub(crate) fn add_file(&self, file: Rc<File<L>>) {
+    pub(crate) fn add_file(&self, file: Rc<File<U>>) {
         self.files.borrow_mut().push(file);
     }
     pub fn file_descriptor(&self) -> &prost_types::FileDescriptorProto {
         &self.descriptor
     }
-    pub fn files(&self) -> Vec<Rc<File<L>>> {
+    pub fn files(&self) -> Vec<Rc<File<U>>> {
         self.files.borrow().iter().map(Rc::clone).collect()
     }
     pub fn is_well_known(&self) -> bool {

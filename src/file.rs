@@ -11,44 +11,44 @@ use std::path::PathBuf;
 // use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 
-pub(crate) type WeakFileList<L> = Rc<RefCell<Vec<Weak<File<L>>>>>;
+pub(crate) type WeakFileList<U> = Rc<RefCell<Vec<Weak<File<U>>>>>;
 
-pub(crate) type FileList<L> = Rc<RefCell<Vec<Rc<File<L>>>>>;
+pub(crate) type FileList<U> = Rc<RefCell<Vec<Rc<File<U>>>>>;
 
-pub(crate) fn new_file_list<L>() -> FileList<L> {
+pub(crate) fn new_file_list<U>() -> FileList<U> {
     Rc::new(RefCell::new(Vec::default()))
 }
 
 #[derive(Debug, Clone)]
-pub struct File<L> {
+pub struct File<U> {
     pub fully_qualified_name: String,
     pub descriptor: prost_types::FileDescriptorProto,
-    pub name: Name<L>,
+    pub name: Name<U>,
     pub file_path: PathBuf,
     pub build_target: bool,
-    pub(crate) pkg: Option<Weak<Package<L>>>,
-    pub(crate) dependents: WeakFileList<L>,
-    pub(crate) imports: WeakFileList<L>,
-    pub(crate) def_exts: ExtensionList<L>,
-    pub(crate) messages: MessageList<L>,
-    pub(crate) enums: EnumList<L>,
-    pub(crate) services: ServiceList<L>,
+    pub(crate) pkg: Option<Weak<Package<U>>>,
+    pub(crate) dependents: WeakFileList<U>,
+    pub(crate) imports: WeakFileList<U>,
+    pub(crate) def_exts: ExtensionList<U>,
+    pub(crate) messages: MessageList<U>,
+    pub(crate) enums: EnumList<U>,
+    pub(crate) services: ServiceList<U>,
     pub(crate) src_info: Rc<RefCell<Option<Rc<prost_types::SourceCodeInfo>>>>,
     pub(crate) pkg_info: Rc<RefCell<Option<Rc<prost_types::SourceCodeInfo>>>>,
 }
 
-impl<L: Lang> BuildTarget for File<L> {
+impl<U> BuildTarget for File<U> {
     fn build_target(&self) -> bool {
         self.build_target
     }
 }
 
-impl<L> File<L> {
+impl<U> File<U> {
     pub(crate) fn new(
         build_target: bool,
         descriptor: prost_types::FileDescriptorProto,
-        package: Option<Rc<Package<L>>>,
-        lang: L,
+        package: Option<Rc<Package<U>>>,
+        lang: U,
     ) -> Rc<Self> {
         let pkg = package.clone().map(|p| Rc::downgrade(&p));
         let name = Name::new(descriptor.name(), lang);
@@ -80,29 +80,29 @@ impl<L> File<L> {
         f
     }
 
-    pub fn transitive_imports(&self) -> TransitiveImports<L> {
+    pub fn transitive_imports(&self) -> TransitiveImports<U> {
         TransitiveImports::new(self.imports.clone())
     }
 
     /// all_messages returns an iterator of all top-level and nested messages from this
     /// file.
-    pub fn all_messages(&self) -> AllMessages<L> {
+    pub fn all_messages(&self) -> AllMessages<U> {
         AllMessages::new(self.messages.clone())
     }
 
-    pub fn enums(&self) -> Iter<Enum<L>> {
+    pub fn enums(&self) -> Iter<Enum<U>> {
         Iter::new(self.enums.clone())
     }
 
     /// all_enums returns an iterator of all top-level and nested enums from this file.
-    pub fn all_enums(&self) -> AllEnums<L> {
+    pub fn all_enums(&self) -> AllEnums<U> {
         AllEnums::new(self.enums.clone(), self.messages.clone())
     }
 
     pub fn file_path(&self) -> &PathBuf {
         &self.file_path
     }
-    pub fn package(&self) -> Option<Rc<Package<L>>> {
+    pub fn package(&self) -> Option<Rc<Package<U>>> {
         self.pkg.clone().map(|p| p.upgrade().unwrap())
     }
     pub fn package_source_code_info(&self) -> Option<Rc<prost_types::SourceCodeInfo>> {
@@ -114,42 +114,42 @@ impl<L> File<L> {
 
     /// returns an iterator of top-level messages for this File. Nested messages
     /// are not included.
-    pub fn messages(&self) -> Iter<Message<L>> {
+    pub fn messages(&self) -> Iter<Message<U>> {
         Iter::new(self.messages.clone())
     }
     /// returns an iterator of services for this File.
-    pub fn services(&self) -> Iter<Service<L>> {
+    pub fn services(&self) -> Iter<Service<U>> {
         Iter::new(self.services.clone())
     }
     /// defined_extensions returns an iterator of extensions defined in this
     /// file.
-    pub fn defined_extensions(&self) -> Iter<Extension<L>> {
+    pub fn defined_extensions(&self) -> Iter<Extension<U>> {
         Iter::new(self.def_exts.clone())
     }
-    pub fn dependencies(&self) -> UpgradeIter<File<L>> {
+    pub fn dependencies(&self) -> UpgradeIter<File<U>> {
         UpgradeIter::new(self.imports.clone())
     }
     /// dependents returns an iterator of all files where the given file was
     /// directly or transitively imported.
-    pub fn dependents(&self) -> UpgradeIter<File<L>> {
+    pub fn dependents(&self) -> UpgradeIter<File<U>> {
         UpgradeIter::new(self.dependents.clone())
     }
-    pub(crate) fn add_enum(&self, e: Rc<Enum<L>>) {
+    pub(crate) fn add_enum(&self, e: Rc<Enum<U>>) {
         self.enums.borrow_mut().push(e);
     }
-    pub(crate) fn add_import(&self, file: Rc<File<L>>) {
+    pub(crate) fn add_import(&self, file: Rc<File<U>>) {
         self.imports.borrow_mut().push(Rc::downgrade(&file));
     }
-    pub(crate) fn add_dependent(&self, file: Rc<File<L>>) {
+    pub(crate) fn add_dependent(&self, file: Rc<File<U>>) {
         self.dependents.borrow_mut().push(Rc::downgrade(&file));
     }
-    pub(crate) fn add_extension(&self, ext: Rc<Extension<L>>) {
+    pub(crate) fn add_extension(&self, ext: Rc<Extension<U>>) {
         self.def_exts.borrow_mut().push(ext);
     }
-    pub(crate) fn add_message(&self, msg: Rc<Message<L>>) {
+    pub(crate) fn add_message(&self, msg: Rc<Message<U>>) {
         self.messages.borrow_mut().push(msg);
     }
-    pub(crate) fn add_service(&self, service: Rc<Service<L>>) {
+    pub(crate) fn add_service(&self, service: Rc<Service<U>>) {
         self.services.borrow_mut().push(service);
     }
     pub(crate) fn set_src_info(&self, src_info: prost_types::SourceCodeInfo) {

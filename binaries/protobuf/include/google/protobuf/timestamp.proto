@@ -32,13 +32,13 @@ syntax = "proto3";
 
 package google.protobuf;
 
-option csharp_namespace = "Google.Protobuf.WellKnownTypes";
-option cc_enable_arenas = true;
-option go_package = "google.golang.org/protobuf/types/known/timestamppb";
-option java_package = "com.google.protobuf";
+option csharp_namespace     = "Google.Protobuf.WellKnownTypes";
+option cc_enable_arenas     = true;
+option go_package           = "google.golang.org/protobuf/types/known/timestamppb";
+option java_package         = "com.google.protobuf";
 option java_outer_classname = "TimestampProto";
-option java_multiple_files = true;
-option objc_class_prefix = "GPB";
+option java_multiple_files  = true;
+option objc_class_prefix    = "GPB";
 
 // A Timestamp represents a point in time independent of any time zone or local
 // calendar, encoded as a count of seconds and fractions of seconds at
@@ -127,21 +127,21 @@ option objc_class_prefix = "GPB";
 // method. In Python, a standard `datetime.datetime` object can be converted
 // to this format using
 // [`strftime`](https://docs.python.org/2/library/time.html#time.strftime) with
-// the time format spec '%Y-%m-%dT%H:%M:%L.%fZ'. Likewise, in Java, one can use
+// the time format spec '%Y-%m-%dT%H:%M:%U.%fZ'. Likewise, in Java, one can use
 // the Joda Time's [`ISODateTimeFormat.dateTime()`](
 // http://www.joda.org/joda-time/apidocs/org/joda/time/format/ISODateTimeFormat.html#dateTime%2D%2D
 // ) to obtain a formatter capable of generating timestamps in this format.
 //
 //
 message Timestamp {
-  // Represents seconds of UTC time since Unix epoch
-  // 1970-01-01T00:00:00Z. Must be from 0001-01-01T00:00:00Z to
-  // 9999-12-31T23:59:59Z inclusive.
-  int64 seconds = 1;
+    // Represents seconds of UTC time since Unix epoch
+    // 1970-01-01T00:00:00Z. Must be from 0001-01-01T00:00:00Z to
+    // 9999-12-31T23:59:59Z inclusive.
+    int64 seconds = 1;
 
-  // Non-negative fractions of a second at nanosecond resolution. Negative
-  // second values with fractions must still have non-negative nanos values
-  // that count forward in time. Must be from 0 to 999,999,999
-  // inclusive.
-  int32 nanos = 2;
+    // Non-negative fractions of a second at nanosecond resolution. Negative
+    // second values with fractions must still have non-negative nanos values
+    // that count forward in time. Must be from 0 to 999,999,999
+    // inclusive.
+    int32 nanos = 2;
 }

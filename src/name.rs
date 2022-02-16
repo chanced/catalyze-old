@@ -8,23 +8,23 @@ use std::hash::{Hash, Hasher};
 use std::{fmt, ops::Add};
 
 #[derive(Clone)]
-pub struct Name<L> {
+pub struct Name<U> {
     val: String,
-    lang: L,
+    lang: U,
 }
 
-impl<L> Hash for Name<L> {
+impl<U> Hash for Name<U> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.val.hash(state);
     }
 }
-impl<L> PartialEq for Name<L> {
+impl<U> PartialEq for Name<U> {
     fn eq(&self, other: &Self) -> bool {
         self.val == other.val
     }
 }
 
-impl<L> Eq for Name<L> {}
+impl<U> Eq for Name<U> {}
 
 impl Default for Name<Unspecified> {
     fn default() -> Self {
@@ -35,22 +35,22 @@ impl Default for Name<Unspecified> {
     }
 }
 
-impl<L> Name<L> {
-    pub fn new(s: &str, lang: L) -> Self {
+impl<U> Name<U> {
+    pub fn new(s: &str, lang: U) -> Self {
         Self {
             val: s.to_string(),
             lang,
         }
     }
 }
-impl<L: Clone> Name<L> {
+impl<U: Clone> Name<U> {
     /// lang is the specified programming language targeted by the current generator.
-    pub fn lang(&self) -> L {
+    pub fn lang(&self) -> U {
         self.lang.clone()
     }
 }
 
-impl<L> Name<L> {
+impl<U> Name<U> {
     pub(crate) fn is_well_known_package(&self) -> bool {
         self.val.starts_with(WELL_KNNOWN_TYPE_PACKAGE)
     }
@@ -59,7 +59,7 @@ impl<L> Name<L> {
     }
 }
 
-impl<L: Lang> Add<Self> for Name<L> {
+impl<U: Clone> Add<Self> for Name<U> {
     type Output = Self;
     fn add(self, other: Self) -> Self {
         Self {
@@ -68,7 +68,7 @@ impl<L: Lang> Add<Self> for Name<L> {
         }
     }
 }
-impl<L: Lang> Add<&str> for Name<L> {
+impl<U: Clone> Add<&str> for Name<U> {
     type Output = Self;
 
     fn add(self, rhs: &str) -> Self::Output {
@@ -76,7 +76,7 @@ impl<L: Lang> Add<&str> for Name<L> {
     }
 }
 
-impl<L: Clone> Add<String> for Name<L> {
+impl<U: Clone> Add<String> for Name<U> {
     type Output = Self;
     fn add(self, rhs: String) -> Self::Output {
         Name::new(&(self.val + rhs.as_str()), self.lang.clone())
@@ -117,43 +117,43 @@ impl ToCamelCase for str {
     }
 }
 
-impl<L: Lang> ToKebabCase for Name<L> {
+impl<U: Lang> ToKebabCase for Name<U> {
     fn to_kebab_case(&self) -> Self {
         self.lang.to_kebab_case(self)
     }
 }
-impl<L: Lang> ToSnakeCase for Name<L> {
+impl<U: Lang> ToSnakeCase for Name<U> {
     fn to_snake_case(&self) -> Self {
         self.lang.to_snake_case(self)
     }
 }
 
-impl<L: Lang> ToPascalCase for Name<L> {
+impl<U: Lang> ToPascalCase for Name<U> {
     fn to_pascal_case(&self) -> Self {
         self.lang.to_pascal_case(self)
     }
 }
 
-impl<L: Lang> ToScreamingSnakeCase for Name<L> {
+impl<U: Lang> ToScreamingSnakeCase for Name<U> {
     fn to_screaming_snake_case(&self) -> Self {
         self.lang.to_screaming_snake_case(self)
     }
 }
 
-impl<L> fmt::Debug for Name<L> {
+impl<U> fmt::Debug for Name<U> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.val)
     }
 }
 
-impl<L: Lang> fmt::Display for Name<L> {
+impl<U> fmt::Display for Name<U> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.val)
     }
 }
 
-// impl<L: Language> ToKebabCase for Name<L> {
-//     fn to_kebab_case(&self) -> Name<L> {
+// impl<U: Language> ToKebabCase for Name<U> {
+//     fn to_kebab_case(&self) -> Name<U> {
 //         self.lang.to_kebab_case(self.clone())
 //     }
 // }

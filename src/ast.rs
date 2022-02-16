@@ -1,4 +1,4 @@
-use crate::new_extension_list;
+use crate::Extension;
 use crate::ExtensionList;
 use crate::Lang;
 use crate::Node;
@@ -9,60 +9,55 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::rc::Rc;
 
-type TargetFiles<L> = Rc<RefCell<HashMap<String, Rc<File<L>>>>>;
-type Packages<L> = Rc<RefCell<HashMap<String, Rc<Package<L>>>>>;
-
-type Nodes<L> = Rc<RefCell<HashMap<String, Node<L>>>>;
 #[derive(Debug)]
-pub struct Ast<L> {
-    targets: TargetFiles<L>,
-    packages: Packages<L>,
-    nodes: Nodes<L>,
-    extensions: ExtensionList<L>,
-    pub lang: L,
+pub struct Ast<U> {
+    pub targets: HashMap<String, Rc<File<U>>>,
+    pub packages: HashMap<String, Rc<Package<U>>>,
+    pub nodes: HashMap<String, Node<U>>,
+    pub extensions: Vec<Rc<Extension<U>>>,
+    pub util: U,
 }
 
 // Ast encapsulates the entirety of the input CodeGeneratorRequest from protoc,
 // parsed to build the Node graph used by catalyze.
-impl<L: Lang> Ast<L> {
-    // targets returns a hashmap of the files specified in the protoc execution.
-    pub fn targets(&self) -> HashMap<String, Rc<File<L>>> {
-        self.targets.borrow().clone()
+impl<U> Ast<U> {
+    pub fn package(&self, name: &str) -> Option<Rc<Package<U>>> {
+        self.packages.get(name).cloned()
     }
-    // packages returns all the imported packages (including those for the target
-    // Files). This is limited to just the files that were imported by target
-    // protos, either directly or transitively.
-    pub fn packages(&self) -> HashMap<String, Rc<Package<L>>> {
-        self.packages.borrow().clone()
-    }
-    pub fn package(&self, name: &str) -> Option<Rc<Package<L>>> {
-        self.packages.borrow().get(name).cloned()
-    }
-    pub fn file(&self, name: &str) -> Option<Rc<File<L>>> {
-        self.targets.borrow().get(name).cloned()
-    }
-    // node allows getting a Node from the graph by its fully-qualified name
-    // (FQN). The FQN uses dot notation of the form ".{package}.{node}", or the
-    // input path for files.
-    pub fn node(&self, name: &str) -> Option<Node<L>> {
-        self.nodes.borrow().get(name).cloned()
+    pub fn file(&self, name: &str) -> Option<Rc<File<U>>> {
+        self.targets.get(name).cloned()
     }
 }
 
-fn create_map<K, V>(size: Option<usize>) -> Rc<RefCell<HashMap<K, V>>> {
-    match size {
-        Some(size) => Rc::new(RefCell::new(HashMap::with_capacity(size))),
-        None => Rc::new(RefCell::new(HashMap::default())),
+impl<U> Ast<U> {
+    pub fn new(util: U) -> Self {
+        Self {
+            util,
+            targets: HashMap::new(),
+            packages: HashMap::new(),
+            nodes: HashMap::new(),
+            extensions: Vec::new(),
+        }
     }
 }
+
+impl<U: Clone> Ast<U> {
+    // node allows getting a Node from the graph by its fully-qualified name
+    // (FQN). The FQN uses dot notation of the form ".{package}.{node}", or the
+    // input path for files.
+    pub fn node(&self, name: &str) -> Option<Node<U>> {
+        self.nodes.get(name).cloned()
+    }
+}
+
 // process_code_generator_request
-pub fn process_code_generator_request<L: Lang>(request: CodeGeneratorRequest, lang: L) -> Ast<L> {
+pub fn process_code_generator_request<U>(request: CodeGeneratorRequest, util: U) -> Ast<U> {
     let mut ast = Ast {
-        lang,
-        targets: create_map(Some(request.proto_file.len())),
-        packages: create_map(None),
-        nodes: create_map(None),
-        extensions: new_extension_list(),
+        util,
+        targets: HashMap::with_capacity(request.proto_file.len()),
+        packages: HashMap::default(),
+        nodes: HashMap::default(),
+        extensions: Vec::default(),
     };
 
     let target_list = request
@@ -74,8 +69,16 @@ pub fn process_code_generator_request<L: Lang>(request: CodeGeneratorRequest, la
     for file in request.proto_file {
         let pkg = file.package;
     }
-
     ast
+}
+
+impl<U> Ast<U> {
+    fn hydrate_pkg(&self, fd: &prost_types::FileDescriptorProto) -> Rc<Package<U>> {
+        let lookup = fd.package();
+        if self.packages.get(lookup).is_some() {
+            return self.packages.get(lookup).unwrap().clone();
+        }
+    }
 }
 
 enum Source {

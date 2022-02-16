@@ -1,7 +1,7 @@
 use crate::Name;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Method<L> {
-    pub name: Name<L>,
+pub struct Method<U> {
+    pub name: Name<U>,
     pub desc: prost_types::MethodDescriptorProto,
 }

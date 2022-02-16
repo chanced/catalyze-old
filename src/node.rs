@@ -3,18 +3,18 @@ use std::rc::Rc;
 use crate::{Enum, EnumValue, Field, File, Message, Method, Name, Oneof, Service};
 
 #[derive(Debug, Clone)]
-pub enum Node<L> {
-    File(Rc<File<L>>),
-    Message(Rc<Message<L>>),
-    OneOf(Rc<Oneof<L>>),
-    Enum(Rc<Enum<L>>),
-    EnumValue(Rc<EnumValue<L>>),
-    Service(Rc<Service<L>>),
-    Method(Rc<Method<L>>),
-    Field(Rc<Field<L>>),
+pub enum Node<U> {
+    File(Rc<File<U>>),
+    Message(Rc<Message<U>>),
+    OneOf(Rc<Oneof<U>>),
+    Enum(Rc<Enum<U>>),
+    EnumValue(Rc<EnumValue<U>>),
+    Service(Rc<Service<U>>),
+    Method(Rc<Method<U>>),
+    Field(Rc<Field<U>>),
 }
-impl<L> Node<L> {
-    pub fn name(&self) -> &Name<L> {
+impl<U> Node<U> {
+    pub fn name(&self) -> &Name<U> {
         match self {
             Node::File(f) => &f.name,
             Node::Message(m) => &m.name,
@@ -27,45 +27,45 @@ impl<L> Node<L> {
         }
     }
 }
-impl<L> From<File<L>> for Node<L> {
-    fn from(file: File<L>) -> Self {
+impl<U> From<File<U>> for Node<U> {
+    fn from(file: File<U>) -> Self {
         Node::File(Rc::new(file))
     }
 }
-impl<L> From<Message<L>> for Node<L> {
-    fn from(message: Message<L>) -> Self {
+impl<U> From<Message<U>> for Node<U> {
+    fn from(message: Message<U>) -> Self {
         Node::Message(Rc::new(message))
     }
 }
-impl<L> From<Oneof<L>> for Node<L> {
-    fn from(oneof: Oneof<L>) -> Self {
+impl<U> From<Oneof<U>> for Node<U> {
+    fn from(oneof: Oneof<U>) -> Self {
         Node::OneOf(Rc::new(oneof))
     }
 }
-impl<L> From<Enum<L>> for Node<L> {
-    fn from(enum_: Enum<L>) -> Self {
+impl<U> From<Enum<U>> for Node<U> {
+    fn from(enum_: Enum<U>) -> Self {
         Node::Enum(Rc::new(enum_))
     }
 }
 
-impl<L> From<Service<L>> for Node<L> {
-    fn from(service: Service<L>) -> Self {
+impl<U> From<Service<U>> for Node<U> {
+    fn from(service: Service<U>) -> Self {
         Node::Service(Rc::new(service))
     }
 }
-impl<L> From<Method<L>> for Node<L> {
-    fn from(method: Method<L>) -> Self {
+impl<U> From<Method<U>> for Node<U> {
+    fn from(method: Method<U>) -> Self {
         Node::Method(Rc::new(method))
     }
 }
-impl<L> From<Field<L>> for Node<L> {
-    fn from(field: Field<L>) -> Self {
+impl<U> From<Field<U>> for Node<U> {
+    fn from(field: Field<U>) -> Self {
         Node::Field(Rc::new(field))
     }
 }
 
-impl<L> From<EnumValue<L>> for Node<L> {
-    fn from(enum_value: EnumValue<L>) -> Self {
+impl<U> From<EnumValue<U>> for Node<U> {
+    fn from(enum_value: EnumValue<U>) -> Self {
         Node::EnumValue(Rc::new(enum_value))
     }
 }
