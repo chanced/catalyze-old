@@ -1,4 +1,4 @@
-use crate::lang::{Lang, Unspecified};
+use crate::util::{Lang, Unspecified};
 use crate::WELL_KNNOWN_TYPE_PACKAGE;
 pub use heck::{
     AsLowerCamelCase, ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase,
@@ -161,15 +161,15 @@ impl<L: Lang> fmt::Display for Name<L> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lang;
+    use crate::util;
     #[test]
     fn test_to_kebab() {
-        let n = Name::new("hello_world", lang::Rust);
+        let n = Name::new("hello_world", util::Rust);
         assert_eq!(n.to_kebab_case().to_string(), "hello-world".to_string());
     }
     #[test]
     fn test_to_pascal() {
-        let n = Name::new("hello_world", lang::Rust);
+        let n = Name::new("hello_world", util::Rust);
         assert_eq!(n.to_pascal_case().to_string(), "HelloWorld".to_string());
     }
 }

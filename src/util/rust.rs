@@ -1,8 +1,8 @@
 use heck::ToSnakeCase;
 use heck::{ToLowerCamelCase, ToPascalCase};
 
-use crate::lang::Keyword;
-use crate::lang::Lang;
+use crate::util::Keyword;
+use crate::util::Lang;
 use crate::Name;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 

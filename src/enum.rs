@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     container::{Container, InternalContainer},
-    lang::{Lang, Unspecified},
+    util::{Lang, Unspecified},
     Message, Name, Package,
 };
 

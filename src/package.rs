@@ -1,4 +1,5 @@
-use crate::lang::Lang;
+use crate::file::{new_file_list, FileList};
+use crate::util::{Lang, Unspecified};
 pub use crate::File;
 use crate::Name;
 
@@ -7,21 +8,30 @@ use std::rc::Rc;
 #[derive(Debug, Clone)]
 pub struct Package<L> {
     pub descriptor: prost_types::FileDescriptorProto,
-    pub(crate) files: RefCell<Vec<Rc<File<L>>>>,
+    pub(crate) files: FileList<L>,
     pub name: Name<L>,
 }
 
-impl<L: Lang> Package<L> {
-    pub(crate) fn new(descriptor: prost_types::FileDescriptorProto, lang: L) -> Self {
-        let name = Name::new(descriptor.name(), lang);
+impl Default for Package<Unspecified> {
+    fn default() -> Self {
         Self {
-            name,
-            descriptor,
-            files: RefCell::new(Vec::new()),
+            descriptor: Default::default(),
+            files: Default::default(),
+            name: Default::default(),
         }
     }
 }
+
 impl<L> Package<L> {
+    pub(crate) fn new(descriptor: prost_types::FileDescriptorProto, lang: L) -> Rc<Self> {
+        let name = Name::new(descriptor.name(), lang);
+        Rc::new(Self {
+            name,
+            descriptor,
+            files: new_file_list(),
+        })
+    }
+
     pub(crate) fn add_file(&self, file: Rc<File<L>>) {
         self.files.borrow_mut().push(file);
     }

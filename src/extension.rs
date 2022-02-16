@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{lang::Lang, Name};
+use crate::{util::Lang, Name};
 
 pub(crate) type ExtensionList<L> = Rc<RefCell<Vec<Rc<Extension<L>>>>>;
 

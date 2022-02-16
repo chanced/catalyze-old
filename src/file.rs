@@ -1,6 +1,6 @@
 use crate::container::BuildTarget;
-use crate::iter::{AllEnums, AllMessages, Iter, UpgradeIter};
-use crate::lang::{Lang, Unspecified};
+use crate::iter::{AllEnums, AllMessages, Iter, TransitiveImports, UpgradeIter};
+use crate::util::{Lang, Unspecified};
 use crate::{
     Enum, EnumList, Extension, ExtensionList, Message, MessageList, Name, Package, Service,
     ServiceList,
@@ -15,6 +15,10 @@ pub(crate) type WeakFileList<L> = Rc<RefCell<Vec<Weak<File<L>>>>>;
 
 pub(crate) type FileList<L> = Rc<RefCell<Vec<Rc<File<L>>>>>;
 
+pub(crate) fn new_file_list<L>() -> FileList<L> {
+    Rc::new(RefCell::new(Vec::default()))
+}
+
 #[derive(Debug, Clone)]
 pub struct File<L> {
     pub fully_qualified_name: String,
@@ -24,7 +28,7 @@ pub struct File<L> {
     pub build_target: bool,
     pub(crate) pkg: Option<Weak<Package<L>>>,
     pub(crate) dependents: WeakFileList<L>,
-    pub(crate) dependencies: WeakFileList<L>,
+    pub(crate) imports: WeakFileList<L>,
     pub(crate) def_exts: ExtensionList<L>,
     pub(crate) messages: MessageList<L>,
     pub(crate) enums: EnumList<L>,
@@ -61,7 +65,7 @@ impl<L> File<L> {
             build_target,
             file_path,
             dependents: Rc::new(RefCell::new(Vec::new())),
-            dependencies: Rc::new(RefCell::new(Vec::new())),
+            imports: Rc::new(RefCell::new(Vec::new())),
             def_exts: Rc::new(RefCell::new(Vec::new())),
             messages: Rc::new(RefCell::new(Vec::new())),
             enums: Rc::new(RefCell::new(Vec::new())),
@@ -75,6 +79,11 @@ impl<L> File<L> {
         }
         f
     }
+
+    pub fn transitive_imports(&self) -> TransitiveImports<L> {
+        TransitiveImports::new(self.imports.clone())
+    }
+
     /// all_messages returns an iterator of all top-level and nested messages from this
     /// file.
     pub fn all_messages(&self) -> AllMessages<L> {
@@ -118,7 +127,7 @@ impl<L> File<L> {
         Iter::new(self.def_exts.clone())
     }
     pub fn dependencies(&self) -> UpgradeIter<File<L>> {
-        UpgradeIter::new(self.dependencies.clone())
+        UpgradeIter::new(self.imports.clone())
     }
     /// dependents returns an iterator of all files where the given file was
     /// directly or transitively imported.
@@ -128,8 +137,8 @@ impl<L> File<L> {
     pub(crate) fn add_enum(&self, e: Rc<Enum<L>>) {
         self.enums.borrow_mut().push(e);
     }
-    pub(crate) fn add_dependency(&self, file: Rc<File<L>>) {
-        self.dependencies.borrow_mut().push(Rc::downgrade(&file));
+    pub(crate) fn add_import(&self, file: Rc<File<L>>) {
+        self.imports.borrow_mut().push(Rc::downgrade(&file));
     }
     pub(crate) fn add_dependent(&self, file: Rc<File<L>>) {
         self.dependents.borrow_mut().push(Rc::downgrade(&file));
@@ -161,7 +170,7 @@ impl Default for File<Unspecified> {
             build_target: Default::default(),
             pkg: Default::default(),
             dependents: Default::default(),
-            dependencies: Default::default(),
+            imports: Default::default(),
             def_exts: Default::default(),
             messages: Default::default(),
             enums: Default::default(),

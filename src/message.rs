@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use crate::container::BuildTarget;
 use crate::iter::{AllEnums, AllMessages, UpgradeIter};
-use crate::lang::{Lang, Unspecified};
+use crate::util::{Lang, Unspecified};
 use crate::{container::Container, container::InternalContainer, Field, Name, Oneof};
 use crate::{iter::Iter, Package, WellKnownType};
 use crate::{Enum, EnumList, FieldList, OneofList};

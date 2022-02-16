@@ -1,10 +1,10 @@
 use std::borrow::Borrow;
 use std::rc::Rc;
 
-use crate::lang::{self, Lang};
+use crate::util::{self, Lang};
 use crate::{Enum, EnumValue, Extension, Field, File, Message, Method, Oneof, Package, Service};
 
-pub trait Visitor<L: Lang> {
+pub trait Visitor<L> {
     type Error;
 
     fn visit_package(&mut self, pkg: Rc<Package<L>>) -> Result<(), Self::Error> {
@@ -23,7 +23,7 @@ pub trait Visitor<L: Lang> {
         todo!("not done")
     }
 
-    fn visit_enum_value(&mut self, ev: Rc<EnumValue<L>>) -> Result<(), Self::Error> {
+    fn visit_enum_value(&mut self, value: Rc<EnumValue<L>>) -> Result<(), Self::Error> {
         todo!("not done")
     }
 
@@ -31,7 +31,7 @@ pub trait Visitor<L: Lang> {
         todo!("not done")
     }
 
-    fn visit_extension(&mut self, extension: Rc<Extension<L>>) -> Result<(), Self::Error> {
+    fn visit_extension(&mut self, ext: Rc<Extension<L>>) -> Result<(), Self::Error> {
         todo!("not done")
     }
 
@@ -51,7 +51,6 @@ pub trait Visitor<L: Lang> {
 pub fn visit_package<L, V>(v: &mut V, pkg: Rc<Package<L>>) -> Result<(), V::Error>
 where
     V: Visitor<L> + ?Sized,
-    L: Lang,
 {
     for file in pkg.files() {
         v.visit_file(file)?;
@@ -62,7 +61,6 @@ where
 pub fn visit_file<L, V>(v: &mut V, file: Rc<File<L>>) -> Result<(), V::Error>
 where
     V: Visitor<L> + ?Sized,
-    L: Lang,
 {
     for msg in file.messages() {
         v.visit_message(msg)?;

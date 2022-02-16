@@ -9,16 +9,10 @@ use crate::{file::WeakFileList, Enum, EnumList, File, Lang, Message, MessageList
 pub struct UpgradeIter<T> {
     nodes: Rc<RefCell<Vec<Weak<T>>>>,
     idx: usize,
-    size: usize,
 }
 impl<T> UpgradeIter<T> {
     pub(crate) fn new(nodes: Rc<RefCell<Vec<Weak<T>>>>) -> Self {
-        let size = nodes.borrow().len();
-        Self {
-            nodes,
-            idx: 0,
-            size,
-        }
+        Self { nodes, idx: 0 }
     }
 }
 impl<T> Iterator for UpgradeIter<T> {
@@ -141,7 +135,7 @@ impl<L: Clone> Iterator for TransitiveImports<L> {
         while let Some(file) = self.queue.pop_front() {
             if !self.processed.contains(&file.name) {
                 self.processed.insert(file.name.clone());
-                for f in file.dependencies.borrow().iter() {
+                for f in file.imports.borrow().iter() {
                     self.queue.push_back(f.upgrade().unwrap());
                 }
                 return Some(file);
@@ -154,7 +148,9 @@ impl<L: Clone> Iterator for TransitiveImports<L> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{container::Container, lang::Unspecified, File, Name};
+    use crate::{
+        container::Container, file::new_file_list, util::Unspecified, File, Name, Package,
+    };
     use std::collections::HashMap;
 
     type MsgTable = HashMap<String, Rc<Message<Unspecified>>>;
@@ -225,20 +221,8 @@ mod tests {
                 .map(|msg| msg.name.to_string())
                 .collect::<Vec<String>>(),
             vec![
-                "r1".to_string(),
-                "r2".to_string(),
-                "s1".to_string(),
-                "s2".to_string(),
-                "s3".to_string(),
-                "s1s1".to_string(),
-                "s1s2".to_string(),
-                "s1s3".to_string(),
-                "s2s1".to_string(),
-                "s2s2".to_string(),
-                "s2s3".to_string(),
-                "s3s1".to_string(),
-                "s3s2".to_string(),
-                "s3s3".to_string(),
+                "r1", "r2", "s1", "s2", "s3", "s1s1", "s1s2", "s1s3", "s2s1", "s2s2", "s2s3",
+                "s3s1", "s3s2", "s3s3",
             ]
         );
     }
@@ -249,25 +233,69 @@ mod tests {
         assert_eq!(
             f.all_enums()
                 .map(|e| e.name.to_string())
-                .collect::<Vec<String>>(),
+                .collect::<Vec<_>>(),
             vec![
-                "e1".to_string(),
-                "e2".to_string(),
-                "r1e1".to_string(),
-                "r1e2".to_string(),
-                "s1e1".to_string(),
-                "s1e2".to_string(),
-                "s2e1".to_string(),
-                "s2e2".to_string(),
-                "s3e1".to_string(),
-                "s1s1e1".to_string(),
-                "s1s2e1".to_string(),
-                "s2s1e1".to_string(),
-                "s3s1e1".to_string(),
+                "e1", "e2", "r1e1", "r1e2", "s1e1", "s1e2", "s2e1", "s2e2", "s3e1", "s1s1e1",
+                "s1s2e1", "s2s1e1", "s3s1e1",
             ],
         );
     }
 
     #[test]
-    fn test_transitive_imports() {}
+    fn test_transitive_imports() {
+        let pkg = Rc::new(Package::default());
+
+        let create_file = |name: &str, dep: Option<Rc<File<Unspecified>>>| {
+            let f = Rc::new(File {
+                name: Name::new(name, Unspecified),
+                ..File::default()
+            });
+            pkg.add_file(f.clone());
+            if let Some(dep) = dep {
+                dep.add_import(f.clone());
+            }
+            f
+        };
+        let dep1 = create_file("dep1", None);
+        create_file("dep1_d1", Some(dep1.clone()));
+        let dep2 = create_file("dep2", None);
+        create_file("dep2_d1", Some(dep2.clone()));
+
+        let f1 = create_file("f1", None);
+        f1.add_import(dep1.clone());
+        f1.add_import(dep2.clone());
+
+        let f1_d1 = create_file("f1_d1", Some(f1.clone()));
+        let f1_d2 = create_file("f1_d2", Some(f1.clone()));
+        let f1_d1_d1 = create_file("f1_d1_d1", Some(f1_d1.clone()));
+        let f1_d1_d2 = create_file("f1_d1_d2", Some(f1_d1.clone()));
+        let f1_d1_d1_d1 = create_file("f1_d1_d1_d1", Some(f1_d1_d1.clone()));
+        f1_d1_d1.add_import(f1_d1_d1_d1);
+
+        f1_d1.add_import(dep1.clone());
+        f1_d1.add_import(dep2.clone());
+        f1_d2.add_import(dep1.clone());
+        f1_d2.add_import(dep2.clone());
+        f1_d1_d2.add_import(dep1);
+        f1_d1_d2.add_import(dep2);
+        let _f2 = create_file("f2", None);
+        let _f3 = create_file("f3", None);
+
+        assert_eq!(
+            f1.transitive_imports()
+                .map(|i| i.name.to_string())
+                .collect::<Vec<_>>(),
+            vec![
+                "dep1",
+                "dep2",
+                "f1_d1",
+                "f1_d2",
+                "dep1_d1",
+                "dep2_d1",
+                "f1_d1_d1",
+                "f1_d1_d2",
+                "f1_d1_d1_d1",
+            ]
+        );
+    }
 }

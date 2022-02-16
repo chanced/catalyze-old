@@ -4,7 +4,7 @@ use crate::{
     iter::{AllEnums, AllMessages, Iter},
     Enum,
 };
-use crate::{lang::Lang, File, Message, Name, Package};
+use crate::{util::Lang, File, Message, Name, Package};
 
 // pub enum Entity {
 

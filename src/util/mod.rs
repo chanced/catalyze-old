@@ -1,7 +1,7 @@
 mod lang;
-mod unspecified;
 mod rust;
 mod typescript;
+mod unspecified;
 pub use lang::{Keyword, Lang};
 
 pub use typescript::TypeScript;
