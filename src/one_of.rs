@@ -9,7 +9,7 @@ use crate::{
 pub(crate) type OneofList<L> = Rc<RefCell<Vec<Rc<Oneof<L>>>>>;
 
 #[derive(Debug, Clone)]
-pub struct Oneof<L: Lang> {
+pub struct Oneof<L> {
     pub name: Name<L>,
     pub desc: prost_types::OneofDescriptorProto,
     fields: RefCell<Vec<Rc<Field<L>>>>,

@@ -4,13 +4,27 @@ pub use heck::{
     AsLowerCamelCase, ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase,
     ToShoutySnakeCase, ToSnakeCase, ToTitleCase, ToUpperCamelCase,
 };
+use std::hash::{Hash, Hasher};
 use std::{fmt, ops::Add};
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub struct Name<L: Lang> {
+#[derive(Clone)]
+pub struct Name<L> {
     val: String,
     lang: L,
 }
+
+impl<L> Hash for Name<L> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.val.hash(state);
+    }
+}
+impl<L> PartialEq for Name<L> {
+    fn eq(&self, other: &Self) -> bool {
+        self.val == other.val
+    }
+}
+
+impl<L> Eq for Name<L> {}
 
 impl Default for Name<Unspecified> {
     fn default() -> Self {
@@ -21,18 +35,22 @@ impl Default for Name<Unspecified> {
     }
 }
 
-impl<L: Lang> Name<L> {
+impl<L> Name<L> {
     pub fn new(s: &str, lang: L) -> Self {
         Self {
             val: s.to_string(),
             lang,
         }
     }
+}
+impl<L: Clone> Name<L> {
     /// lang is the specified programming language targeted by the current generator.
     pub fn lang(&self) -> L {
         self.lang.clone()
     }
+}
 
+impl<L> Name<L> {
     pub(crate) fn is_well_known_package(&self) -> bool {
         self.val.starts_with(WELL_KNNOWN_TYPE_PACKAGE)
     }
@@ -58,7 +76,7 @@ impl<L: Lang> Add<&str> for Name<L> {
     }
 }
 
-impl<L: Lang> Add<String> for Name<L> {
+impl<L: Clone> Add<String> for Name<L> {
     type Output = Self;
     fn add(self, rhs: String) -> Self::Output {
         Name::new(&(self.val + rhs.as_str()), self.lang.clone())
@@ -122,7 +140,7 @@ impl<L: Lang> ToScreamingSnakeCase for Name<L> {
     }
 }
 
-impl<L: Lang> fmt::Debug for Name<L> {
+impl<L> fmt::Debug for Name<L> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.val)
     }

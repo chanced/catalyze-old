@@ -1,10 +1,10 @@
 use std::{
     cell::RefCell,
-    collections::{HashMap, VecDeque},
+    collections::{HashSet, VecDeque},
     rc::{Rc, Weak},
 };
 
-use crate::{Enum, EnumList, Lang, Message, MessageList};
+use crate::{file::WeakFileList, Enum, EnumList, File, Lang, Message, MessageList, Name};
 
 pub struct UpgradeIter<T> {
     nodes: Rc<RefCell<Vec<Weak<T>>>>,
@@ -27,7 +27,10 @@ impl<T> Iterator for UpgradeIter<T> {
         let nodes = self.nodes.borrow();
         if self.idx < nodes.len() {
             self.idx += 1;
-            nodes.get(self.idx).cloned().map(|n| n.upgrade().unwrap())
+            nodes
+                .get(self.idx - 1)
+                .cloned()
+                .map(|n| n.upgrade().unwrap())
         } else {
             None
         }
@@ -57,40 +60,11 @@ impl<T> Iterator for Iter<T> {
     }
 }
 
-pub struct MapIter<T> {
-    nodes: Rc<RefCell<HashMap<String, Rc<T>>>>,
-    idx: usize,
-    keys: Vec<String>,
-}
-impl<T> MapIter<T> {
-    pub(crate) fn new(nodes: Rc<RefCell<HashMap<String, Rc<T>>>>) -> Self {
-        let keys: Vec<String> = nodes.borrow().keys().cloned().collect();
-        Self {
-            nodes,
-            keys,
-            idx: 0,
-        }
-    }
-}
-impl<T> Iterator for MapIter<T> {
-    type Item = (String, Rc<T>);
-    fn next(&mut self) -> Option<Self::Item> {
-        let nodes = self.nodes.borrow();
-        if self.idx < self.keys.len() {
-            let key = self.keys[self.idx].clone();
-            self.idx += 1;
-            nodes.get(&key).cloned().map(|v| (key, v))
-        } else {
-            None
-        }
-    }
-}
-
-pub struct AllMessages<L: Lang> {
+pub struct AllMessages<L> {
     q: VecDeque<Rc<Message<L>>>,
 }
 
-impl<L: Lang> AllMessages<L> {
+impl<L> AllMessages<L> {
     pub(crate) fn new(msgs: MessageList<L>) -> Self {
         Self {
             q: VecDeque::from_iter(msgs.borrow().iter().cloned()),
@@ -98,7 +72,7 @@ impl<L: Lang> AllMessages<L> {
     }
 }
 
-impl<L: Lang> Iterator for AllMessages<L> {
+impl<L> Iterator for AllMessages<L> {
     type Item = Rc<Message<L>>;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(msg) = self.q.pop_front() {
@@ -111,12 +85,12 @@ impl<L: Lang> Iterator for AllMessages<L> {
         }
     }
 }
-pub struct AllEnums<L: Lang> {
+pub struct AllEnums<L> {
     msgs: VecDeque<Rc<Message<L>>>,
     enums: VecDeque<Rc<Enum<L>>>,
 }
 
-impl<L: Lang> AllEnums<L> {
+impl<L> AllEnums<L> {
     pub(crate) fn new(enums: EnumList<L>, msgs: MessageList<L>) -> Self {
         Self {
             msgs: VecDeque::from_iter(msgs.borrow().iter().cloned()),
@@ -125,7 +99,7 @@ impl<L: Lang> AllEnums<L> {
     }
 }
 
-impl<L: Lang> Iterator for AllEnums<L> {
+impl<L> Iterator for AllEnums<L> {
     type Item = Rc<Enum<L>>;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(enum_) = self.enums.pop_front() {
@@ -147,12 +121,42 @@ impl<L: Lang> Iterator for AllEnums<L> {
     }
 }
 
+pub struct TransitiveImports<L> {
+    queue: VecDeque<Rc<File<L>>>,
+    processed: HashSet<Name<L>>,
+}
+
+impl<L> TransitiveImports<L> {
+    pub(crate) fn new(files: WeakFileList<L>) -> Self {
+        Self {
+            queue: VecDeque::from_iter(files.borrow().iter().map(|f| f.upgrade().unwrap())),
+            processed: HashSet::new(),
+        }
+    }
+}
+
+impl<L: Clone> Iterator for TransitiveImports<L> {
+    type Item = Rc<File<L>>;
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(file) = self.queue.pop_front() {
+            if !self.processed.contains(&file.name) {
+                self.processed.insert(file.name.clone());
+                for f in file.dependencies.borrow().iter() {
+                    self.queue.push_back(f.upgrade().unwrap());
+                }
+                return Some(file);
+            }
+        }
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
-
-    use crate::{container::Container, lang::Unspecified, File, Name};
-
     use super::*;
+    use crate::{container::Container, lang::Unspecified, File, Name};
+    use std::collections::HashMap;
+
     type MsgTable = HashMap<String, Rc<Message<Unspecified>>>;
     fn init() -> (Rc<File<Unspecified>>, MsgTable) {
         let mut table = HashMap::new();
@@ -263,4 +267,7 @@ mod tests {
             ],
         );
     }
+
+    #[test]
+    fn test_transitive_imports() {}
 }

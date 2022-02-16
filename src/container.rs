@@ -1,10 +1,7 @@
-use std::{
-    cell::RefCell,
-    rc::{Rc, Weak},
-};
+use std::rc::{Rc, Weak};
 
 use crate::{
-    iter::{self, AllEnums, AllMessages, Iter},
+    iter::{AllEnums, AllMessages, Iter},
     Enum,
 };
 use crate::{lang::Lang, File, Message, Name, Package};
@@ -13,24 +10,24 @@ use crate::{lang::Lang, File, Message, Name, Package};
 
 // }
 #[derive(Debug, Clone)]
-pub(crate) enum InternalContainer<L: Lang> {
+pub(crate) enum InternalContainer<L> {
     File(Weak<File<L>>),
     Message(Weak<Message<L>>),
 }
 
-impl<L: Lang> From<Rc<File<L>>> for InternalContainer<L> {
+impl<L> From<Rc<File<L>>> for InternalContainer<L> {
     fn from(file: Rc<File<L>>) -> Self {
         InternalContainer::File(Rc::downgrade(&file))
     }
 }
 
-impl<L: Lang> From<Rc<Message<L>>> for InternalContainer<L> {
+impl<L> From<Rc<Message<L>>> for InternalContainer<L> {
     fn from(message: Rc<Message<L>>) -> Self {
         InternalContainer::Message(Rc::downgrade(&message))
     }
 }
 
-impl<L: Lang> InternalContainer<L> {
+impl<L> InternalContainer<L> {
     // TODO: should this return Option<Container<L>>?
     pub(crate) fn upgrade(&self) -> Container<L> {
         match self {
@@ -63,7 +60,7 @@ impl<L: Lang> InternalContainer<L> {
     }
 }
 #[derive(Debug, Clone)]
-pub enum Container<L: Lang> {
+pub enum Container<L> {
     File(Rc<File<L>>),
     Message(Rc<Message<L>>),
 }
@@ -74,13 +71,13 @@ impl<L: Lang> From<Rc<File<L>>> for Container<L> {
     }
 }
 
-impl<L: Lang> From<Rc<Message<L>>> for Container<L> {
+impl<L> From<Rc<Message<L>>> for Container<L> {
     fn from(message: Rc<Message<L>>) -> Self {
         Container::Message(message)
     }
 }
 
-impl<L: Lang> Container<L> {
+impl<L> Container<L> {
     pub fn fully_qualified_name(&self) -> &str {
         match self {
             Container::File(f) => &f.fully_qualified_name,

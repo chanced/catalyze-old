@@ -12,7 +12,7 @@ use crate::{
 pub(crate) type EnumList<L> = Rc<RefCell<Vec<Rc<Enum<L>>>>>;
 
 #[derive(Debug, Clone)]
-pub struct Enum<L: Lang> {
+pub struct Enum<L> {
     pub name: Name<L>,
     pub(crate) container: InternalContainer<L>,
 }

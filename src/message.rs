@@ -18,7 +18,7 @@ pub(crate) type MessageList<L> = Rc<RefCell<Vec<Rc<Message<L>>>>>;
 /// all Fields technically live on the Message, some may be contained within
 /// OneOf blocks.
 #[derive(Debug, Clone)]
-pub struct Message<L: Lang> {
+pub struct Message<L> {
     pub fully_qualified_name: String,
     pub descriptor: prost_types::DescriptorProto,
     pub is_map_entry: bool,
@@ -58,7 +58,7 @@ impl<L: Lang> BuildTarget for Message<L> {
     }
 }
 
-impl<L: Lang> Message<L> {
+impl<L> Message<L> {
     pub(crate) fn new(
         descriptor: prost_types::DescriptorProto,
         container: Container<L>,

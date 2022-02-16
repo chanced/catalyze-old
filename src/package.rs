@@ -5,9 +5,9 @@ use crate::Name;
 use std::cell::RefCell;
 use std::rc::Rc;
 #[derive(Debug, Clone)]
-pub struct Package<L: Lang> {
+pub struct Package<L> {
     pub descriptor: prost_types::FileDescriptorProto,
-    files: RefCell<Vec<Rc<File<L>>>>,
+    pub(crate) files: RefCell<Vec<Rc<File<L>>>>,
     pub name: Name<L>,
 }
 
@@ -20,8 +20,10 @@ impl<L: Lang> Package<L> {
             files: RefCell::new(Vec::new()),
         }
     }
-    pub(crate) fn add_file(&self, file: File<L>) {
-        self.files.borrow_mut().push(Rc::new(file));
+}
+impl<L> Package<L> {
+    pub(crate) fn add_file(&self, file: Rc<File<L>>) {
+        self.files.borrow_mut().push(file);
     }
     pub fn file_descriptor(&self) -> &prost_types::FileDescriptorProto {
         &self.descriptor
