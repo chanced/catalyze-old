@@ -4,13 +4,10 @@ use std::str::FromStr;
 
 use crate::container::BuildTarget;
 use crate::iter::{AllEnums, AllMessages, UpgradeIter};
-use crate::util::Unspecified;
+use crate::util::Generic;
 use crate::{container::Container, container::InternalContainer, Field, Name, Oneof};
-use crate::{iter::Iter, Package, WellKnownType};
-use crate::{Enum, EnumList, FieldList, OneofList};
-
-pub(crate) type WeakMessageList<U> = Rc<RefCell<Vec<Weak<Message<U>>>>>;
-pub(crate) type MessageList<U> = Rc<RefCell<Vec<Rc<Message<U>>>>>;
+use crate::{Enum, Node};
+use crate::{Package, WellKnownType};
 
 /// Message describes a proto message. Messages can be contained in either
 /// another Message or File, and may house further Messages and/or Enums. While
@@ -23,22 +20,22 @@ pub struct Message<U> {
     pub is_map_entry: bool,
     pub name: Name<U>,
     pub well_known_type: Option<WellKnownType>, // dependents_cache: RefCell<HashMap<String, Weak<Message<U>>>>,
-    pub(crate) enums: EnumList<U>,
-    pub(crate) preserved_messages: MessageList<U>,
-    pub(crate) messages: MessageList<U>,
-    pub(crate) fields: FieldList<U>,
-    pub(crate) oneofs: OneofList<U>,
-    pub(crate) dependents: WeakMessageList<U>,
+    pub enums: Vec<Rc<Enum<U>>>,
+    pub preserved_messages: Vec<Rc<Message<U>>>,
+    pub messages: Vec<Rc<Message<U>>>,
+    pub fields: Vec<Rc<Field<U>>>,
+    pub oneofs: Vec<Rc<Oneof<U>>>,
+    pub(crate) dependents: Rc<RefCell<Vec<Weak<Message<U>>>>>,
     pub(crate) container: InternalContainer<U>,
 }
 
-impl Default for Message<Unspecified> {
+impl Default for Message<Generic> {
     fn default() -> Self {
         Self {
             fully_qualified_name: Default::default(),
             descriptor: Default::default(),
             is_map_entry: Default::default(),
-            name: Name::new("", Unspecified),
+            name: Name::new("", Generic),
             enums: Default::default(),
             well_known_type: Default::default(),
             preserved_messages: Default::default(),
@@ -86,23 +83,22 @@ impl<U> Message<U> {
         // };
         let name = Name::new(descriptor.name(), lang);
         let is_map_entry = false;
-        let r = Rc::new(Message {
+        let m = Message {
             name,
             container: container.downgrade(),
             fully_qualified_name,
             well_known_type,
             descriptor,
             is_map_entry,
-            enums: Rc::new(RefCell::new(Vec::new())),
-            preserved_messages: Rc::new(RefCell::new(Vec::new())),
-            messages: Rc::new(RefCell::new(Vec::new())),
-            fields: Rc::new(RefCell::new(Vec::new())),
-            oneofs: Rc::new(RefCell::new(Vec::new())),
+            enums: Vec::default(),
+            preserved_messages: Vec::default(),
+            messages: Vec::default(), //with_capacity(descriptor.nested_type.len()),
+            fields: Vec::default(),   //with_capacity(descriptor.field.len()),
+            oneofs: Vec::default(),   //Vec::with_capacity(descriptor.oneof_decl.len()),
             dependents: Rc::new(RefCell::new(Vec::new())),
-        });
+        };
 
-        r.add_message(r.clone());
-        r
+        Rc::new(m)
     }
 
     pub fn package(&self) -> Option<Rc<Package<U>>> {
@@ -112,53 +108,26 @@ impl<U> Message<U> {
     pub fn is_well_known_type(&self) -> bool {
         self.well_known_type.is_some()
     }
-
-    pub fn fields(&self) -> Vec<Rc<Field<U>>> {
-        self.fields.borrow().clone()
-    }
     pub fn container(&self) -> Container<U> {
         self.container.upgrade()
     }
-
-    pub fn messages(&self) -> Iter<Message<U>> {
-        Iter::new(self.messages.clone())
-    }
-
     pub fn all_messages(&self) -> AllMessages<U> {
-        AllMessages::new(self.messages.clone())
-    }
-    pub fn enums(&self) -> Iter<Enum<U>> {
-        Iter::new(self.enums.clone())
-    }
-    pub fn all_enums(&self) -> AllEnums<U> {
-        AllEnums::new(self.enums.clone(), self.messages.clone())
-    }
-    pub(crate) fn add_enum(&self, e: Rc<Enum<U>>) {
-        self.enums.borrow_mut().push(e);
+        AllMessages::new(&self.messages)
     }
 
-    pub fn one_ofs(&self) -> Vec<Rc<Oneof<U>>> {
-        self.oneofs.borrow().clone()
+    pub fn all_enums(&self) -> AllEnums<U> {
+        AllEnums::new(&self.enums, &self.messages)
     }
-    pub fn dependencies(&self) -> UpgradeIter<Message<U>> {
+
+    pub fn dependents(&self) -> UpgradeIter<Message<U>> {
         UpgradeIter::new(self.dependents.clone())
     }
-    pub fn preserved_messages(&self) -> Vec<Rc<Message<U>>> {
-        self.preserved_messages.borrow().clone()
-    }
-    pub(crate) fn add_preserved_message(&self, msg: Rc<Message<U>>) {
-        self.preserved_messages.borrow_mut().push(msg);
-    }
-    pub(crate) fn add_message(&self, msg: Rc<Message<U>>) {
-        self.messages.borrow_mut().push(msg);
-    }
-    pub(crate) fn add_field(&self, field: Rc<Field<U>>) {
-        self.fields.borrow_mut().push(field);
-    }
-    pub(crate) fn add_one_of(&self, one_of: Rc<Oneof<U>>) {
-        self.oneofs.borrow_mut().push(one_of);
-    }
+
     pub(crate) fn add_dependent(&self, dependent: Weak<Message<U>>) {
         self.dependents.borrow_mut().push(dependent);
+    }
+
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<U>> {
+        todo!()
     }
 }

@@ -4,7 +4,7 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{file::WeakFileList, Enum, EnumList, File, Lang, Message, MessageList, Name};
+use crate::{Enum, File, Message, Name};
 
 pub struct UpgradeIter<T> {
     nodes: Rc<RefCell<Vec<Weak<T>>>>,
@@ -30,38 +30,15 @@ impl<T> Iterator for UpgradeIter<T> {
         }
     }
 }
-pub struct Iter<T> {
-    nodes: Rc<RefCell<Vec<Rc<T>>>>,
-    idx: usize,
-}
-
-impl<T> Iter<T> {
-    pub(crate) fn new(nodes: Rc<RefCell<Vec<Rc<T>>>>) -> Self {
-        Self { nodes, idx: 0 }
-    }
-}
-
-impl<T> Iterator for Iter<T> {
-    type Item = Rc<T>;
-    fn next(&mut self) -> Option<Self::Item> {
-        let nodes = self.nodes.borrow();
-        if self.idx < nodes.len() {
-            self.idx += 1;
-            nodes.get(self.idx - 1).cloned()
-        } else {
-            None
-        }
-    }
-}
 
 pub struct AllMessages<U> {
     q: VecDeque<Rc<Message<U>>>,
 }
 
 impl<U> AllMessages<U> {
-    pub(crate) fn new(msgs: MessageList<U>) -> Self {
+    pub(crate) fn new(msgs: &[Rc<Message<U>>]) -> Self {
         Self {
-            q: VecDeque::from_iter(msgs.borrow().iter().cloned()),
+            q: VecDeque::from_iter(msgs.iter().cloned()),
         }
     }
 }
@@ -70,7 +47,7 @@ impl<U> Iterator for AllMessages<U> {
     type Item = Rc<Message<U>>;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(msg) = self.q.pop_front() {
-            for v in msg.messages() {
+            for v in msg.messages.iter().cloned() {
                 self.q.push_back(v);
             }
             Some(msg)
@@ -85,10 +62,10 @@ pub struct AllEnums<U> {
 }
 
 impl<U> AllEnums<U> {
-    pub(crate) fn new(enums: EnumList<U>, msgs: MessageList<U>) -> Self {
+    pub(crate) fn new(enums: &[Rc<Enum<U>>], msgs: &[Rc<Message<U>>]) -> Self {
         Self {
-            msgs: VecDeque::from_iter(msgs.borrow().iter().cloned()),
-            enums: VecDeque::from_iter(enums.borrow().iter().cloned()),
+            msgs: VecDeque::from_iter(msgs.iter().cloned()),
+            enums: VecDeque::from_iter(enums.iter().cloned()),
         }
     }
 }
@@ -96,18 +73,18 @@ impl<U> AllEnums<U> {
 impl<U> Iterator for AllEnums<U> {
     type Item = Rc<Enum<U>>;
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(enum_) = self.enums.pop_front() {
-            Some(enum_)
+        if let Some(e) = self.enums.pop_front() {
+            Some(e)
         } else {
             while let Some(msg) = self.msgs.pop_front() {
-                for v in msg.messages() {
+                for v in msg.messages.iter().cloned() {
                     self.msgs.push_back(v);
                 }
-                for v in msg.enums() {
+                for v in msg.enums.iter().cloned() {
                     self.enums.push_back(v);
                 }
-                if let Some(enum_) = self.enums.pop_front() {
-                    return Some(enum_);
+                if let Some(e) = self.enums.pop_front() {
+                    return Some(e);
                 }
             }
             None
@@ -121,7 +98,7 @@ pub struct TransitiveImports<U> {
 }
 
 impl<U> TransitiveImports<U> {
-    pub(crate) fn new(files: WeakFileList<U>) -> Self {
+    pub(crate) fn new(files: Rc<RefCell<Vec<Weak<File<U>>>>>) -> Self {
         Self {
             queue: VecDeque::from_iter(files.borrow().iter().map(|f| f.upgrade().unwrap())),
             processed: HashSet::new(),
@@ -135,7 +112,7 @@ impl<U: Clone> Iterator for TransitiveImports<U> {
         while let Some(file) = self.queue.pop_front() {
             if !self.processed.contains(&file.name) {
                 self.processed.insert(file.name.clone());
-                for f in file.imports.borrow().iter() {
+                for f in file.dependencies.borrow().iter() {
                     self.queue.push_back(f.upgrade().unwrap());
                 }
                 return Some(file);
@@ -148,73 +125,82 @@ impl<U: Clone> Iterator for TransitiveImports<U> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        container::Container, file::new_file_list, util::Unspecified, File, Name, Package,
-    };
-    use std::collections::HashMap;
+    use crate::{util::Generic, File, Name, Package};
+    fn msg(
+        name: &str,
+        messages: Vec<Rc<Message<Generic>>>,
+        enums: Vec<Rc<Enum<Generic>>>,
+    ) -> Rc<Message<Generic>> {
+        Rc::new(Message {
+            name: Name::new(name, Generic),
+            messages,
+            enums,
+            ..Message::<Generic>::default()
+        })
+    }
+    fn enums(names: Vec<&str>) -> Vec<Rc<Enum<Generic>>> {
+        names
+            .iter()
+            .map(|name| {
+                Rc::new(Enum {
+                    name: Name::new(name, Generic),
+                    ..Enum::<Generic>::default()
+                })
+            })
+            .collect()
+    }
 
-    type MsgTable = HashMap<String, Rc<Message<Unspecified>>>;
-    fn init() -> (Rc<File<Unspecified>>, MsgTable) {
-        let mut table = HashMap::new();
-        let f = Rc::new(File {
-            name: Name::new("test.rs", Unspecified),
-            ..File::<Unspecified>::default()
-        });
-        let mut create_msg =
-            |name: &str, container: Container<Unspecified>| -> Rc<Message<Unspecified>> {
-                let m = Rc::new(Message {
-                    name: Name::new(name, Unspecified),
-                    container: container.downgrade(),
-                    ..Message::<Unspecified>::default()
-                });
-                container.add_message(m.clone());
-                table.insert(name.to_string(), m.clone());
-                m
-            };
-        let create_enum =
-            |name: &str, container: Container<Unspecified>| -> Rc<Enum<Unspecified>> {
-                let e = Rc::new(Enum {
-                    name: Name::new(name, Unspecified),
-                    ..Enum::<Unspecified>::default()
-                });
-                container.add_enum(e.clone());
-                e
-            };
-        let r1 = create_msg("r1", Container::from(f.clone()));
-        let r2 = create_msg("r2", Container::from(f.clone()));
-
-        let s1 = create_msg("s1", Container::from(r1.clone()));
-        let s2 = create_msg("s2", Container::from(r1.clone()));
-        let s3 = create_msg("s3", Container::from(r1.clone()));
-        let s1s1 = create_msg("s1s1", Container::from(s1.clone()));
-        let s1s2 = create_msg("s1s2", Container::from(s1.clone()));
-        let _s2s1 = create_msg("s1s3", Container::from(s1.clone()));
-        let s2s1 = create_msg("s2s1", Container::from(s2.clone()));
-        let _s2s2 = create_msg("s2s2", Container::from(s2.clone()));
-        let _s3s1 = create_msg("s2s3", Container::from(s2.clone()));
-        let s3s1 = create_msg("s3s1", Container::from(s3.clone()));
-        create_msg("s3s2", Container::from(s3.clone()));
-        create_msg("s3s3", Container::from(s3.clone()));
-
-        create_enum("e1", Container::from(f.clone()));
-        create_enum("e2", Container::from(f.clone()));
-        create_enum("r1e1", Container::from(r1));
-        create_enum("r1e2", Container::from(r2));
-        create_enum("s1e1", Container::from(s1.clone()));
-        create_enum("s1e2", Container::from(s1));
-        create_enum("s2e1", Container::from(s2.clone()));
-        create_enum("s2e2", Container::from(s2));
-        create_enum("s3e1", Container::from(s3));
-        create_enum("s1s1e1", Container::from(s1s1));
-        create_enum("s1s2e1", Container::from(s1s2));
-        create_enum("s2s1e1", Container::from(s2s1));
-        create_enum("s3s1e1", Container::from(s3s1));
-        (f, table)
+    fn init() -> File<Generic> {
+        File {
+            name: Name::new("test.rs", Generic),
+            messages: vec![
+                msg(
+                    "r1",
+                    vec![
+                        msg(
+                            "s1",
+                            vec![
+                                msg(
+                                    "s1s1",
+                                    vec![msg("s1s1s1", vec![], enums(vec!["s1s1s1e1"]))],
+                                    enums(vec!["s1s1e1"]),
+                                ),
+                                msg("s1s2", vec![], enums(vec!["s1s2e1", "s1s2e2"])),
+                                msg("s1s3", vec![], enums(vec!["s1s3e1", "s1s3e2"])),
+                            ],
+                            enums(vec!["s1e1", "s1e2"]),
+                        ),
+                        msg(
+                            "s2",
+                            vec![
+                                msg("s2s1", vec![], enums(vec!["s2s1e1"])),
+                                msg("s2s2", vec![], enums(vec!["s2s2e1"])),
+                                msg("s2s3", vec![], vec![]),
+                            ],
+                            enums(vec!["s2e1", "s2e2"]),
+                        ),
+                        msg(
+                            "s3",
+                            vec![
+                                msg("s3s1", vec![], vec![]),
+                                msg("s3s2", vec![], vec![]),
+                                msg("s3s3", vec![], vec![]),
+                            ],
+                            enums(vec!["s3e1", "s3e2"]),
+                        ),
+                    ],
+                    enums(vec!["r1e1", "r1e2"]),
+                ),
+                msg("r2", vec![], enums(vec!["r2e1"])),
+            ],
+            enums: enums(vec!["e1", "e2"]),
+            ..File::<Generic>::default()
+        }
     }
 
     #[test]
     fn test_all_messages() {
-        let (f, _t) = init();
+        let f = init();
 
         assert_eq!(
             f.all_messages()
@@ -222,21 +208,21 @@ mod tests {
                 .collect::<Vec<String>>(),
             vec![
                 "r1", "r2", "s1", "s2", "s3", "s1s1", "s1s2", "s1s3", "s2s1", "s2s2", "s2s3",
-                "s3s1", "s3s2", "s3s3",
+                "s3s1", "s3s2", "s3s3", "s1s1s1"
             ]
         );
     }
 
     #[test]
     fn test_all_enums() {
-        let (f, _t) = init();
+        let f = init();
         assert_eq!(
             f.all_enums()
                 .map(|e| e.name.to_string())
                 .collect::<Vec<_>>(),
             vec![
-                "e1", "e2", "r1e1", "r1e2", "s1e1", "s1e2", "s2e1", "s2e2", "s3e1", "s1s1e1",
-                "s1s2e1", "s2s1e1", "s3s1e1",
+                "e1", "e2", "r1e1", "r1e2", "r2e1", "s1e1", "s1e2", "s2e1", "s2e2", "s3e1", "s3e2",
+                "s1s1e1", "s1s2e1", "s1s2e2", "s1s3e1", "s1s3e2", "s2s1e1", "s2s2e1", "s1s1s1e1"
             ],
         );
     }
@@ -245,14 +231,14 @@ mod tests {
     fn test_transitive_imports() {
         let pkg = Rc::new(Package::default());
 
-        let create_file = |name: &str, dep: Option<Rc<File<Unspecified>>>| {
+        let create_file = |name: &str, dep: Option<Rc<File<Generic>>>| {
             let f = Rc::new(File {
-                name: Name::new(name, Unspecified),
+                name: Name::new(name, Generic),
                 ..File::default()
             });
             pkg.add_file(f.clone());
             if let Some(dep) = dep {
-                dep.add_import(f.clone());
+                dep.add_dependency(f.clone());
             }
             f
         };
@@ -262,22 +248,22 @@ mod tests {
         create_file("dep2_d1", Some(dep2.clone()));
 
         let f1 = create_file("f1", None);
-        f1.add_import(dep1.clone());
-        f1.add_import(dep2.clone());
+        f1.add_dependency(dep1.clone());
+        f1.add_dependency(dep2.clone());
 
         let f1_d1 = create_file("f1_d1", Some(f1.clone()));
         let f1_d2 = create_file("f1_d2", Some(f1.clone()));
         let f1_d1_d1 = create_file("f1_d1_d1", Some(f1_d1.clone()));
         let f1_d1_d2 = create_file("f1_d1_d2", Some(f1_d1.clone()));
         let f1_d1_d1_d1 = create_file("f1_d1_d1_d1", Some(f1_d1_d1.clone()));
-        f1_d1_d1.add_import(f1_d1_d1_d1);
+        f1_d1_d1.add_dependency(f1_d1_d1_d1);
 
-        f1_d1.add_import(dep1.clone());
-        f1_d1.add_import(dep2.clone());
-        f1_d2.add_import(dep1.clone());
-        f1_d2.add_import(dep2.clone());
-        f1_d1_d2.add_import(dep1);
-        f1_d1_d2.add_import(dep2);
+        f1_d1.add_dependency(dep1.clone());
+        f1_d1.add_dependency(dep2.clone());
+        f1_d2.add_dependency(dep1.clone());
+        f1_d2.add_dependency(dep2.clone());
+        f1_d1_d2.add_dependency(dep1);
+        f1_d1_d2.add_dependency(dep2);
         let _f2 = create_file("f2", None);
         let _f3 = create_file("f3", None);
 

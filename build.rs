@@ -18,11 +18,7 @@
 //! See PROST_LICENSE for license information.
 //!
 use std::env;
-use std::os::unix::prelude::CommandExt;
 use std::path::PathBuf;
-use std::process::Command;
-
-const PROTOC_COMMAND: &str = "protoc-gen-capture";
 
 /// Returns the path to the location of the bundled Protobuf artifacts.
 fn bundle_path() -> PathBuf {

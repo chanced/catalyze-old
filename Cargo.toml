@@ -6,11 +6,10 @@ edition = "2021"
 [dependencies]
 prost = "0.9"
 prost-types = "0.9"
-tonic = "0.6"
-tonic-types = "0.4"
 heck = "0.4"
 glob = "0.3"
 anyhow = "1.0.53"
+petgraph = "0.6.0"
 
 [build-dependencies]
 which = { version = "4.2" }

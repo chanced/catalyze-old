@@ -1,4 +1,4 @@
-use crate::util::{Lang, Unspecified};
+use crate::util::{Generic, Lang};
 use crate::WELL_KNNOWN_TYPE_PACKAGE;
 pub use heck::{
     AsLowerCamelCase, ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase,
@@ -26,11 +26,11 @@ impl<U> PartialEq for Name<U> {
 
 impl<U> Eq for Name<U> {}
 
-impl Default for Name<Unspecified> {
+impl Default for Name<Generic> {
     fn default() -> Self {
         Self {
             val: Default::default(),
-            lang: Unspecified {},
+            lang: Generic {},
         }
     }
 }

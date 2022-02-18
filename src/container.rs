@@ -1,10 +1,13 @@
-use std::rc::{Rc, Weak};
+use std::{
+    rc::{Rc, Weak},
+    slice::Iter,
+};
 
 use crate::{
-    iter::{AllEnums, AllMessages, Iter},
+    iter::{AllEnums, AllMessages},
     Enum,
 };
-use crate::{util::Lang, File, Message, Name, Package};
+use crate::{File, Message, Name, Package};
 
 // pub enum Entity {
 
@@ -35,16 +38,16 @@ impl<U> InternalContainer<U> {
             InternalContainer::Message(m) => Container::Message(m.upgrade().unwrap()),
         }
     }
-    pub(crate) fn add_message(&self, message: Rc<Message<U>>) {
-        match self {
-            InternalContainer::File(f) => {
-                f.upgrade().unwrap().add_message(message);
-            }
-            InternalContainer::Message(m) => {
-                m.upgrade().unwrap().add_message(message);
-            }
-        }
-    }
+    // pub(crate) fn add_message(&self, message: Rc<Message<U>>) {
+    //     match self {
+    //         InternalContainer::File(f) => {
+    //             f.upgrade().unwrap().add_message(message);
+    //         }
+    //         InternalContainer::Message(m) => {
+    //             m.upgrade().unwrap().add_message(message);
+    //         }
+    //     }
+    // }
     pub(crate) fn fully_qualified_name(&self) -> String {
         match self {
             InternalContainer::File(f) => f.upgrade().unwrap().fully_qualified_name.clone(),
@@ -91,10 +94,10 @@ impl<U> Container<U> {
     //     }
     // }
 
-    pub fn messages(&self) -> Iter<Message<U>> {
+    pub fn messages(&self) -> Iter<Rc<Message<U>>> {
         match self {
-            Container::File(f) => f.messages(),
-            Container::Message(m) => m.messages(),
+            Container::File(f) => f.messages.iter(),
+            Container::Message(m) => m.messages.iter(),
         }
     }
     pub fn all_messages(&self) -> AllMessages<U> {
@@ -109,10 +112,10 @@ impl<U> Container<U> {
             Container::Message(m) => m.all_enums(),
         }
     }
-    pub fn enums(&self) -> Iter<Enum<U>> {
+    pub fn enums(&self) -> Iter<Rc<Enum<U>>> {
         match self {
-            Container::File(f) => f.enums(),
-            Container::Message(m) => m.enums(),
+            Container::File(f) => f.enums.iter(),
+            Container::Message(m) => m.enums.iter(),
         }
     }
     pub fn package(&self) -> Option<Rc<Package<U>>> {
@@ -128,19 +131,19 @@ impl<U> Container<U> {
         }
     }
 
-    pub(crate) fn add_message(&self, msg: Rc<Message<U>>) {
-        match self {
-            Container::File(f) => f.add_message(msg),
-            Container::Message(m) => m.add_message(msg),
-        }
-    }
+    // pub(crate) fn add_message(&self, msg: Rc<Message<U>>) {
+    //     match self {
+    //         Container::File(f) => f.add_message(msg),
+    //         Container::Message(m) => m.add_message(msg),
+    //     }
+    // }
 
-    pub(crate) fn add_enum(&self, e: Rc<Enum<U>>) {
-        match self {
-            Container::File(f) => f.add_enum(e),
-            Container::Message(m) => m.add_enum(e),
-        }
-    }
+    // pub(crate) fn add_enum(&self, e: Rc<Enum<U>>) {
+    //     match self {
+    //         Container::File(f) => f.add_enum(e),
+    //         Container::Message(m) => m.add_enum(e),
+    //     }
+    // }
 }
 
 impl<U: Clone> Container<U> {
@@ -170,15 +173,6 @@ impl<U> BuildTarget for InternalContainer<U> {
         match self {
             InternalContainer::File(f) => f.upgrade().unwrap().build_target(),
             InternalContainer::Message(m) => m.upgrade().unwrap().build_target(),
-        }
-    }
-}
-
-impl<U: Clone> InternalContainer<U> {
-    pub(crate) fn name(&self) -> Name<U> {
-        match self {
-            InternalContainer::File(f) => f.upgrade().unwrap().name.clone(),
-            InternalContainer::Message(m) => m.upgrade().unwrap().name.clone(),
         }
     }
 }

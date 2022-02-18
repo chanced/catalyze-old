@@ -1,7 +1,7 @@
-use std::borrow::Borrow;
+#![allow(unused_variables)]
+
 use std::rc::Rc;
 
-use crate::util::{self, Lang};
 use crate::{Enum, EnumValue, Extension, Field, File, Message, Method, Oneof, Package, Service};
 
 pub trait Visitor<U> {
@@ -62,10 +62,10 @@ pub fn visit_file<U, V>(v: &mut V, file: Rc<File<U>>) -> Result<(), V::Error>
 where
     V: Visitor<U> + ?Sized,
 {
-    for msg in file.messages() {
+    for msg in file.messages.iter().cloned() {
         v.visit_message(msg)?;
     }
-    for e in file.enums() {
+    for e in file.enums.iter().cloned() {
         v.visit_enum(e)?;
     }
 

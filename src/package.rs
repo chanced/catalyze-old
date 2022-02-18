@@ -1,42 +1,41 @@
 use crate::file::{new_file_list, FileList};
-use crate::util::{Lang, Unspecified};
+use crate::util::Generic;
 pub use crate::File;
 use crate::Name;
 
 use std::cell::RefCell;
 use std::rc::Rc;
+
 #[derive(Debug, Clone)]
 pub struct Package<U> {
-    pub descriptor: prost_types::FileDescriptorProto,
     pub(crate) files: FileList<U>,
     pub name: Name<U>,
+    pub(crate) comments: Rc<RefCell<Vec<String>>>,
 }
 
-impl Default for Package<Unspecified> {
+impl Default for Package<Generic> {
     fn default() -> Self {
         Self {
-            descriptor: Default::default(),
             files: Default::default(),
             name: Default::default(),
+            comments: Default::default(),
         }
     }
 }
 
 impl<U> Package<U> {
-    pub(crate) fn new(descriptor: prost_types::FileDescriptorProto, lang: U) -> Rc<Self> {
-        let name = Name::new(descriptor.name(), lang);
+    pub(crate) fn new(name: &str, util: U) -> Rc<Self> {
+        let name = Name::new(name, util);
+
         Rc::new(Self {
             name,
-            descriptor,
             files: new_file_list(),
+            comments: Rc::new(RefCell::new(Vec::default())),
         })
     }
 
     pub(crate) fn add_file(&self, file: Rc<File<U>>) {
         self.files.borrow_mut().push(file);
-    }
-    pub fn file_descriptor(&self) -> &prost_types::FileDescriptorProto {
-        &self.descriptor
     }
     pub fn files(&self) -> Vec<Rc<File<U>>> {
         self.files.borrow().iter().map(Rc::clone).collect()
@@ -44,33 +43,7 @@ impl<U> Package<U> {
     pub fn is_well_known(&self) -> bool {
         self.name.is_well_known_package()
     }
+    pub fn comments(&self) -> Vec<String> {
+        self.comments.borrow().clone()
+    }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     #[test]
-//     fn test_files() {
-//         let mut p = Package {
-//             fd: prost_types::FileDescriptorProto {
-//                 name: Some("".to_string()),
-//                 ..Default::default()
-//             },
-//             files: vec![],
-//             name: Name::new("".to_string(), syntax::NotSpecified),
-//         };
-
-//         p.add_file(File {
-//             desc: prost_types::FileDescriptorProto {
-//                 name: Some("".to_string()),
-//                 ..Default::default()
-//             },
-//             name: Name::new("".to_string(), syntax::NotSpecified),
-//             package: Rc::downgrade(&r),
-//         });
-//         let r = Rc::new(p);
-//         for f in r.files() {
-//             println!("{:?}", f);
-//         }
-//     }
-// }

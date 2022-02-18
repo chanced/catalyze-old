@@ -1,4 +1,4 @@
-use crate::name::{Name, ToScreamingKebabCase};
+use crate::name::Name;
 // use anyhow::Result;
 
 pub use heck::{
@@ -6,8 +6,6 @@ pub use heck::{
     ToTitleCase, ToUpperCamelCase,
 };
 use std::string::ToString;
-
-use super::Unspecified;
 
 pub enum Keyword {
     /// SCREAMING-KEBAB-CASE

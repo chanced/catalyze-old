@@ -1,13 +1,21 @@
 use crate::Extension;
-use crate::ExtensionList;
-use crate::Lang;
 use crate::Node;
+use crate::Source;
 use crate::{File, Package};
-use prost_types::compiler::CodeGeneratorRequest;
-use std::cell::RefCell;
+
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::rc::Rc;
+
+use anyhow::bail;
+use prost_types::FileDescriptorProto;
+
+// protoc
+// --include_imports
+// --include_source_info
+// --proto_path=[dep dir path]
+// --descriptor_set_out=[path].bin
+// [path].proto
 
 #[derive(Debug)]
 pub struct Ast<U> {
@@ -16,6 +24,8 @@ pub struct Ast<U> {
     pub nodes: HashMap<String, Node<U>>,
     pub extensions: Vec<Rc<Extension<U>>>,
     pub util: U,
+    pub file_descriptors: Vec<Rc<FileDescriptorProto>>,
+    pub target_list: HashSet<String>,
 }
 
 // Ast encapsulates the entirety of the input CodeGeneratorRequest from protoc,
@@ -29,58 +39,107 @@ impl<U> Ast<U> {
     }
 }
 
-impl<U> Ast<U> {
-    pub fn new(util: U) -> Self {
-        Self {
-            util,
-            targets: HashMap::new(),
-            packages: HashMap::new(),
-            nodes: HashMap::new(),
-            extensions: Vec::new(),
-        }
-    }
-}
-
 impl<U: Clone> Ast<U> {
-    // node allows getting a Node from the graph by its fully-qualified name
-    // (FQN). The FQN uses dot notation of the form ".{package}.{node}", or the
-    // input path for files.
-    pub fn node(&self, name: &str) -> Option<Node<U>> {
-        self.nodes.get(name).cloned()
-    }
-}
+    pub fn new(source: impl Source, util: U) -> Result<Self, anyhow::Error> {
+        let file_descriptors = source
+            .files()
+            .cloned()
+            .map(Rc::new)
+            .collect::<Vec<Rc<FileDescriptorProto>>>();
+        let target_list = source.targets().cloned().collect::<HashSet<String>>();
+        let cap = file_descriptors.len();
+        let mut ast = Self {
+            util: util.clone(),
+            targets: HashMap::with_capacity(cap),
+            target_list,
+            packages: HashMap::default(),
+            nodes: HashMap::default(),
+            extensions: Vec::default(),
+            file_descriptors,
+        };
+        let mut seen: HashMap<String, Rc<File<U>>> = HashMap::default();
+        for fd in ast.file_descriptors.iter().cloned() {
+            let pkg = {
+                let name = fd.package();
+                if name.is_empty() {
+                    None
+                } else {
+                    Some(
+                        ast.packages
+                            .entry(name.to_string())
+                            .or_insert_with(|| Package::new(name, util.clone()))
+                            .clone(),
+                    )
+                }
+            };
 
-// process_code_generator_request
-pub fn process_code_generator_request<U>(request: CodeGeneratorRequest, util: U) -> Ast<U> {
-    let mut ast = Ast {
-        util,
-        targets: HashMap::with_capacity(request.proto_file.len()),
-        packages: HashMap::default(),
-        nodes: HashMap::default(),
-        extensions: Vec::default(),
-    };
+            let build_target = ast.target_list.contains(fd.name());
+            let file = File::new(build_target, fd.clone(), pkg, util.clone());
+            ast.targets.insert(fd.name().to_string(), file.clone());
+            for d in fd.dependency.iter() {
+                let dep = match seen.get(d).cloned() {
+                    Some(f) => f,
+                    None => {
+                        bail!("dependency {} has not been hydrated", d);
+                    }
+                };
+                file.add_dependency(dep.clone());
+                dep.add_dependent(file.clone());
+            }
 
-    let target_list = request
-        .file_to_generate
-        .iter()
-        .cloned()
-        .collect::<HashSet<String>>();
-
-    for file in request.proto_file {
-        let pkg = file.package;
-    }
-    ast
-}
-
-impl<U> Ast<U> {
-    fn hydrate_pkg(&self, fd: &prost_types::FileDescriptorProto) -> Rc<Package<U>> {
-        let lookup = fd.package();
-        if self.packages.get(lookup).is_some() {
-            return self.packages.get(lookup).unwrap().clone();
+            seen.insert(fd.name().to_string(), file.clone());
         }
+
+        Ok(ast)
     }
+    // fn hydrate_package(&mut self, fd: Rc<FileDescriptorProto>) -> Option<Rc<Package<U>>> {
+
+    // }
 }
 
-enum Source {
-    CodeGeneratorRequest(CodeGeneratorRequest),
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_() {}
 }
+
+// // process_code_generator_request
+// pub fn process_code_generator_request<U>(request: prost_types::compiler::CodeGeneratorRequest, util: U) -> Ast<U> {
+//     // let mut ast = Ast {
+//     //     util,
+//     //     targets: HashMap::with_capacity(request.proto_file.len()),
+//     //     packages: HashMap::default(),
+//     //     nodes: HashMap::default(),
+//     //     extensions: Vec::default(),
+//     // };
+
+//     let target_list = request
+//         .file_to_generate
+//         .iter()
+//         .cloned()
+//         .collect::<HashSet<String>>();
+
+//     for file in request.proto_file {
+//         let pkg = ast.
+//     }
+
+// }
+
+// impl<U> Ast<U> {
+//     fn hydrate_pkg(
+//         &mut self,
+//         fd: &prost_types::FileDescriptorProto,
+//         util: U,
+//     ) -> Option<Rc<Package<U>>> {
+//         let p = fd.package();
+//         if p.is_empty() {
+//             return None;
+//         }
+//         if self.packages.get(p).is_some() {
+//             return Some(self.packages.get(p).unwrap().clone());
+//         }
+//         let pkg = Package::new(fd.clone(), util);
+//         self.packages.insert(fd.package().to_string(), pkg.clone());
+//         Some(pkg)
+//     }
+// }
