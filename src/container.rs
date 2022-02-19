@@ -93,7 +93,12 @@ impl<U> Container<U> {
     //         Container::Message(m) => m.messages.clone(),
     //     }
     // }
-
+    pub fn name(&self) -> &Name<U> {
+        match self {
+            Container::File(f) => &f.name,
+            Container::Message(m) => &m.name,
+        }
+    }
     pub fn messages(&self) -> Iter<Rc<Message<U>>> {
         match self {
             Container::File(f) => f.messages.iter(),
@@ -126,8 +131,8 @@ impl<U> Container<U> {
     }
     pub(crate) fn downgrade(&self) -> InternalContainer<U> {
         match self {
-            Container::File(f) => InternalContainer::File(Rc::downgrade(&f)),
-            Container::Message(m) => InternalContainer::Message(Rc::downgrade(&m)),
+            Container::File(f) => InternalContainer::File(Rc::downgrade(f)),
+            Container::Message(m) => InternalContainer::Message(Rc::downgrade(m)),
         }
     }
 
@@ -146,19 +151,9 @@ impl<U> Container<U> {
     // }
 }
 
-impl<U: Clone> Container<U> {
-    pub fn name(&self) -> Name<U> {
-        match self {
-            Container::File(f) => f.name.clone(),
-            Container::Message(m) => m.name.clone(),
-        }
-    }
-}
-
 pub trait BuildTarget {
     fn build_target(&self) -> bool;
 }
-
 impl<U> BuildTarget for Container<U> {
     fn build_target(&self) -> bool {
         match self {

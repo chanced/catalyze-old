@@ -36,7 +36,7 @@ pub use package::Package;
 pub use r#enum::*;
 pub use service::*;
 pub use source::*;
-pub use util::Lang;
+pub use util::ToCase;
 pub use visit::*;
 pub use well_known_type::*;
 #[cfg(test)]

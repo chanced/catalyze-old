@@ -3,11 +3,7 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{
-    container::{Container, InternalContainer},
-    util::Generic,
-    Message, Name, Node, Package,
-};
+use crate::{container::InternalContainer, util::Generic, Message, Name, Node, Package};
 
 #[derive(Debug, Clone)]
 pub struct Enum<U> {
@@ -26,9 +22,7 @@ impl<U> Enum<U> {
     //         dependents: Rc::new(RefCell::new(Vec::default())),
     //     }
     // }
-    pub fn fully_qualified_name(&self) -> String {
-        self.container.fully_qualified_name()
-    }
+
     pub fn package(&self) -> Option<Rc<Package<U>>> {
         self.container.package()
     }
@@ -41,8 +35,8 @@ impl<U> Enum<U> {
 impl Default for Enum<Generic> {
     fn default() -> Self {
         Self {
-            name: Name::new("", Generic),
-            fully_qualified_name: "".to_string(),
+            name: Name::default(),
+            fully_qualified_name: String::default(),
             container: InternalContainer::File(Weak::new()),
             dependents: Rc::new(RefCell::new(Vec::default())),
         }

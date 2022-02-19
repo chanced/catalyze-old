@@ -2,8 +2,6 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{Method, Name, Node};
 
-pub(crate) type ServiceList<U> = Rc<RefCell<Vec<Rc<Service<U>>>>>;
-
 #[derive(Debug, Clone)]
 pub struct Service<U> {
     pub name: Name<U>,

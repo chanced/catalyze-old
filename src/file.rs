@@ -3,18 +3,13 @@ use prost_types::FileDescriptorProto;
 use crate::container::BuildTarget;
 use crate::iter::{AllEnums, AllMessages, TransitiveImports, UpgradeIter};
 use crate::util::Generic;
-use crate::{Enum, Extension, Message, Name, Node, Package, ServiceList};
+use crate::{Enum, Extension, Message, Name, Node, Package, Service};
 use std::cell::RefCell;
 
 use std::path::PathBuf;
 // use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 
-pub(crate) type FileList<U> = Rc<RefCell<Vec<Rc<File<U>>>>>;
-
-pub(crate) fn new_file_list<U>() -> FileList<U> {
-    Rc::new(RefCell::new(Vec::default()))
-}
 #[derive(Debug, Clone)]
 pub struct File<U> {
     pub fully_qualified_name: String,
@@ -25,10 +20,10 @@ pub struct File<U> {
     pub def_exts: Vec<Rc<Extension<U>>>,
     pub messages: Vec<Rc<Message<U>>>,
     pub enums: Vec<Rc<Enum<U>>>,
-    pub services: ServiceList<U>,
+    pub services: Vec<Rc<Service<U>>>,
     pub src_info: Option<prost_types::SourceCodeInfo>,
     pub pkg_info: Option<prost_types::SourceCodeInfo>,
-
+    pub util: Rc<RefCell<U>>,
     pub(crate) pkg: Option<Weak<Package<U>>>,
     pub(crate) dependents: Rc<RefCell<Vec<Weak<File<U>>>>>,
     pub(crate) dependencies: Rc<RefCell<Vec<Weak<File<U>>>>>,
@@ -45,12 +40,12 @@ impl<U> File<U> {
         build_target: bool,
         descriptor: Rc<FileDescriptorProto>,
         package: Option<Rc<Package<U>>>,
-        util: U,
+        util: Rc<RefCell<U>>,
     ) -> Rc<Self> {
         let pkg = package.map(|p| Rc::downgrade(&p));
-        let name = Name::new(descriptor.name(), util);
+        let name = Name::new(descriptor.name(), util.clone());
         let fully_qualified_name = match descriptor.package() {
-            "" => String::from(""),
+            "" => String::default(),
             p => format!(".{}", p),
         };
         let file_path = PathBuf::from(descriptor.name());
@@ -66,9 +61,10 @@ impl<U> File<U> {
             def_exts: Vec::default(),
             messages: Vec::default(),
             enums: Vec::default(),
-            services: Rc::new(RefCell::new(Vec::new())),
+            services: Vec::default(),
             src_info: None,
             pkg_info: None,
+            util,
         })
     }
     pub fn imports(&self) -> UpgradeIter<File<U>> {
@@ -119,7 +115,7 @@ impl Default for File<Generic> {
     fn default() -> Self {
         Self {
             fully_qualified_name: Default::default(),
-            descriptor: Default::default(),
+            descriptor: Rc::new(FileDescriptorProto::default()),
             name: Name::<Generic>::default(),
             file_path: Default::default(),
             build_target: Default::default(),
@@ -132,6 +128,7 @@ impl Default for File<Generic> {
             services: Default::default(),
             src_info: Default::default(),
             pkg_info: Default::default(),
+            util: Rc::new(RefCell::new(Generic)),
         }
     }
 }

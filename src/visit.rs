@@ -105,15 +105,6 @@ where
 // }
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    struct MockVisitor<'a, U> {
-        pkg: &'a Package<U>,
-    }
-    impl<'a, U> Visitor<U> for MockVisitor<'a, U> {
-        type Error = anyhow::Error;
-    }
-
     // #[test]
     // fn test_visit_package() {
     //     let pkg = Package::new(, lang)

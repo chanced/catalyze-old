@@ -3,6 +3,7 @@ use crate::Node;
 use crate::Source;
 use crate::{File, Package};
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -23,7 +24,7 @@ pub struct Ast<U> {
     pub packages: HashMap<String, Rc<Package<U>>>,
     pub nodes: HashMap<String, Node<U>>,
     pub extensions: Vec<Rc<Extension<U>>>,
-    pub util: U,
+    pub util: Rc<RefCell<U>>,
     pub file_descriptors: Vec<Rc<FileDescriptorProto>>,
     pub target_list: HashSet<String>,
 }
@@ -39,23 +40,17 @@ impl<U> Ast<U> {
     }
 }
 
-impl<U: Clone> Ast<U> {
-    pub fn new(source: impl Source, util: U) -> Result<Self, anyhow::Error> {
-        let file_descriptors = source
-            .files()
-            .cloned()
-            .map(Rc::new)
-            .collect::<Vec<Rc<FileDescriptorProto>>>();
+impl<U> Ast<U> {
+    pub fn new(source: impl Source, util: Rc<RefCell<U>>) -> Result<Self, anyhow::Error> {
         let target_list = source.targets().cloned().collect::<HashSet<String>>();
-        let cap = file_descriptors.len();
         let mut ast = Self {
             util: util.clone(),
-            targets: HashMap::with_capacity(cap),
+            targets: HashMap::with_capacity(target_list.len()),
             target_list,
             packages: HashMap::default(),
             nodes: HashMap::default(),
             extensions: Vec::default(),
-            file_descriptors,
+            file_descriptors: source.files().collect::<Vec<Rc<FileDescriptorProto>>>(),
         };
         let mut seen: HashMap<String, Rc<File<U>>> = HashMap::default();
         for fd in ast.file_descriptors.iter().cloned() {
@@ -67,7 +62,7 @@ impl<U: Clone> Ast<U> {
                     Some(
                         ast.packages
                             .entry(name.to_string())
-                            .or_insert_with(|| Package::new(name, util.clone()))
+                            .or_insert_with(|| Rc::new(Package::new(name, util.clone())))
                             .clone(),
                     )
                 }
@@ -79,15 +74,16 @@ impl<U: Clone> Ast<U> {
             for d in fd.dependency.iter() {
                 let dep = match seen.get(d).cloned() {
                     Some(f) => f,
-                    None => {
-                        bail!("dependency {} has not been hydrated", d);
-                    }
+                    None => bail!("dependency {} has not been hydrated", d),
                 };
                 file.add_dependency(dep.clone());
                 dep.add_dependent(file.clone());
             }
-
             seen.insert(fd.name().to_string(), file.clone());
+
+            for m in fd.message_type.iter().cloned() {
+                // let msg = Message::new()
+            }
         }
 
         Ok(ast)

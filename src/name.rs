@@ -1,16 +1,30 @@
-use crate::util::{Generic, Lang};
+use crate::util::{Generic, ToCase};
 use crate::WELL_KNNOWN_TYPE_PACKAGE;
 pub use heck::{
     AsLowerCamelCase, ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase,
     ToShoutySnakeCase, ToSnakeCase, ToTitleCase, ToUpperCamelCase,
 };
+use std::cell::RefCell;
+use std::fmt::Write;
 use std::hash::{Hash, Hasher};
+use std::ops;
+use std::rc::Rc;
+
+use std::str::FromStr;
 use std::{fmt, ops::Add};
 
-#[derive(Clone)]
 pub struct Name<U> {
     val: String,
-    lang: U,
+    pub util: Rc<RefCell<U>>,
+}
+
+impl<U> Clone for Name<U> {
+    fn clone(&self) -> Self {
+        Self {
+            val: self.val.clone(),
+            util: self.util.clone(),
+        }
+    }
 }
 
 impl<U> Hash for Name<U> {
@@ -18,9 +32,81 @@ impl<U> Hash for Name<U> {
         self.val.hash(state);
     }
 }
+
+impl<U> Name<U> {
+    pub fn new(val: &str, util: Rc<RefCell<U>>) -> Self {
+        Self {
+            val: val.to_owned(),
+            util,
+        }
+    }
+    /// Assign returns a new `Name` with the contents of `val` and a cloned copy
+    /// of `Rc<RefCell<U>>`.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// let n = Name::new("foo", Rc::new(RefCell::new(util::Generic{})));
+    /// let n2 = n.assign("bar");
+    /// assert_eq!(n2, "bar");
+    /// ```
+    pub fn assign(&self, val: &str) -> Self {
+        Self {
+            val: val.to_owned(),
+            util: self.util.clone(),
+        }
+    }
+    /// Assign returns a new `Name` with the contents of `val` and a cloned copy
+    /// of `Rc<RefCell<U>>`.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// let n = Name::new("foo", Rc::new(RefCell::new(util::Generic{})));
+    /// let n2 = n.assign(String::from("bar"));
+    /// assert_eq!(n2, "bar");
+    /// ```
+    pub fn assign_string(&self, val: String) -> Self {
+        Self {
+            val,
+            util: self.util.clone(),
+        }
+    }
+    // Returns a byte slice of this `Name`'s value.
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.val.as_bytes()
+    }
+    pub fn util(&self) -> Rc<RefCell<U>> {
+        self.util.clone()
+    }
+}
+
 impl<U> PartialEq for Name<U> {
     fn eq(&self, other: &Self) -> bool {
-        self.val == other.val
+        PartialEq::eq(&self.val, &other.val)
+    }
+    fn ne(&self, other: &Self) -> bool {
+        PartialEq::ne(&self.val, &other.val)
+    }
+}
+impl<U> PartialEq<String> for Name<U> {
+    fn eq(&self, other: &String) -> bool {
+        PartialEq::eq(&self.val, other)
+    }
+    fn ne(&self, other: &String) -> bool {
+        PartialEq::ne(&self.val, other)
+    }
+}
+impl<U> PartialEq<str> for Name<U> {
+    fn eq(&self, other: &str) -> bool {
+        PartialEq::eq(self.as_str(), other)
+    }
+    fn ne(&self, other: &str) -> bool {
+        PartialEq::ne(self.as_str(), other)
     }
 }
 
@@ -30,23 +116,38 @@ impl Default for Name<Generic> {
     fn default() -> Self {
         Self {
             val: Default::default(),
-            lang: Generic {},
+            util: Rc::new(RefCell::new(Generic)),
+        }
+    }
+}
+impl FromStr for Name<Generic> {
+    type Err = core::convert::Infallible;
+    #[inline]
+    fn from_str(s: &str) -> Result<Name<Generic>, Self::Err> {
+        Ok(Name::from(s))
+    }
+}
+
+impl From<&str> for Name<Generic> {
+    #[inline]
+    fn from(s: &str) -> Self {
+        Self {
+            val: String::from(s),
+            util: Rc::new(RefCell::new(Generic)),
         }
     }
 }
 
-impl<U> Name<U> {
-    pub fn new(s: &str, lang: U) -> Self {
-        Self {
-            val: s.to_string(),
-            lang,
-        }
+impl<U> Write for Name<U> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.val.write_str(s)
     }
 }
-impl<U: Clone> Name<U> {
-    /// lang is the specified programming language targeted by the current generator.
-    pub fn lang(&self) -> U {
-        self.lang.clone()
+
+impl<U> ops::Deref for Name<U> {
+    type Target = str;
+    fn deref(&self) -> &Self::Target {
+        &self.val
     }
 }
 
@@ -59,27 +160,26 @@ impl<U> Name<U> {
     }
 }
 
-impl<U: Clone> Add<Self> for Name<U> {
+impl<U> Add<Self> for Name<U> {
     type Output = Self;
     fn add(self, other: Self) -> Self {
         Self {
             val: format!("{}{}", self.val, other.val),
-            lang: self.lang.clone(),
+            util: self.util,
         }
     }
 }
-impl<U: Clone> Add<&str> for Name<U> {
+impl<U> Add<&str> for Name<U> {
     type Output = Self;
-
     fn add(self, rhs: &str) -> Self::Output {
-        Name::new(&(self.val + rhs), self.lang.clone())
+        Name::new(&(self.val + rhs), self.util)
     }
 }
 
-impl<U: Clone> Add<String> for Name<U> {
+impl<U> Add<String> for Name<U> {
     type Output = Self;
     fn add(self, rhs: String) -> Self::Output {
-        Name::new(&(self.val + rhs.as_str()), self.lang.clone())
+        Name::new(&(self.val + rhs.as_str()), self.util)
     }
 }
 
@@ -107,47 +207,46 @@ impl<T: ToLowerCamelCase> ToCamelCase for T {
         self.to_lower_camel_case()
     }
 }
-
-pub trait ToCamelCase: ToOwned {
-    fn to_camel_case(&self) -> Self::Owned;
-}
 impl ToCamelCase for str {
     fn to_camel_case(&self) -> String {
         AsLowerCamelCase(self).to_string()
     }
 }
+pub trait ToCamelCase: ToOwned {
+    fn to_camel_case(&self) -> Self::Owned;
+}
 
-impl<U: Lang> ToKebabCase for Name<U> {
+impl<U: ToCase> ToKebabCase for Name<U> {
     fn to_kebab_case(&self) -> Self {
-        self.lang.to_kebab_case(self)
+        self.util.borrow().to_kebab_case(self)
     }
 }
-impl<U: Lang> ToSnakeCase for Name<U> {
+impl<U: ToCase> ToSnakeCase for Name<U> {
     fn to_snake_case(&self) -> Self {
-        self.lang.to_snake_case(self)
+        self.util.borrow().to_snake_case(self)
     }
 }
 
-impl<U: Lang> ToPascalCase for Name<U> {
+impl<U: ToCase> ToPascalCase for Name<U> {
     fn to_pascal_case(&self) -> Self {
-        self.lang.to_pascal_case(self)
+        self.util.borrow().to_pascal_case(self)
     }
 }
 
-impl<U: Lang> ToScreamingSnakeCase for Name<U> {
+impl<U: ToCase> ToScreamingSnakeCase for Name<U> {
     fn to_screaming_snake_case(&self) -> Self {
-        self.lang.to_screaming_snake_case(self)
+        self.util.borrow().to_screaming_snake_case(self)
     }
 }
 
 impl<U> fmt::Debug for Name<U> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.val)
     }
 }
 
 impl<U> fmt::Display for Name<U> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.val)
     }
 }
@@ -161,15 +260,15 @@ impl<U> fmt::Display for Name<U> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util;
+    use crate::util::Rust;
     #[test]
     fn test_to_kebab() {
-        let n = Name::new("hello_world", util::Rust);
+        let n = Name::new("hello_world", Rc::new(RefCell::new(Rust {})));
         assert_eq!(n.to_kebab_case().to_string(), "hello-world".to_string());
     }
     #[test]
     fn test_to_pascal() {
-        let n = Name::new("hello_world", util::Rust);
+        let n = Name::new("hello_world", Rc::new(RefCell::new(Rust {})));
         assert_eq!(n.to_pascal_case().to_string(), "HelloWorld".to_string());
     }
 }

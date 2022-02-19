@@ -7,7 +7,6 @@ edition = "2021"
 prost = "0.9"
 prost-types = "0.9"
 heck = "0.4"
-glob = "0.3"
 anyhow = "1.0.53"
 petgraph = "0.6.0"
 

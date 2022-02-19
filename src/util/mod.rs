@@ -1,11 +1,9 @@
+pub mod format;
 mod generic;
-mod lang;
 mod rust;
-mod typescript;
-pub use lang::{Keyword, Lang};
+pub mod typescript;
+pub use format::*;
+pub use generic::*;
+pub use rust::*;
 
 pub use typescript::TypeScript;
-
-pub use rust::Rust;
-
-pub use generic::Generic;
