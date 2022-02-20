@@ -1,10 +1,7 @@
-use std::{
-    rc::{Rc, Weak},
-    slice::Iter,
-};
+use std::rc::{Rc, Weak};
 
 use crate::{
-    iter::{AllEnums, AllMessages},
+    iter::{AllEnums, AllMessages, Iter},
     Enum,
 };
 use crate::{File, Message, Name, Package};
@@ -99,10 +96,10 @@ impl<U> Container<U> {
             Container::Message(m) => &m.name,
         }
     }
-    pub fn messages(&self) -> Iter<Rc<Message<U>>> {
+    pub fn messages(&self) -> Iter<Message<U>> {
         match self {
-            Container::File(f) => f.messages.iter(),
-            Container::Message(m) => m.messages.iter(),
+            Container::File(f) => Iter::from(&f.messages),
+            Container::Message(m) => Iter::from(&m.messages),
         }
     }
     pub fn all_messages(&self) -> AllMessages<U> {
@@ -117,10 +114,10 @@ impl<U> Container<U> {
             Container::Message(m) => m.all_enums(),
         }
     }
-    pub fn enums(&self) -> Iter<Rc<Enum<U>>> {
+    pub fn enums(&self) -> Iter<Enum<U>> {
         match self {
-            Container::File(f) => f.enums.iter(),
-            Container::Message(m) => m.enums.iter(),
+            Container::File(f) => Iter::from(&f.enums),
+            Container::Message(m) => Iter::from(&m.enums),
         }
     }
     pub fn package(&self) -> Option<Rc<Package<U>>> {

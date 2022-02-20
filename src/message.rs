@@ -1,15 +1,18 @@
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
 use std::str::FromStr;
 
 use prost_types::DescriptorProto;
 
 use crate::container::BuildTarget;
-use crate::iter::{AllEnums, AllMessages, UpgradeIter};
+use crate::iter::UpgradeIter;
 use crate::util::Generic;
-use crate::{container::Container, container::InternalContainer, Field, Name, Oneof};
-use crate::{Enum, Node};
+use crate::{container::Container, container::InternalContainer, Name};
+use crate::{AllEnums, EnumList, FieldList, Node, OneofList};
 use crate::{Package, WellKnownType};
+
+pub(crate) type MessageList<U> = Rc<RefCell<Vec<Rc<Message<U>>>>>;
 
 /// Message describes a proto message. Messages can be contained in either
 /// another Message or File, and may house further Messages and/or Enums. While
@@ -22,29 +25,29 @@ pub struct Message<U> {
     pub is_map_entry: bool,
     pub name: Name<U>,
     pub well_known_type: Option<WellKnownType>, // dependents_cache: RefCell<HashMap<String, Weak<Message<U>>>>,
-    pub enums: Vec<Rc<Enum<U>>>,
-    pub preserved_messages: Vec<Rc<Message<U>>>,
-    pub messages: Vec<Rc<Message<U>>>,
-    pub maps: Vec<Rc<Message<U>>>,
-    pub fields: Vec<Rc<Field<U>>>,
-    pub oneofs: Vec<Rc<Oneof<U>>>,
+    pub enums: EnumList<U>,
+    pub preserved_messages: MessageList<U>,
+    pub messages: MessageList<U>,
+    pub maps: MessageList<U>,
+    pub fields: FieldList<U>,
+    pub oneofs: OneofList<U>,
     pub(crate) dependents: Rc<RefCell<Vec<Weak<Message<U>>>>>,
     pub(crate) container: InternalContainer<U>,
 }
 
 impl<U> Message<U> {
     pub(crate) fn new(
-        md: &DescriptorProto,
+        desc: DescriptorProto,
         container: Container<U>,
         lang: Rc<RefCell<U>>,
     ) -> Rc<Self> {
-        let fully_qualified_name = match md.name() {
+        let fully_qualified_name = match desc.name() {
             "" => String::from(""),
             n => format!("{}.{}", container.fully_qualified_name(), n),
         };
 
         let well_known_type = if container.package().map_or(false, |pkg| pkg.is_well_known()) {
-            match WellKnownType::from_str(md.name()) {
+            match WellKnownType::from_str(desc.name()) {
                 Ok(wkt) => Some(wkt),
                 Err(_) => None,
             }
@@ -52,20 +55,20 @@ impl<U> Message<U> {
             None
         };
 
-        let name = Name::new(md.name(), lang);
+        let name = Name::new(desc.name(), lang);
         Rc::new(Message {
             name,
             container: container.downgrade(),
             fully_qualified_name,
             well_known_type,
-            descriptor: md.clone(),
-            is_map_entry: md.options.as_ref().map_or(false, |o| o.map_entry()),
-            enums: Vec::default(),
-            preserved_messages: Vec::default(),
-            messages: Vec::default(),
-            fields: Vec::default(),
-            oneofs: Vec::default(),
-            maps: Vec::default(),
+            descriptor: desc.clone(),
+            is_map_entry: desc.options.as_ref().map_or(false, |o| o.map_entry()),
+            enums: Rc::new(RefCell::new(Vec::with_capacity(desc.enum_type.len()))),
+            fields: Rc::new(RefCell::new(Vec::with_capacity(desc.field.len()))),
+            oneofs: Rc::new(RefCell::new(Vec::with_capacity(desc.oneof_decl.len()))),
+            preserved_messages: Rc::new(RefCell::new(Vec::with_capacity(desc.nested_type.len()))),
+            messages: Rc::new(RefCell::new(Vec::new())),
+            maps: Rc::new(RefCell::new(Vec::new())),
             dependents: Rc::new(RefCell::new(Vec::new())),
         })
     }
@@ -85,11 +88,11 @@ impl<U> Message<U> {
         self.container.upgrade()
     }
     pub fn all_messages(&self) -> AllMessages<U> {
-        AllMessages::new(&self.messages)
+        AllMessages::new(self.messages.clone())
     }
 
     pub fn all_enums(&self) -> AllEnums<U> {
-        AllEnums::new(&self.enums, &self.messages)
+        AllEnums::new(self.enums.clone(), self.messages.clone())
     }
 
     pub fn dependents(&self) -> UpgradeIter<Message<U>> {
@@ -121,6 +124,32 @@ impl Default for Message<Generic> {
             oneofs: Default::default(),
             dependents: Default::default(),
             container: InternalContainer::File(Weak::new()),
+        }
+    }
+}
+
+pub struct AllMessages<U> {
+    q: VecDeque<Rc<Message<U>>>,
+}
+
+impl<U> AllMessages<U> {
+    pub(crate) fn new(msgs: MessageList<U>) -> Self {
+        Self {
+            q: VecDeque::from_iter(msgs.borrow().iter().cloned()),
+        }
+    }
+}
+
+impl<U> Iterator for AllMessages<U> {
+    type Item = Rc<Message<U>>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(msg) = self.q.pop_front() {
+            for v in msg.messages.borrow().iter().cloned() {
+                self.q.push_back(v);
+            }
+            Some(msg)
+        } else {
+            None
         }
     }
 }

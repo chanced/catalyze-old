@@ -28,13 +28,15 @@ impl Default for Package<Generic> {
 }
 
 impl<U> Package<U> {
-    pub(crate) fn new(name: &str, util: Rc<RefCell<U>>) -> Self {
-        Self {
+    pub(crate) fn new(name: &str, util: Rc<RefCell<U>>) -> Rc<Self> {
+        let mut pkg = Self {
             name: Name::new(name, util.clone()),
             files: Rc::new(RefCell::new(vec![])),
             comments: Rc::new(RefCell::new(Vec::default())),
             util,
-        }
+        };
+
+        return Rc::new(pkg);
     }
 
     pub(crate) fn add_file(&self, file: Rc<File<U>>) {

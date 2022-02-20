@@ -62,10 +62,10 @@ pub fn visit_file<U, V>(v: &mut V, file: Rc<File<U>>) -> Result<(), V::Error>
 where
     V: Visitor<U> + ?Sized,
 {
-    for msg in file.messages.iter().cloned() {
+    for msg in file.messages() {
         v.visit_message(msg)?;
     }
-    for e in file.enums.iter().cloned() {
+    for e in file.enums() {
         v.visit_enum(e)?;
     }
 

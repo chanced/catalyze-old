@@ -4,7 +4,27 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{Enum, File, Message, Name};
+use crate::{File, Name};
+
+pub struct Iter<T> {
+    nodes: Rc<RefCell<Vec<Rc<T>>>>,
+    idx: usize,
+}
+impl<T> Iterator for Iter<T> {
+    type Item = Rc<T>;
+    fn next(&mut self) -> Option<Rc<T>> {
+        self.idx += 1;
+        self.nodes.borrow().get(self.idx - 1).cloned()
+    }
+}
+impl<T> From<&Rc<RefCell<Vec<Rc<T>>>>> for Iter<T> {
+    fn from(nodes: &Rc<RefCell<Vec<Rc<T>>>>) -> Self {
+        Iter {
+            nodes: nodes.clone(),
+            idx: 0,
+        }
+    }
+}
 
 pub struct UpgradeIter<T> {
     nodes: Rc<RefCell<Vec<Weak<T>>>>,
@@ -26,67 +46,6 @@ impl<T> Iterator for UpgradeIter<T> {
                 .cloned()
                 .map(|n| n.upgrade().unwrap())
         } else {
-            None
-        }
-    }
-}
-
-pub struct AllMessages<U> {
-    q: VecDeque<Rc<Message<U>>>,
-}
-
-impl<U> AllMessages<U> {
-    pub(crate) fn new(msgs: &[Rc<Message<U>>]) -> Self {
-        Self {
-            q: VecDeque::from_iter(msgs.iter().cloned()),
-        }
-    }
-}
-
-impl<U> Iterator for AllMessages<U> {
-    type Item = Rc<Message<U>>;
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(msg) = self.q.pop_front() {
-            for v in msg.messages.iter().cloned() {
-                self.q.push_back(v);
-            }
-            Some(msg)
-        } else {
-            None
-        }
-    }
-}
-pub struct AllEnums<U> {
-    msgs: VecDeque<Rc<Message<U>>>,
-    enums: VecDeque<Rc<Enum<U>>>,
-}
-
-impl<U> AllEnums<U> {
-    pub(crate) fn new(enums: &[Rc<Enum<U>>], msgs: &[Rc<Message<U>>]) -> Self {
-        Self {
-            msgs: VecDeque::from_iter(msgs.iter().cloned()),
-            enums: VecDeque::from_iter(enums.iter().cloned()),
-        }
-    }
-}
-
-impl<U> Iterator for AllEnums<U> {
-    type Item = Rc<Enum<U>>;
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(e) = self.enums.pop_front() {
-            Some(e)
-        } else {
-            while let Some(msg) = self.msgs.pop_front() {
-                for v in msg.messages.iter().cloned() {
-                    self.msgs.push_back(v);
-                }
-                for v in msg.enums.iter().cloned() {
-                    self.enums.push_back(v);
-                }
-                if let Some(e) = self.enums.pop_front() {
-                    return Some(e);
-                }
-            }
             None
         }
     }

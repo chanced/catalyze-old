@@ -1,9 +1,17 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     container::{Container, InternalContainer},
     Field, Name, Node,
 };
+
+pub(crate) type OneofList<U> = Rc<RefCell<Vec<Rc<Oneof<U>>>>>;
+pub(crate) fn new_oneof_list<U>(cap: usize) -> OneofList<U> {
+    match cap {
+        0 => Rc::new(RefCell::new(Vec::new())),
+        cap => Rc::new(RefCell::new(Vec::with_capacity(cap))),
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Oneof<U> {

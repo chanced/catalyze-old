@@ -1,4 +1,6 @@
+use crate::container::Container;
 use crate::Extension;
+use crate::Message;
 use crate::Node;
 use crate::Source;
 use crate::{File, Package};
@@ -25,7 +27,7 @@ pub struct Ast<U> {
     pub nodes: HashMap<String, Node<U>>,
     pub extensions: Vec<Rc<Extension<U>>>,
     pub util: Rc<RefCell<U>>,
-    pub file_descriptors: Vec<Rc<FileDescriptorProto>>,
+    pub file_descriptors: Vec<FileDescriptorProto>,
     pub target_list: HashSet<String>,
 }
 
@@ -50,7 +52,10 @@ impl<U> Ast<U> {
             packages: HashMap::default(),
             nodes: HashMap::default(),
             extensions: Vec::default(),
-            file_descriptors: source.files().collect::<Vec<Rc<FileDescriptorProto>>>(),
+            file_descriptors: source
+                .files()
+                .cloned()
+                .collect::<Vec<FileDescriptorProto>>(),
         };
         let mut seen: HashMap<String, Rc<File<U>>> = HashMap::default();
         for fd in ast.file_descriptors.iter().cloned() {
@@ -62,12 +67,11 @@ impl<U> Ast<U> {
                     Some(
                         ast.packages
                             .entry(name.to_string())
-                            .or_insert_with(|| Rc::new(Package::new(name, util.clone())))
+                            .or_insert_with(|| Package::new(name, util.clone()))
                             .clone(),
                     )
                 }
             };
-
             let build_target = ast.target_list.contains(fd.name());
             let file = File::new(build_target, fd.clone(), pkg, util.clone());
             ast.targets.insert(fd.name().to_string(), file.clone());
@@ -80,10 +84,6 @@ impl<U> Ast<U> {
                 dep.add_dependent(file.clone());
             }
             seen.insert(fd.name().to_string(), file.clone());
-
-            for m in fd.message_type.iter().cloned() {
-                // let msg = Message::new()
-            }
         }
 
         Ok(ast)
