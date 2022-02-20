@@ -7,9 +7,10 @@ use prost_types::DescriptorProto;
 
 use crate::container::BuildTarget;
 use crate::iter::UpgradeIter;
+use crate::path::DescriptorPath;
 use crate::util::Generic;
 use crate::{container::Container, container::InternalContainer, Name};
-use crate::{AllEnums, EnumList, FieldList, Node, OneofList};
+use crate::{AllEnums, EnumList, FieldList, Node, NodeAtPath, OneofList};
 use crate::{Package, WellKnownType};
 
 pub(crate) type MessageList<U> = Rc<RefCell<Vec<Rc<Message<U>>>>>;
@@ -102,9 +103,32 @@ impl<U> Message<U> {
     pub(crate) fn add_dependent(&self, dependent: Weak<Message<U>>) {
         self.dependents.borrow_mut().push(dependent);
     }
+}
 
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<U>> {
-        todo!()
+impl<U> NodeAtPath<U> for Rc<Message<U>> {
+    fn node_at_path(&self, path: &[i32]) -> Option<Node<U>> {
+        let msg = self.clone();
+        if path.is_empty() {
+            return Some(Node::Message(msg));
+        }
+        if path.len() % 2 == 0 {
+            return None;
+        }
+
+        let next = path[1] as usize;
+        DescriptorPath::try_from(path[0]).ok().and_then(|p| {
+            match p {
+                DescriptorPath::EnumType => msg.enums.borrow().get(next).cloned().map(Node::Enum),
+                DescriptorPath::Field => msg.fields.borrow().get(next).cloned().map(Node::Field),
+                DescriptorPath::OneofDecl => {
+                    msg.oneofs.borrow().get(next).cloned().map(Node::OneOf)
+                }
+                DescriptorPath::NestedType => {
+                    msg.messages.borrow().get(next).cloned().map(Node::Message)
+                }
+            }
+            .and_then(|n| n.node_at_path(&path[2..]))
+        })
     }
 }
 

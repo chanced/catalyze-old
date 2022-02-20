@@ -1,10 +1,7 @@
 use std::rc::{Rc, Weak};
 
-use crate::{
-    iter::{AllEnums, AllMessages, Iter},
-    Enum,
-};
-use crate::{File, Message, Name, Package};
+use crate::{iter::Iter, Enum};
+use crate::{AllEnums, AllMessages, File, Message, Name, Package};
 
 // pub enum Entity {
 
@@ -45,12 +42,12 @@ impl<U> InternalContainer<U> {
     //         }
     //     }
     // }
-    pub(crate) fn fully_qualified_name(&self) -> String {
-        match self {
-            InternalContainer::File(f) => f.upgrade().unwrap().fully_qualified_name.clone(),
-            InternalContainer::Message(m) => m.upgrade().unwrap().fully_qualified_name.clone(),
-        }
-    }
+    // pub(crate) fn fully_qualified_name(&self) -> String {
+    //     match self {
+    //         InternalContainer::File(f) => f.upgrade().unwrap().fully_qualified_name.clone(),
+    //         InternalContainer::Message(m) => m.upgrade().unwrap().fully_qualified_name.clone(),
+    //     }
+    // }
 
     pub(crate) fn package(&self) -> Option<Rc<Package<U>>> {
         match self {

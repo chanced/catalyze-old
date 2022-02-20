@@ -39,7 +39,7 @@ impl<U> Node<U> {
         }
     }
 
-    pub(crate) fn child_at_path(&self, path: &[i32]) -> Option<Node<U>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<U>> {
         match self {
             Node::File(f) => f.node_at_path(path),
             Node::Message(m) => m.node_at_path(path),
@@ -94,4 +94,8 @@ impl<U> From<EnumValue<U>> for Node<U> {
     fn from(enum_value: EnumValue<U>) -> Self {
         Node::EnumValue(Rc::new(enum_value))
     }
+}
+
+pub trait NodeAtPath<U> {
+    fn node_at_path(&self, path: &[i32]) -> Option<Node<U>>;
 }

@@ -1,8 +1,11 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    rc::{Rc, Weak},
+};
 
 use prost_types::FieldDescriptorProto;
 
-use crate::Name;
+use crate::{File, Name};
 
 pub(crate) type ExtensionList<U> = Rc<RefCell<Vec<Rc<Extension<U>>>>>;
 pub(crate) fn new_extension_list<U>(cap: usize) -> ExtensionList<U> {
@@ -12,18 +15,26 @@ pub(crate) fn new_extension_list<U>(cap: usize) -> ExtensionList<U> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct Extension<U> {
-    name: Name<U>,
-    placeholder_until_i_fill_in_this_field: String,
-    // TODO: see above.
+    pub name: Name<U>,
+    pub descriptor: FieldDescriptorProto,
+    pub(crate) file: Weak<File<U>>,
 }
 
 impl<U> Extension<U> {
-    pub fn new(descriptor: Rc<FieldDescriptorProto>, util: Rc<RefCell<U>>) -> Self {
-        Self {
-            name: Name::new(descriptor.name(), util),
-            placeholder_until_i_fill_in_this_field: String::new(),
-        }
+    pub fn new(desc: FieldDescriptorProto, file: Rc<File<U>>, util: Rc<RefCell<U>>) -> Rc<Self> {
+        let ext = Rc::new(Self {
+            name: Name::new(desc.name(), util),
+            descriptor: desc,
+            file: Rc::downgrade(&file),
+        });
+        ext
+    }
+}
+
+impl<U> Extension<U> {
+    pub fn file(&self) -> Rc<File<U>> {
+        self.file.upgrade().unwrap()
     }
 }

@@ -9,7 +9,7 @@ use prost_types::EnumDescriptorProto;
 use crate::{
     container::{Container, InternalContainer},
     util::Generic,
-    EnumValueList, Message, MessageList, Name, Node, Package,
+    EnumValue, EnumValueList, Message, MessageList, Name, Node, Package,
 };
 
 pub(crate) type EnumList<U> = Rc<RefCell<Vec<Rc<Enum<U>>>>>;
@@ -38,6 +38,12 @@ impl<U> Enum<U> {
             dependents: Rc::new(RefCell::new(Vec::default())),
             fully_qualified_name,
         });
+        {
+            let mut values = e.values.borrow_mut();
+            for v in &desc.value {
+                values.push(EnumValue::new(v.clone(), e.clone(), util.clone()));
+            }
+        }
 
         e
     }
@@ -97,4 +103,12 @@ impl<U> Iterator for AllEnums<U> {
             None
         }
     }
+}
+
+pub enum CalculatorInput {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Value(i32),
 }
