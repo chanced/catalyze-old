@@ -7,8 +7,8 @@ use prost_types::FieldDescriptorProto;
 
 use crate::{File, Name};
 
-pub(crate) type ExtensionList<U> = Rc<RefCell<Vec<Rc<Extension<U>>>>>;
-pub(crate) fn new_extension_list<U>(cap: usize) -> ExtensionList<U> {
+pub(crate) type ExtensionList<'a, U> = Rc<RefCell<Vec<Rc<Extension<'a, U>>>>>;
+pub(crate) fn new_extension_list<'a, U>(cap: usize) -> ExtensionList<'a, U> {
     match cap {
         0 => Rc::new(RefCell::new(Vec::new())),
         cap => Rc::new(RefCell::new(Vec::with_capacity(cap))),
@@ -16,14 +16,18 @@ pub(crate) fn new_extension_list<U>(cap: usize) -> ExtensionList<U> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Extension<U> {
+pub struct Extension<'a, U> {
     pub name: Name<U>,
-    pub descriptor: FieldDescriptorProto,
-    pub(crate) file: Weak<File<U>>,
+    pub descriptor: &'a FieldDescriptorProto,
+    pub(crate) file: Weak<File<'a, U>>,
 }
 
-impl<U> Extension<U> {
-    pub fn new(desc: FieldDescriptorProto, file: Rc<File<U>>, util: Rc<RefCell<U>>) -> Rc<Self> {
+impl<'a, U> Extension<'a, U> {
+    pub fn new(
+        desc: &'a FieldDescriptorProto,
+        file: Rc<File<'a, U>>,
+        util: Rc<RefCell<U>>,
+    ) -> Rc<Self> {
         let ext = Rc::new(Self {
             name: Name::new(desc.name(), util),
             descriptor: desc,
@@ -33,8 +37,8 @@ impl<U> Extension<U> {
     }
 }
 
-impl<U> Extension<U> {
-    pub fn file(&self) -> Rc<File<U>> {
+impl<'a, U> Extension<'a, U> {
+    pub fn file(&self) -> Rc<File<'a, U>> {
         self.file.upgrade().unwrap()
     }
 }

@@ -21,11 +21,11 @@ use prost_types::FileDescriptorProto;
 // [path].proto
 
 #[derive(Debug)]
-pub struct Ast<U> {
-    pub targets: HashMap<String, Rc<File<U>>>,
-    pub packages: HashMap<String, Rc<Package<U>>>,
-    pub nodes: HashMap<String, Node<U>>,
-    pub extensions: Vec<Rc<Extension<U>>>,
+pub struct Ast<'a, U> {
+    pub targets: HashMap<String, Rc<File<'a, U>>>,
+    pub packages: HashMap<String, Rc<Package<'a, U>>>,
+    pub nodes: HashMap<String, Node<'a, U>>,
+    pub extensions: Vec<Rc<Extension<'a, U>>>,
     pub util: Rc<RefCell<U>>,
     pub file_descriptors: Vec<FileDescriptorProto>,
     pub target_list: HashSet<String>,
@@ -33,16 +33,16 @@ pub struct Ast<U> {
 
 // Ast encapsulates the entirety of the input CodeGeneratorRequest from protoc,
 // parsed to build the Node graph used by catalyze.
-impl<U> Ast<U> {
-    pub fn package(&self, name: &str) -> Option<Rc<Package<U>>> {
+impl<'a, U> Ast<'a, U> {
+    pub fn package(&self, name: &str) -> Option<Rc<Package<'a, U>>> {
         self.packages.get(name).cloned()
     }
-    pub fn file(&self, name: &str) -> Option<Rc<File<U>>> {
+    pub fn file(&self, name: &str) -> Option<Rc<File<'a, U>>> {
         self.targets.get(name).cloned()
     }
 }
 
-impl<U> Ast<U> {
+impl<'a, U> Ast<'a, U> {
     pub fn new(source: impl Source, util: Rc<RefCell<U>>) -> Result<Self, anyhow::Error> {
         let target_list = source.targets().cloned().collect::<HashSet<String>>();
         let mut ast = Self {
@@ -57,7 +57,7 @@ impl<U> Ast<U> {
                 .cloned()
                 .collect::<Vec<FileDescriptorProto>>(),
         };
-        let mut seen: HashMap<String, Rc<File<U>>> = HashMap::default();
+        let mut seen: HashMap<String, Rc<File<'a, U>>> = HashMap::default();
         for fd in ast.file_descriptors.iter().cloned() {
             let pkg = {
                 let name = fd.package();
@@ -88,7 +88,7 @@ impl<U> Ast<U> {
 
         Ok(ast)
     }
-    // fn hydrate_package(&mut self, fd: Rc<FileDescriptorProto>) -> Option<Rc<Package<U>>> {
+    // fn hydrate_package(&mut self, fd: Rc<FileDescriptorProto>) -> Option<Rc<Package<'a, U>>> {
 
     // }
 }
@@ -100,7 +100,7 @@ mod tests {
 }
 
 // // process_code_generator_request
-// pub fn process_code_generator_request<U>(request: prost_types::compiler::CodeGeneratorRequest, util: U) -> Ast<U> {
+// pub fn process_code_generator_request<'a, U>(request: prost_types::compiler::CodeGeneratorRequest, util: U) -> Ast<'a, U> {
 //     // let mut ast = Ast {
 //     //     util,
 //     //     targets: HashMap::with_capacity(request.proto_file.len()),
@@ -121,12 +121,12 @@ mod tests {
 
 // }
 
-// impl<U> Ast<U> {
+// impl<'a, U> Ast<'a, U> {
 //     fn hydrate_pkg(
 //         &mut self,
 //         fd: &prost_types::FileDescriptorProto,
 //         util: U,
-//     ) -> Option<Rc<Package<U>>> {
+//     ) -> Option<Rc<Package<'a, U>>> {
 //         let p = fd.package();
 //         if p.is_empty() {
 //             return None;

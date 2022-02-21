@@ -15,123 +15,121 @@ use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 
 #[derive(Debug, Clone)]
-pub struct File<U> {
-    pub fully_qualified_name: String,
-    pub descriptor: FileDescriptorProto,
+pub struct File<'a, U> {
+    fully_qualified_name: String,
+    pub descriptor: &'a FileDescriptorProto,
     pub name: Name<U>,
     pub file_path: PathBuf,
     pub build_target: bool,
     pub pkg_info: Option<prost_types::SourceCodeInfo>,
     pub src_info: Option<prost_types::SourceCodeInfo>,
     pub util: Rc<RefCell<U>>,
-    pub(crate) pkg: Option<Weak<Package<U>>>,
-    pub(crate) def_exts: ExtensionList<U>,
-    pub(crate) messages: MessageList<U>,
-    pub(crate) enums: EnumList<U>,
-    pub(crate) services: ServiceList<U>,
-    pub(crate) dependents: Rc<RefCell<Vec<Weak<File<U>>>>>,
-    pub(crate) dependencies: Rc<RefCell<Vec<Weak<File<U>>>>>,
+    pub(crate) pkg: Option<Weak<Package<'a, U>>>,
+    pub(crate) def_exts: ExtensionList<'a, U>,
+    pub(crate) messages: MessageList<'a, U>,
+    pub(crate) enums: EnumList<'a, U>,
+    pub(crate) services: ServiceList<'a, U>,
+    pub(crate) dependents: Rc<RefCell<Vec<Weak<File<'a, U>>>>>,
+    pub(crate) dependencies: Rc<RefCell<Vec<Weak<File<'a, U>>>>>,
 }
 
-impl<U> BuildTarget for File<U> {
+impl<'a, U> BuildTarget for File<'a, U> {
     fn build_target(&self) -> bool {
         self.build_target
     }
 }
 
-impl<U> File<U> {
+impl<'a, U> File<'a, U> {
     pub(crate) fn new(
         build_target: bool,
-        desc: FileDescriptorProto,
-        package: Option<Rc<Package<U>>>,
+        descriptor: &'a FileDescriptorProto,
+        package: Option<Rc<Package<'a, U>>>,
         util: Rc<RefCell<U>>,
     ) -> Rc<Self> {
         let pkg = package.map(|p| Rc::downgrade(&p));
-        let name = Name::new(desc.name(), util.clone());
-        let fully_qualified_name = match desc.package() {
+        let name = Name::new(descriptor.name(), util.clone());
+        let fully_qualified_name = match descriptor.package() {
             "" => String::default(),
             p => format!(".{}", p),
         };
-        let file_path = PathBuf::from(desc.name());
+        let file_path = PathBuf::from(descriptor.name());
 
         let file = Rc::new(Self {
             name,
             util,
-            descriptor: desc.clone(),
+            descriptor,
             pkg,
             fully_qualified_name,
             build_target,
             file_path,
             dependents: Rc::new(RefCell::new(Vec::new())),
-            dependencies: Rc::new(RefCell::new(Vec::with_capacity(desc.dependency.len()))),
-            def_exts: Rc::new(RefCell::new(Vec::with_capacity(desc.extension.len()))),
-            messages: Rc::new(RefCell::new(Vec::with_capacity(desc.message_type.len()))),
-            enums: Rc::new(RefCell::new(Vec::with_capacity(desc.enum_type.len()))),
-            services: Rc::new(RefCell::new(Vec::with_capacity(desc.service.len()))),
+            dependencies: Rc::new(RefCell::new(Vec::with_capacity(
+                descriptor.dependency.len(),
+            ))),
+            def_exts: Rc::new(RefCell::new(Vec::with_capacity(descriptor.extension.len()))),
+            messages: Rc::new(RefCell::new(Vec::with_capacity(
+                descriptor.message_type.len(),
+            ))),
+            enums: Rc::new(RefCell::new(Vec::with_capacity(descriptor.enum_type.len()))),
+            services: Rc::new(RefCell::new(Vec::with_capacity(descriptor.service.len()))),
             src_info: None,
             pkg_info: None,
         });
-        file.hydrate();
-        // for ed in desc.enum_type.iter().cloned() {
-        //     let msg = Enum::new(ed, Container::File(file.clone()), util.clone());
-        //     *(file.enums).borrow_mut().push(msg.clone());
-        // }
-
-        file
+        file.hydrate()
     }
-    pub fn messages(&self) -> Iter<Message<U>> {
+    pub fn messages(&self) -> Iter<Message<'a, U>> {
         Iter::from(&self.messages)
     }
-    pub fn enums(&self) -> Iter<Enum<U>> {
+    pub fn enums(&self) -> Iter<Enum<'a, U>> {
         Iter::from(&self.enums)
     }
-    pub fn services(&self) -> Iter<Service<U>> {
+    pub fn services(&self) -> Iter<Service<'a, U>> {
         Iter::from(&self.services)
     }
-    pub fn extensions(&self) -> Iter<Extension<U>> {
+    pub fn extensions(&self) -> Iter<Extension<'a, U>> {
         Iter::from(&self.def_exts)
     }
-    pub fn imports(&self) -> UpgradeIter<File<U>> {
+    pub fn imports(&self) -> UpgradeIter<File<'a, U>> {
         UpgradeIter::new(self.dependencies.clone())
     }
-    pub fn dependents(&self) -> UpgradeIter<File<U>> {
+    pub fn dependents(&self) -> UpgradeIter<File<'a, U>> {
         UpgradeIter::new(self.dependents.clone())
     }
-    pub fn dependencies(&self) -> UpgradeIter<File<U>> {
+    pub fn dependencies(&self) -> UpgradeIter<File<'a, U>> {
         UpgradeIter::new(self.dependencies.clone())
     }
 
-    pub fn transitive_imports(&self) -> TransitiveImports<U> {
+    pub fn transitive_imports(&self) -> TransitiveImports<'a, U> {
         TransitiveImports::new(self.dependencies.clone())
     }
 
     /// all_messages returns an iterator of all top-level and nested messages from this
     /// file.
-    pub fn all_messages(&self) -> AllMessages<U> {
+    pub fn all_messages(&self) -> AllMessages<'a, U> {
         AllMessages::new(self.messages.clone())
     }
 
     /// all_enums returns an iterator of all top-level and nested enums from this file.
-    pub fn all_enums(&self) -> AllEnums<U> {
+    pub fn all_enums(&self) -> AllEnums<'a, U> {
         AllEnums::new(self.enums.clone(), self.messages.clone())
     }
 
     pub fn file_path(&self) -> &PathBuf {
         &self.file_path
     }
-    pub fn package(&self) -> Option<Rc<Package<U>>> {
+    pub fn package(&self) -> Option<Rc<Package<'a, U>>> {
         self.pkg.clone().map(|p| p.upgrade().unwrap())
     }
 
-    pub(crate) fn add_dependency(&self, file: Rc<File<U>>) {
+    pub(crate) fn add_dependency(&self, file: Rc<File<'a, U>>) {
         self.dependencies.borrow_mut().push(Rc::downgrade(&file));
     }
 
-    pub(crate) fn add_dependent(&self, file: Rc<File<U>>) {
+    pub(crate) fn add_dependent(&self, file: Rc<File<'a, U>>) {
         self.dependents.borrow_mut().push(Rc::downgrade(&file));
     }
 }
-trait Hydrate<U> {
+trait Hydrate<'a, U> {
     fn hydrate(&self);
     fn hydrate_messages(&self);
     fn hydrate_enums(&self);
@@ -139,7 +137,7 @@ trait Hydrate<U> {
     fn hydrate_extensions(&self);
 }
 
-impl<U> Hydrate<U> for Rc<File<U>> {
+impl<'a, U> Hydrate<'a, U> for Rc<File<'a, U>> {
     fn hydrate(&self) {
         self.hydrate_messages();
         self.hydrate_enums();
@@ -149,7 +147,7 @@ impl<U> Hydrate<U> for Rc<File<U>> {
     fn hydrate_messages(&self) {
         let file = self.clone();
         let mut msgs = file.messages.borrow_mut();
-        for md in file.descriptor.message_type.iter().cloned() {
+        for md in file.descriptor.message_type.iter() {
             let msg = Message::new(md, Container::File(file.clone()), file.util.clone());
             msgs.push(msg);
         }
@@ -157,7 +155,7 @@ impl<U> Hydrate<U> for Rc<File<U>> {
     fn hydrate_enums(&self) {
         let file = self.clone();
         let mut enums = file.enums.borrow_mut();
-        for ed in file.descriptor.enum_type.iter().cloned() {
+        for ed in file.descriptor.enum_type.iter() {
             let e = Enum::new(ed, Container::File(file.clone()), file.util.clone());
             enums.push(e);
         }
@@ -166,7 +164,7 @@ impl<U> Hydrate<U> for Rc<File<U>> {
     fn hydrate_services(&self) {
         let file = self.clone();
         let mut services = file.services.borrow_mut();
-        for sd in file.descriptor.service.iter().cloned() {
+        for sd in file.descriptor.service.iter() {
             let svc = Service::new(sd, Container::File(file.clone()), file.util.clone());
             services.push(svc);
         }
@@ -175,15 +173,15 @@ impl<U> Hydrate<U> for Rc<File<U>> {
     fn hydrate_extensions(&self) {
         let file = self.clone();
         let mut exts = file.def_exts.borrow_mut();
-        for ed in file.descriptor.extension.iter().cloned() {
+        for ed in file.descriptor.extension.iter() {
             let ext = Extension::new(ed, file.clone(), file.util.clone());
             exts.push(ext);
         }
     }
 }
 
-impl<U> NodeAtPath<U> for Rc<File<U>> {
-    fn node_at_path(&self, path: &[i32]) -> Option<Node<U>> {
+impl<'a, U> NodeAtPath<'a, U> for Rc<File<'a, U>> {
+    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         if path.is_empty() {
             return Some(Node::File(self.clone()));
         }
@@ -209,12 +207,12 @@ impl<U> NodeAtPath<U> for Rc<File<U>> {
     }
 }
 
-impl Default for File<Generic> {
+impl Default for File<'_, Generic> {
     fn default() -> Self {
         Self {
             fully_qualified_name: Default::default(),
-            descriptor: FileDescriptorProto::default(),
-            name: Name::<Generic>::default(),
+            descriptor: &FileDescriptorProto::default(),
+            name: Name::default(),
             file_path: Default::default(),
             build_target: Default::default(),
             pkg: Default::default(),

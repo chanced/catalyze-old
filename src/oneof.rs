@@ -5,8 +5,8 @@ use crate::{
     Field, Name, Node,
 };
 
-pub(crate) type OneofList<U> = Rc<RefCell<Vec<Rc<Oneof<U>>>>>;
-pub(crate) fn new_oneof_list<U>(cap: usize) -> OneofList<U> {
+pub(crate) type OneofList<'a, U> = Rc<RefCell<Vec<Rc<Oneof<'a, U>>>>>;
+pub(crate) fn new_oneof_list<'a, U>(cap: usize) -> OneofList<'a, U> {
     match cap {
         0 => Rc::new(RefCell::new(Vec::new())),
         cap => Rc::new(RefCell::new(Vec::with_capacity(cap))),
@@ -14,18 +14,18 @@ pub(crate) fn new_oneof_list<U>(cap: usize) -> OneofList<U> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Oneof<U> {
+pub struct Oneof<'a, U> {
     pub name: Name<U>,
-    pub desc: prost_types::OneofDescriptorProto,
-    pub fully_qualified_name: String,
-    pub fields: Vec<Rc<Field<U>>>,
-    container: InternalContainer<U>,
+    pub desc: &'a prost_types::OneofDescriptorProto,
+    fully_qualified_name: String,
+    pub fields: Vec<Rc<Field<'a, U>>>,
+    container: InternalContainer<'a, U>,
 }
 
-impl<U> Oneof<U> {
+impl<'a, U> Oneof<'a, U> {
     // pub(crate) fn new(
-    //     desc: prost_types::OneofDescriptorProto,
-    //     container: Container<U>,
+    //     desc: &'a prost_types::OneofDescriptorProto,
+    //     container: Container<'a, U>,
     //     lang: U,
     // ) -> Self {
     //     Self {
@@ -36,15 +36,15 @@ impl<U> Oneof<U> {
     //     }
     // }
 
-    pub fn container(&self) -> Container<U> {
+    pub fn container(&self) -> Container<'a, U> {
         self.container.upgrade()
     }
 
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<U>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         todo!()
     }
 
-    // pub(crate) fn add_field(&self, field: Rc<Field<U>>) {
+    // pub(crate) fn add_field(&self, field: Rc<Field<'a, U>>) {
     //     self.fields.borrow_mut().push(field);
     // }
 }

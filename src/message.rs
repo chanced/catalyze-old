@@ -13,42 +13,42 @@ use crate::{container::Container, container::InternalContainer, Name};
 use crate::{AllEnums, EnumList, FieldList, Node, NodeAtPath, OneofList};
 use crate::{Package, WellKnownType};
 
-pub(crate) type MessageList<U> = Rc<RefCell<Vec<Rc<Message<U>>>>>;
+pub(crate) type MessageList<'a, U> = Rc<RefCell<Vec<Rc<Message<'a, U>>>>>;
 
 /// Message describes a proto message. Messages can be contained in either
 /// another Message or File, and may house further Messages and/or Enums. While
 /// all Fields technically live on the Message, some may be contained within
 /// OneOf blocks.
 #[derive(Debug, Clone)]
-pub struct Message<U> {
-    pub fully_qualified_name: String,
-    pub descriptor: DescriptorProto,
+pub struct Message<'a, U> {
+    fully_qualified_name: String,
+    pub descriptor: &'a DescriptorProto,
     pub is_map_entry: bool,
     pub name: Name<U>,
-    pub well_known_type: Option<WellKnownType>, // dependents_cache: RefCell<HashMap<String, Weak<Message<U>>>>,
-    pub enums: EnumList<U>,
-    pub preserved_messages: MessageList<U>,
-    pub messages: MessageList<U>,
-    pub maps: MessageList<U>,
-    pub fields: FieldList<U>,
-    pub oneofs: OneofList<U>,
-    pub(crate) dependents: Rc<RefCell<Vec<Weak<Message<U>>>>>,
-    pub(crate) container: InternalContainer<U>,
+    pub well_known_type: Option<WellKnownType>, // dependents_cache: RefCell<HashMap<String, Weak<Message<'a, U>>>>,
+    pub enums: EnumList<'a, U>,
+    pub preserved_messages: MessageList<'a, U>,
+    pub messages: MessageList<'a, U>,
+    pub maps: MessageList<'a, U>,
+    pub fields: FieldList<'a, U>,
+    pub oneofs: OneofList<'a, U>,
+    pub(crate) dependents: Rc<RefCell<Vec<Weak<Message<'a, U>>>>>,
+    pub(crate) container: InternalContainer<'a, U>,
 }
 
-impl<U> Message<U> {
+impl<'a, U> Message<'a, U> {
     pub(crate) fn new(
-        desc: DescriptorProto,
-        container: Container<U>,
+        descriptor: &'a DescriptorProto,
+        container: Container<'a, U>,
         lang: Rc<RefCell<U>>,
     ) -> Rc<Self> {
-        let fully_qualified_name = match desc.name() {
+        let fully_qualified_name = match descriptor.name() {
             "" => String::from(""),
             n => format!("{}.{}", container.fully_qualified_name(), n),
         };
 
         let well_known_type = if container.package().map_or(false, |pkg| pkg.is_well_known()) {
-            match WellKnownType::from_str(desc.name()) {
+            match WellKnownType::from_str(descriptor.name()) {
                 Ok(wkt) => Some(wkt),
                 Err(_) => None,
             }
@@ -56,18 +56,22 @@ impl<U> Message<U> {
             None
         };
 
-        let name = Name::new(desc.name(), lang);
+        let name = Name::new(descriptor.name(), lang);
         Rc::new(Message {
             name,
             container: container.downgrade(),
             fully_qualified_name,
             well_known_type,
-            descriptor: desc.clone(),
-            is_map_entry: desc.options.as_ref().map_or(false, |o| o.map_entry()),
-            enums: Rc::new(RefCell::new(Vec::with_capacity(desc.enum_type.len()))),
-            fields: Rc::new(RefCell::new(Vec::with_capacity(desc.field.len()))),
-            oneofs: Rc::new(RefCell::new(Vec::with_capacity(desc.oneof_decl.len()))),
-            preserved_messages: Rc::new(RefCell::new(Vec::with_capacity(desc.nested_type.len()))),
+            descriptor,
+            is_map_entry: descriptor.options.as_ref().map_or(false, |o| o.map_entry()),
+            enums: Rc::new(RefCell::new(Vec::with_capacity(descriptor.enum_type.len()))),
+            fields: Rc::new(RefCell::new(Vec::with_capacity(descriptor.field.len()))),
+            oneofs: Rc::new(RefCell::new(Vec::with_capacity(
+                descriptor.oneof_decl.len(),
+            ))),
+            preserved_messages: Rc::new(RefCell::new(Vec::with_capacity(
+                descriptor.nested_type.len(),
+            ))),
             messages: Rc::new(RefCell::new(Vec::new())),
             maps: Rc::new(RefCell::new(Vec::new())),
             dependents: Rc::new(RefCell::new(Vec::new())),
@@ -78,35 +82,35 @@ impl<U> Message<U> {
         self.container.build_target()
     }
 
-    pub fn package(&self) -> Option<Rc<Package<U>>> {
+    pub fn package(&self) -> Option<Rc<Package<'a, U>>> {
         self.container.package()
     }
 
     pub fn is_well_known_type(&self) -> bool {
         self.well_known_type.is_some()
     }
-    pub fn container(&self) -> Container<U> {
+    pub fn container(&self) -> Container<'a, U> {
         self.container.upgrade()
     }
-    pub fn all_messages(&self) -> AllMessages<U> {
+    pub fn all_messages(&self) -> AllMessages<'a, U> {
         AllMessages::new(self.messages.clone())
     }
 
-    pub fn all_enums(&self) -> AllEnums<U> {
+    pub fn all_enums(&self) -> AllEnums<'a, U> {
         AllEnums::new(self.enums.clone(), self.messages.clone())
     }
 
-    pub fn dependents(&self) -> UpgradeIter<Message<U>> {
+    pub fn dependents(&self) -> UpgradeIter<Message<'a, U>> {
         UpgradeIter::new(self.dependents.clone())
     }
 
-    pub(crate) fn add_dependent(&self, dependent: Weak<Message<U>>) {
+    pub(crate) fn add_dependent(&self, dependent: Weak<Message<'a, U>>) {
         self.dependents.borrow_mut().push(dependent);
     }
 }
 
-impl<U> NodeAtPath<U> for Rc<Message<U>> {
-    fn node_at_path(&self, path: &[i32]) -> Option<Node<U>> {
+impl<'a, U> NodeAtPath<'a, U> for Rc<Message<'a, U>> {
+    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         let msg = self.clone();
         if path.is_empty() {
             return Some(Node::Message(msg));
@@ -132,11 +136,11 @@ impl<U> NodeAtPath<U> for Rc<Message<U>> {
     }
 }
 
-impl Default for Message<Generic> {
+impl Default for Message<'_, Generic> {
     fn default() -> Self {
         Self {
             fully_qualified_name: Default::default(),
-            descriptor: DescriptorProto::default(),
+            descriptor: &DescriptorProto::default(),
             is_map_entry: Default::default(),
             name: Name::new("", Rc::new(RefCell::new(Generic::default()))),
             enums: Default::default(),
@@ -152,20 +156,20 @@ impl Default for Message<Generic> {
     }
 }
 
-pub struct AllMessages<U> {
-    q: VecDeque<Rc<Message<U>>>,
+pub struct AllMessages<'a, U> {
+    q: VecDeque<Rc<Message<'a, U>>>,
 }
 
-impl<U> AllMessages<U> {
-    pub(crate) fn new(msgs: MessageList<U>) -> Self {
+impl<'a, U> AllMessages<'a, U> {
+    pub(crate) fn new(msgs: MessageList<'a, U>) -> Self {
         Self {
             q: VecDeque::from_iter(msgs.borrow().iter().cloned()),
         }
     }
 }
 
-impl<U> Iterator for AllMessages<U> {
-    type Item = Rc<Message<U>>;
+impl<'a, U> Iterator for AllMessages<'a, U> {
+    type Item = Rc<Message<'a, U>>;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(msg) = self.q.pop_front() {
             for v in msg.messages.borrow().iter().cloned() {

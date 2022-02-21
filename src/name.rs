@@ -18,7 +18,7 @@ pub struct Name<U> {
     pub util: Rc<RefCell<U>>,
 }
 
-impl<U> Clone for Name<U> {
+impl<'a, U> Clone for Name<U> {
     fn clone(&self) -> Self {
         Self {
             val: self.val.clone(),
@@ -27,13 +27,13 @@ impl<U> Clone for Name<U> {
     }
 }
 
-impl<U> Hash for Name<U> {
+impl<'a, U> Hash for Name<U> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.val.hash(state);
     }
 }
 
-impl<U> Name<U> {
+impl<'a, U> Name<U> {
     pub fn new(val: &str, util: Rc<RefCell<U>>) -> Self {
         Self {
             val: val.to_owned(),
@@ -85,7 +85,7 @@ impl<U> Name<U> {
     }
 }
 
-impl<U> PartialEq for Name<U> {
+impl<'a, U> PartialEq for Name<U> {
     fn eq(&self, other: &Self) -> bool {
         PartialEq::eq(&self.val, &other.val)
     }
@@ -93,7 +93,7 @@ impl<U> PartialEq for Name<U> {
         PartialEq::ne(&self.val, &other.val)
     }
 }
-impl<U> PartialEq<String> for Name<U> {
+impl<'a, U> PartialEq<String> for Name<U> {
     fn eq(&self, other: &String) -> bool {
         PartialEq::eq(&self.val, other)
     }
@@ -101,7 +101,7 @@ impl<U> PartialEq<String> for Name<U> {
         PartialEq::ne(&self.val, other)
     }
 }
-impl<U> PartialEq<str> for Name<U> {
+impl<'a, U> PartialEq<str> for Name<U> {
     fn eq(&self, other: &str) -> bool {
         PartialEq::eq(self.as_str(), other)
     }
@@ -110,7 +110,7 @@ impl<U> PartialEq<str> for Name<U> {
     }
 }
 
-impl<U> Eq for Name<U> {}
+impl<'a, U> Eq for Name<U> {}
 
 impl Default for Name<Generic> {
     fn default() -> Self {
@@ -138,20 +138,20 @@ impl From<&str> for Name<Generic> {
     }
 }
 
-impl<U> Write for Name<U> {
+impl<'a, U> Write for Name<U> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.val.write_str(s)
     }
 }
 
-impl<U> ops::Deref for Name<U> {
+impl<'a, U> ops::Deref for Name<U> {
     type Target = str;
     fn deref(&self) -> &Self::Target {
         &self.val
     }
 }
 
-impl<U> Name<U> {
+impl<'a, U> Name<U> {
     pub(crate) fn is_well_known_package(&self) -> bool {
         self.val.starts_with(WELL_KNNOWN_TYPE_PACKAGE)
     }
@@ -160,7 +160,7 @@ impl<U> Name<U> {
     }
 }
 
-impl<U> Add<Self> for Name<U> {
+impl<'a, U> Add<Self> for Name<U> {
     type Output = Self;
     fn add(self, other: Self) -> Self {
         Self {
@@ -169,14 +169,14 @@ impl<U> Add<Self> for Name<U> {
         }
     }
 }
-impl<U> Add<&str> for Name<U> {
+impl<'a, U> Add<&str> for Name<U> {
     type Output = Self;
     fn add(self, rhs: &str) -> Self::Output {
         Name::new(&(self.val + rhs), self.util)
     }
 }
 
-impl<U> Add<String> for Name<U> {
+impl<'a, U> Add<String> for Name<U> {
     type Output = Self;
     fn add(self, rhs: String) -> Self::Output {
         Name::new(&(self.val + rhs.as_str()), self.util)
@@ -239,13 +239,13 @@ impl<U: ToCase> ToScreamingSnakeCase for Name<U> {
     }
 }
 
-impl<U> fmt::Debug for Name<U> {
+impl<'a, U> fmt::Debug for Name<U> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.val)
     }
 }
 
-impl<U> fmt::Display for Name<U> {
+impl<'a, U> fmt::Display for Name<U> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.val)
     }

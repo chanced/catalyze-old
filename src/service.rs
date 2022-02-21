@@ -6,19 +6,19 @@ use crate::{
     container::Container, iter::Iter, path::ServiceDescriptorPath, Method, Name, Node, NodeAtPath,
 };
 
-pub(crate) type ServiceList<U> = Rc<RefCell<Vec<Rc<Service<U>>>>>;
+pub(crate) type ServiceList<'a, U> = Rc<RefCell<Vec<Rc<Service<'a, U>>>>>;
 
 #[derive(Debug, Clone)]
-pub struct Service<U> {
+pub struct Service<'a, U> {
     pub name: Name<U>,
-    pub fully_qualified_name: String,
-    pub methods: Rc<RefCell<Vec<Rc<Method<U>>>>>,
+    fully_qualified_name: String,
+    pub methods: Rc<RefCell<Vec<Rc<Method<'a, U>>>>>,
 }
 
-impl<U> Service<U> {
+impl<'a, U> Service<'a, U> {
     pub fn new(
-        desc: ServiceDescriptorProto,
-        container: Container<U>,
+        desc: &'a ServiceDescriptorProto,
+        container: Container<'a, U>,
         util: Rc<RefCell<U>>,
     ) -> Rc<Self> {
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
@@ -28,13 +28,13 @@ impl<U> Service<U> {
             methods: Rc::new(RefCell::new(Vec::with_capacity(desc.method.len()))),
         })
     }
-    pub fn methods(&self) -> Iter<Method<U>> {
+    pub fn methods(&self) -> Iter<Method<'a, U>> {
         Iter::from(&self.methods)
     }
 }
 
-impl<U> NodeAtPath<U> for Rc<Service<U>> {
-    fn node_at_path(&self, path: &[i32]) -> Option<Node<U>> {
+impl<'a, U> NodeAtPath<'a, U> for Rc<Service<'a, U>> {
+    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         if path.is_empty() {
             return Some(Node::Service(self.clone()));
         }

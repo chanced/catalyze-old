@@ -9,14 +9,14 @@ use std::rc::Rc;
 use std::vec::IntoIter;
 use std::*;
 #[derive(Debug, Clone)]
-pub struct Package<U> {
-    pub(crate) files: Rc<RefCell<Vec<Rc<File<U>>>>>,
+pub struct Package<'a, U> {
+    pub(crate) files: Rc<RefCell<Vec<Rc<File<'a, U>>>>>,
     pub name: Name<U>,
     pub(crate) comments: Rc<RefCell<Vec<String>>>,
     util: Rc<RefCell<U>>,
 }
 
-impl Default for Package<Generic> {
+impl Default for Package<'_, Generic> {
     fn default() -> Self {
         Self {
             files: Default::default(),
@@ -27,7 +27,7 @@ impl Default for Package<Generic> {
     }
 }
 
-impl<U> Package<U> {
+impl<'a, U> Package<'a, U> {
     pub(crate) fn new(name: &str, util: Rc<RefCell<U>>) -> Rc<Self> {
         let mut pkg = Self {
             name: Name::new(name, util.clone()),
@@ -39,15 +39,15 @@ impl<U> Package<U> {
         return Rc::new(pkg);
     }
 
-    pub(crate) fn add_file(&self, file: Rc<File<U>>) {
+    pub(crate) fn add_file(&self, file: Rc<File<'a, U>>) {
         self.files.borrow_mut().push(file);
     }
-    pub fn files(&self) -> impl Iterator<Item = Rc<File<U>>> {
+    pub fn files(&self) -> impl Iterator<Item = Rc<File<'a, U>>> {
         self.files
             .borrow()
             .iter()
             .cloned()
-            .collect::<Vec<Rc<File<U>>>>()
+            .collect::<Vec<Rc<File<'a, U>>>>()
             .into_iter()
     }
     pub fn is_well_known(&self) -> bool {

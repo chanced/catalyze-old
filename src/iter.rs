@@ -51,13 +51,13 @@ impl<T> Iterator for UpgradeIter<T> {
     }
 }
 
-pub struct TransitiveImports<U> {
-    queue: VecDeque<Rc<File<U>>>,
+pub struct TransitiveImports<'a, U> {
+    queue: VecDeque<Rc<File<'a, U>>>,
     processed: HashSet<Name<U>>,
 }
 
-impl<U> TransitiveImports<U> {
-    pub(crate) fn new(files: Rc<RefCell<Vec<Weak<File<U>>>>>) -> Self {
+impl<'a, U> TransitiveImports<'a, U> {
+    pub(crate) fn new(files: Rc<RefCell<Vec<Weak<File<'a, U>>>>>) -> Self {
         Self {
             queue: VecDeque::from_iter(files.borrow().iter().map(|f| f.upgrade().unwrap())),
             processed: HashSet::new(),
@@ -65,8 +65,8 @@ impl<U> TransitiveImports<U> {
     }
 }
 
-impl<U> Iterator for TransitiveImports<U> {
-    type Item = Rc<File<U>>;
+impl<'a, U> Iterator for TransitiveImports<'a, U> {
+    type Item = Rc<File<'a, U>>;
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(file) = self.queue.pop_front() {
             if !self.processed.contains(&file.name) {
@@ -87,29 +87,29 @@ impl<U> Iterator for TransitiveImports<U> {
 //     use crate::{util::Generic, File, Name, Package};
 //     fn msg(
 //         name: &str,
-//         messages: Vec<Rc<Message<Generic>>>,
-//         enums: Vec<Rc<Enum<Generic>>>,
-//     ) -> Rc<Message<Generic>> {
+//         messages: Vec<Rc<Message<'_, Generic>>>,
+//         enums: Vec<Rc<Enum<'_, Generic>>>,
+//     ) -> Rc<Message<'_, Generic>> {
 //         Rc::new(Message {
 //             name: Name::new(name, Rc::new(RefCell::new(Generic {}))),
 //             messages,
 //             enums,
-//             ..Message::<Generic>::default()
+//             ..Message::<'_, Generic>::default()
 //         })
 //     }
-//     fn enums(names: Vec<&str>) -> Vec<Rc<Enum<Generic>>> {
+//     fn enums(names: Vec<&str>) -> Vec<Rc<Enum<'_, Generic>>> {
 //         names
 //             .iter()
 //             .map(|name| {
 //                 Rc::new(Enum {
 //                     name: Name::new(name, Generic),
-//                     ..Enum::<Generic>::default()
+//                     ..Enum::<'_, Generic>::default()
 //                 })
 //             })
 //             .collect()
 //     }
 
-//     fn init() -> File<Generic> {
+//     fn init() -> File<'_, Generic> {
 //         File {
 //             name: Name::new("test.rs", Generic),
 //             messages: vec![
@@ -153,7 +153,7 @@ impl<U> Iterator for TransitiveImports<U> {
 //                 msg("r2", vec![], enums(vec!["r2e1"])),
 //             ],
 //             enums: enums(vec!["e1", "e2"]),
-//             ..File::<Generic>::default()
+//             ..File::<'_, Generic>::default()
 //         }
 //     }
 
@@ -190,7 +190,7 @@ impl<U> Iterator for TransitiveImports<U> {
 //     fn test_transitive_imports() {
 //         let pkg = Rc::new(Package::default());
 
-//         let create_file = |name: &str, dep: Option<Rc<File<Generic>>>| {
+//         let create_file = |name: &str, dep: Option<Rc<File<'_, Generic>>>| {
 //             let f = Rc::new(File {
 //                 name: Name::new(name, Generic),
 //                 ..File::default()

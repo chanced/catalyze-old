@@ -7,32 +7,32 @@ use crate::{AllEnums, AllMessages, File, Message, Name, Package};
 
 // }
 #[derive(Debug, Clone)]
-pub(crate) enum InternalContainer<U> {
-    File(Weak<File<U>>),
-    Message(Weak<Message<U>>),
+pub(crate) enum InternalContainer<'a, U> {
+    File(Weak<File<'a, U>>),
+    Message(Weak<Message<'a, U>>),
 }
 
-impl<U> From<Rc<File<U>>> for InternalContainer<U> {
-    fn from(file: Rc<File<U>>) -> Self {
+impl<'a, U> From<Rc<File<'a, U>>> for InternalContainer<'a, U> {
+    fn from(file: Rc<File<'a, U>>) -> Self {
         InternalContainer::File(Rc::downgrade(&file))
     }
 }
 
-impl<U> From<Rc<Message<U>>> for InternalContainer<U> {
-    fn from(message: Rc<Message<U>>) -> Self {
+impl<'a, U> From<Rc<Message<'a, U>>> for InternalContainer<'a, U> {
+    fn from(message: Rc<Message<'a, U>>) -> Self {
         InternalContainer::Message(Rc::downgrade(&message))
     }
 }
 
-impl<U> InternalContainer<U> {
-    // TODO: should this return Option<Container<U>>?
-    pub(crate) fn upgrade(&self) -> Container<U> {
+impl<'a, U> InternalContainer<'a, U> {
+    // TODO: should this return Option<Container<'a, U>>?
+    pub(crate) fn upgrade(&self) -> Container<'a, U> {
         match self {
             InternalContainer::File(f) => Container::File(f.upgrade().unwrap()),
             InternalContainer::Message(m) => Container::Message(m.upgrade().unwrap()),
         }
     }
-    // pub(crate) fn add_message(&self, message: Rc<Message<U>>) {
+    // pub(crate) fn add_message(&self, message: Rc<Message<'a, U>>) {
     //     match self {
     //         InternalContainer::File(f) => {
     //             f.upgrade().unwrap().add_message(message);
@@ -49,7 +49,7 @@ impl<U> InternalContainer<U> {
     //     }
     // }
 
-    pub(crate) fn package(&self) -> Option<Rc<Package<U>>> {
+    pub(crate) fn package(&self) -> Option<Rc<Package<'a, U>>> {
         match self {
             InternalContainer::File(f) => f.upgrade().unwrap().package(),
             InternalContainer::Message(m) => m.upgrade().unwrap().package(),
@@ -57,31 +57,31 @@ impl<U> InternalContainer<U> {
     }
 }
 #[derive(Debug, Clone)]
-pub enum Container<U> {
-    File(Rc<File<U>>),
-    Message(Rc<Message<U>>),
+pub enum Container<'a, U> {
+    File(Rc<File<'a, U>>),
+    Message(Rc<Message<'a, U>>),
 }
 
-impl<U> From<Rc<File<U>>> for Container<U> {
-    fn from(file: Rc<File<U>>) -> Self {
+impl<'a, U> From<Rc<File<'a, U>>> for Container<'a, U> {
+    fn from(file: Rc<File<'a, U>>) -> Self {
         Container::File(file)
     }
 }
 
-impl<U> From<Rc<Message<U>>> for Container<U> {
-    fn from(message: Rc<Message<U>>) -> Self {
+impl<'a, U> From<Rc<Message<'a, U>>> for Container<'a, U> {
+    fn from(message: Rc<Message<'a, U>>) -> Self {
         Container::Message(message)
     }
 }
 
-impl<U> Container<U> {
+impl<'a, U> Container<'a, U> {
     pub fn fully_qualified_name(&self) -> &str {
         match self {
             Container::File(f) => &f.fully_qualified_name,
             Container::Message(m) => &m.fully_qualified_name,
         }
     }
-    // pub(crate) fn msgs(&self) -> Rc<RefCell<Vec<Rc<Message<U>>>>> {
+    // pub(crate) fn msgs(&self) -> Rc<RefCell<Vec<Rc<Message<'a, U>>>>> {
     //     match self {
     //         Container::File(f) => f.messages.clone(),
     //         Container::Message(m) => m.messages.clone(),
@@ -93,51 +93,51 @@ impl<U> Container<U> {
             Container::Message(m) => &m.name,
         }
     }
-    pub fn messages(&self) -> Iter<Message<U>> {
+    pub fn messages(&self) -> Iter<Message<'a, U>> {
         match self {
             Container::File(f) => Iter::from(&f.messages),
             Container::Message(m) => Iter::from(&m.messages),
         }
     }
-    pub fn all_messages(&self) -> AllMessages<U> {
+    pub fn all_messages(&self) -> AllMessages<'a, U> {
         match self {
             Container::File(f) => f.all_messages(),
             Container::Message(m) => m.all_messages(),
         }
     }
-    pub fn all_enums(&self) -> AllEnums<U> {
+    pub fn all_enums(&self) -> AllEnums<'a, U> {
         match self {
             Container::File(f) => f.all_enums(),
             Container::Message(m) => m.all_enums(),
         }
     }
-    pub fn enums(&self) -> Iter<Enum<U>> {
+    pub fn enums(&self) -> Iter<Enum<'a, U>> {
         match self {
             Container::File(f) => Iter::from(&f.enums),
             Container::Message(m) => Iter::from(&m.enums),
         }
     }
-    pub fn package(&self) -> Option<Rc<Package<U>>> {
+    pub fn package(&self) -> Option<Rc<Package<'a, U>>> {
         match self {
             Container::File(f) => f.package(),
             Container::Message(m) => m.package(),
         }
     }
-    pub(crate) fn downgrade(&self) -> InternalContainer<U> {
+    pub(crate) fn downgrade(&self) -> InternalContainer<'a, U> {
         match self {
             Container::File(f) => InternalContainer::File(Rc::downgrade(f)),
             Container::Message(m) => InternalContainer::Message(Rc::downgrade(m)),
         }
     }
 
-    // pub(crate) fn add_message(&self, msg: Rc<Message<U>>) {
+    // pub(crate) fn add_message(&self, msg: Rc<Message<'a, U>>) {
     //     match self {
     //         Container::File(f) => f.add_message(msg),
     //         Container::Message(m) => m.add_message(msg),
     //     }
     // }
 
-    // pub(crate) fn add_enum(&self, e: Rc<Enum<U>>) {
+    // pub(crate) fn add_enum(&self, e: Rc<Enum<'a, U>>) {
     //     match self {
     //         Container::File(f) => f.add_enum(e),
     //         Container::Message(m) => m.add_enum(e),
@@ -148,7 +148,7 @@ impl<U> Container<U> {
 pub trait BuildTarget {
     fn build_target(&self) -> bool;
 }
-impl<U> BuildTarget for Container<U> {
+impl<'a, U> BuildTarget for Container<'a, U> {
     fn build_target(&self) -> bool {
         match self {
             Container::File(f) => f.build_target(),
@@ -157,7 +157,7 @@ impl<U> BuildTarget for Container<U> {
     }
 }
 
-impl<U> BuildTarget for InternalContainer<U> {
+impl<'a, U> BuildTarget for InternalContainer<'a, U> {
     fn build_target(&self) -> bool {
         match self {
             InternalContainer::File(f) => f.upgrade().unwrap().build_target(),
