@@ -1,6 +1,4 @@
-use crate::container::Container;
 use crate::Extension;
-use crate::Message;
 use crate::Node;
 use crate::Source;
 use crate::{File, Package};
@@ -27,7 +25,7 @@ pub struct Ast<'a, U> {
     pub nodes: HashMap<String, Node<'a, U>>,
     pub extensions: Vec<Rc<Extension<'a, U>>>,
     pub util: Rc<RefCell<U>>,
-    pub file_descriptors: Vec<FileDescriptorProto>,
+    pub file_descriptors: Vec<&'a FileDescriptorProto>,
     pub target_list: HashSet<String>,
 }
 
@@ -43,8 +41,13 @@ impl<'a, U> Ast<'a, U> {
 }
 
 impl<'a, U> Ast<'a, U> {
-    pub fn new(source: impl Source, util: Rc<RefCell<U>>) -> Result<Self, anyhow::Error> {
-        let target_list = source.targets().cloned().collect::<HashSet<String>>();
+    pub fn new(source: &'a impl Source<'a>, util: Rc<RefCell<U>>) -> Result<Self, anyhow::Error> {
+        let target_list = source
+            .targets()
+            .iter()
+            .cloned()
+            .collect::<HashSet<String>>();
+        let file_descriptors = source.files().iter().collect();
         let mut ast = Self {
             util: util.clone(),
             targets: HashMap::with_capacity(target_list.len()),
@@ -52,13 +55,10 @@ impl<'a, U> Ast<'a, U> {
             packages: HashMap::default(),
             nodes: HashMap::default(),
             extensions: Vec::default(),
-            file_descriptors: source
-                .files()
-                .cloned()
-                .collect::<Vec<FileDescriptorProto>>(),
+            file_descriptors,
         };
         let mut seen: HashMap<String, Rc<File<'a, U>>> = HashMap::default();
-        for fd in ast.file_descriptors.iter().cloned() {
+        for fd in ast.file_descriptors.iter() {
             let pkg = {
                 let name = fd.package();
                 if name.is_empty() {
@@ -73,7 +73,7 @@ impl<'a, U> Ast<'a, U> {
                 }
             };
             let build_target = ast.target_list.contains(fd.name());
-            let file = File::new(build_target, fd.clone(), pkg, util.clone());
+            let file = File::new(build_target, fd, pkg, util.clone());
             ast.targets.insert(fd.name().to_string(), file.clone());
             for d in fd.dependency.iter() {
                 let dep = match seen.get(d).cloned() {

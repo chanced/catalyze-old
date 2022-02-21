@@ -8,7 +8,6 @@ use prost_types::DescriptorProto;
 use crate::container::BuildTarget;
 use crate::iter::UpgradeIter;
 use crate::path::DescriptorPath;
-use crate::util::Generic;
 use crate::{container::Container, container::InternalContainer, Name};
 use crate::{AllEnums, EnumList, FieldList, Node, NodeAtPath, OneofList};
 use crate::{Package, WellKnownType};
@@ -21,17 +20,17 @@ pub(crate) type MessageList<'a, U> = Rc<RefCell<Vec<Rc<Message<'a, U>>>>>;
 /// OneOf blocks.
 #[derive(Debug, Clone)]
 pub struct Message<'a, U> {
-    fully_qualified_name: String,
+    pub fully_qualified_name: String,
     pub descriptor: &'a DescriptorProto,
     pub is_map_entry: bool,
     pub name: Name<U>,
     pub well_known_type: Option<WellKnownType>, // dependents_cache: RefCell<HashMap<String, Weak<Message<'a, U>>>>,
     pub enums: EnumList<'a, U>,
-    pub preserved_messages: MessageList<'a, U>,
-    pub messages: MessageList<'a, U>,
-    pub maps: MessageList<'a, U>,
-    pub fields: FieldList<'a, U>,
-    pub oneofs: OneofList<'a, U>,
+    pub(crate) preserved_messages: MessageList<'a, U>,
+    pub(crate) messages: MessageList<'a, U>,
+    pub(crate) maps: MessageList<'a, U>,
+    pub(crate) fields: FieldList<'a, U>,
+    pub(crate) oneofs: OneofList<'a, U>,
     pub(crate) dependents: Rc<RefCell<Vec<Weak<Message<'a, U>>>>>,
     pub(crate) container: InternalContainer<'a, U>,
 }
@@ -136,26 +135,6 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<Message<'a, U>> {
     }
 }
 
-impl Default for Message<'_, Generic> {
-    fn default() -> Self {
-        Self {
-            fully_qualified_name: Default::default(),
-            descriptor: &DescriptorProto::default(),
-            is_map_entry: Default::default(),
-            name: Name::new("", Rc::new(RefCell::new(Generic::default()))),
-            enums: Default::default(),
-            well_known_type: Default::default(),
-            preserved_messages: Default::default(),
-            messages: Default::default(),
-            maps: Default::default(),
-            fields: Default::default(),
-            oneofs: Default::default(),
-            dependents: Default::default(),
-            container: InternalContainer::File(Weak::new()),
-        }
-    }
-}
-
 pub struct AllMessages<'a, U> {
     q: VecDeque<Rc<Message<'a, U>>>,
 }
@@ -179,5 +158,15 @@ impl<'a, U> Iterator for AllMessages<'a, U> {
         } else {
             None
         }
+    }
+}
+
+trait Hydrate<'a, U> {
+    fn hydrate(&self) -> Rc<Self>;
+}
+
+impl<'a, U> Hydrate<'a, U> for Rc<Message<'a, U>> {
+    fn hydrate(&self) -> Rc<Self> {
+        todo!()
     }
 }

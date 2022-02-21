@@ -14,7 +14,7 @@ pub(crate) fn new_method_list<'a, U>(cap: usize) -> MethodList<'a, U> {
 pub struct Method<'a, U> {
     pub name: Name<U>,
     pub desc: &'a prost_types::MethodDescriptorProto,
-    fully_qualified_name: String,
+    pub fully_qualified_name: String,
 }
 
 impl<'a, U> Method<'a, U> {

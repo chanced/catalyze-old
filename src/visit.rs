@@ -48,7 +48,7 @@ pub trait Visitor<'a, U> {
     }
 }
 
-pub fn visit_package<U, V>(v: &mut V, pkg: Rc<Package<'a, U>>) -> Result<(), V::Error>
+pub fn visit_package<'a, U, V>(v: &mut V, pkg: Rc<Package<'a, U>>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U> + ?Sized,
 {
@@ -58,7 +58,7 @@ where
     Ok(())
 }
 
-pub fn visit_file<U, V>(v: &mut V, file: Rc<File<'a, U>>) -> Result<(), V::Error>
+pub fn visit_file<'a, U, V>(v: &mut V, file: Rc<File<'a, U>>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U> + ?Sized,
 {

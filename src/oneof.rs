@@ -17,7 +17,7 @@ pub(crate) fn new_oneof_list<'a, U>(cap: usize) -> OneofList<'a, U> {
 pub struct Oneof<'a, U> {
     pub name: Name<U>,
     pub desc: &'a prost_types::OneofDescriptorProto,
-    fully_qualified_name: String,
+    pub fully_qualified_name: String,
     pub fields: Vec<Rc<Field<'a, U>>>,
     container: InternalContainer<'a, U>,
 }

@@ -11,7 +11,7 @@ pub(crate) type EnumValueList<'a, U> = Rc<RefCell<Vec<Rc<EnumValue<'a, U>>>>>;
 #[derive(Debug, Clone)]
 pub struct EnumValue<'a, U> {
     pub name: Name<U>,
-    fully_qualified_name: String,
+    pub fully_qualified_name: String,
     pub descriptor: &'a EnumValueDescriptorProto,
     pub(crate) container: Weak<Enum<'a, U>>,
 }

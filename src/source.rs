@@ -19,27 +19,27 @@ pub struct InputSource {
     pub targets: Vec<String>,
 }
 
-pub trait Source {
-    fn targets(&self) -> slice::Iter<String>;
-    fn files(&self) -> slice::Iter<FileDescriptorProto>;
+pub trait Source<'a> {
+    fn targets(&self) -> &[String];
+    fn files(&self) -> &[FileDescriptorProto];
 }
 
-impl Source for prost_types::compiler::CodeGeneratorRequest {
-    fn targets(&self) -> slice::Iter<String> {
-        self.file_to_generate.iter()
+impl<'a> Source<'a> for prost_types::compiler::CodeGeneratorRequest {
+    fn targets(&self) -> &[String] {
+        &self.file_to_generate
     }
 
-    fn files(&self) -> slice::Iter<FileDescriptorProto> {
-        self.proto_file.iter()
+    fn files(&self) -> &[FileDescriptorProto] {
+        &self.proto_file
     }
 }
 
-impl Source for InputSource {
-    fn targets(&self) -> std::slice::Iter<String> {
-        self.targets.iter()
+impl<'a> Source<'a> for InputSource {
+    fn targets(&self) -> &[String] {
+        &self.targets
     }
 
-    fn files(&self) -> std::slice::Iter<prost_types::FileDescriptorProto> {
-        self.file_descriptor_set.file.iter()
+    fn files(&self) -> &[FileDescriptorProto] {
+        &self.file_descriptor_set.file
     }
 }

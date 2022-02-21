@@ -17,7 +17,7 @@ pub(crate) type EnumList<'a, U> = Rc<RefCell<Vec<Rc<Enum<'a, U>>>>>;
 #[derive(Debug, Clone)]
 pub struct Enum<'a, U> {
     pub name: Name<U>,
-    fully_qualified_name: String,
+    pub fully_qualified_name: String,
     pub(crate) values: EnumValueList<'a, U>,
     pub(crate) container: InternalContainer<'a, U>,
     pub(crate) dependents: Rc<RefCell<Vec<Weak<Message<'a, U>>>>>,
@@ -61,7 +61,7 @@ impl Default for Enum<'_, Generic> {
     fn default() -> Self {
         Self {
             name: Name::default(),
-            fully_qualified_name: "",
+            fully_qualified_name: String::default(),
             container: InternalContainer::File(Weak::new()),
             dependents: Rc::new(RefCell::new(Vec::default())),
             values: Rc::new(RefCell::new(Vec::default())),

@@ -16,7 +16,7 @@ use std::rc::{Rc, Weak};
 
 #[derive(Debug, Clone)]
 pub struct File<'a, U> {
-    fully_qualified_name: String,
+    pub fully_qualified_name: String,
     pub descriptor: &'a FileDescriptorProto,
     pub name: Name<U>,
     pub file_path: PathBuf,
@@ -75,7 +75,8 @@ impl<'a, U> File<'a, U> {
             src_info: None,
             pkg_info: None,
         });
-        file.hydrate()
+        file.hydrate();
+        file
     }
     pub fn messages(&self) -> Iter<Message<'a, U>> {
         Iter::from(&self.messages)
@@ -204,27 +205,5 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<File<'a, U>> {
             }
             .and_then(|n| n.node_at_path(&path[2..]))
         })
-    }
-}
-
-impl Default for File<'_, Generic> {
-    fn default() -> Self {
-        Self {
-            fully_qualified_name: Default::default(),
-            descriptor: &FileDescriptorProto::default(),
-            name: Name::default(),
-            file_path: Default::default(),
-            build_target: Default::default(),
-            pkg: Default::default(),
-            dependents: Default::default(),
-            dependencies: Default::default(),
-            def_exts: Default::default(),
-            messages: Default::default(),
-            enums: Default::default(),
-            services: Default::default(),
-            src_info: Default::default(),
-            pkg_info: Default::default(),
-            util: Rc::new(RefCell::new(Generic)),
-        }
     }
 }

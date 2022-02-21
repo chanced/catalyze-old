@@ -11,7 +11,7 @@ pub(crate) type ServiceList<'a, U> = Rc<RefCell<Vec<Rc<Service<'a, U>>>>>;
 #[derive(Debug, Clone)]
 pub struct Service<'a, U> {
     pub name: Name<U>,
-    fully_qualified_name: String,
+    pub fully_qualified_name: String,
     pub methods: Rc<RefCell<Vec<Rc<Method<'a, U>>>>>,
 }
 
