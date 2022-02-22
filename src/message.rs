@@ -57,7 +57,7 @@ impl<'a, U> Message<'a, U> {
             fully_qualified_name: format_fqn(&container.node(), descriptor.name()),
             well_known_type,
             descriptor,
-            util,
+            util: util.clone(),
             is_map_entry: descriptor.options.as_ref().map_or(false, |o| o.map_entry()),
             enums: Rc::new(RefCell::new(Vec::with_capacity(descriptor.enum_type.len()))),
             fields: Rc::new(RefCell::new(Vec::with_capacity(descriptor.field.len()))),
@@ -73,23 +73,26 @@ impl<'a, U> Message<'a, U> {
         });
 
         let container = Container::Message(msg.clone());
-
-        let msgs = msg.messages.borrow_mut();
-        for md in msg.descriptor.nested_type.iter() {
-            let msg = Message::new(md, container.clone(), msg.util.clone());
-            msgs.push(msg);
+        {
+            let mut msgs = msg.messages.borrow_mut();
+            for md in msg.descriptor.nested_type.iter() {
+                let msg = Message::new(md, container.clone(), util.clone());
+                msgs.push(msg);
+            }
         }
-
-        let enums = msg.enums.borrow();
-        for ed in descriptor.enum_type.iter() {
-            let e = Enum::new(ed, container.clone(), util.clone());
-            enums.push(e);
+        {
+            let mut enums = msg.enums.borrow_mut();
+            for ed in descriptor.enum_type.iter() {
+                let e = Enum::new(ed, container.clone(), util.clone());
+                enums.push(e);
+            }
         }
-
-        let oneofs = msg.oneofs.borrow_mut();
-        for od in msg.descriptor.oneof_decl.iter() {
-            let o = Oneof::new(od, container.clone(), util.clone());
-            oneofs.push(o);
+        {
+            let mut oneofs = msg.oneofs.borrow_mut();
+            for od in msg.descriptor.oneof_decl.iter() {
+                let o = Oneof::new(od, container.clone(), util.clone());
+                oneofs.push(o);
+            }
         }
 
         msg

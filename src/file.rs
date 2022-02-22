@@ -76,29 +76,33 @@ impl<'a, U> File<'a, U> {
         });
 
         let container = || Container::File(file.clone());
-
-        let mut msgs = file.messages.borrow_mut();
-        for md in file.descriptor.message_type.iter() {
-            let msg = Message::new(md, container(), file.util.clone());
-            msgs.push(msg);
+        {
+            let mut msgs = file.messages.borrow_mut();
+            for md in file.descriptor.message_type.iter() {
+                let msg = Message::new(md, container(), file.util.clone());
+                msgs.push(msg);
+            }
         }
-
-        let mut enums = file.enums.borrow_mut();
-        for ed in file.descriptor.enum_type.iter() {
-            let e = Enum::new(ed, container(), file.util.clone());
-            enums.push(e);
+        {
+            let mut enums = file.enums.borrow_mut();
+            for ed in file.descriptor.enum_type.iter() {
+                let e = Enum::new(ed, container(), file.util.clone());
+                enums.push(e);
+            }
         }
-
-        let mut services = file.services.borrow_mut();
-        for sd in file.descriptor.service.iter() {
-            let svc = Service::new(sd, container(), file.util.clone());
-            services.push(svc);
+        {
+            let mut services = file.services.borrow_mut();
+            for sd in file.descriptor.service.iter() {
+                let svc = Service::new(sd, container(), file.util.clone());
+                services.push(svc);
+            }
         }
-
-        let mut exts = file.def_exts.borrow_mut();
-        for ed in file.descriptor.extension.iter() {
-            let ext = Extension::new(ed, file.clone(), file.util.clone());
-            exts.push(ext);
+        {
+            let mut exts = file.def_exts.borrow_mut();
+            for ed in file.descriptor.extension.iter() {
+                let ext = Extension::new(ed, file.clone(), file.util.clone());
+                exts.push(ext);
+            }
         }
 
         file

@@ -93,7 +93,7 @@ impl<'a, U> Iterator for AllEnums<'a, U> {
                 for v in msg.messages() {
                     self.msgs.push_back(v);
                 }
-                for v in msg.enums.borrow().iter().cloned() {
+                for v in msg.enums() {
                     self.enums.push_back(v);
                 }
                 if let Some(e) = self.enums.pop_front() {
