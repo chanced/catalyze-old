@@ -1,8 +1,16 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    rc::{Rc, Weak},
+};
 
-use prost_types::FieldDescriptorProto;
+use prost_types::{DescriptorProto, FieldDescriptorProto};
 
-use crate::{Message, Name, Node, NodeAtPath};
+use crate::{
+    container::WeakContainer,
+    util::Generic,
+    visit::{self, Accept, Visitor},
+    Message, Name, Node, NodeAtPath,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field<'a, U> {
@@ -35,5 +43,11 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<Field<'a, U>> {
         } else {
             None
         }
+    }
+}
+
+impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Field<'a, U>> {
+    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
+        visitor.visit_field(self.clone())
     }
 }

@@ -1,6 +1,13 @@
 use std::rc::Rc;
 
-use crate::{Enum, EnumValue, Field, File, Message, Method, Name, Oneof, Service};
+use crate::{
+    visit::{Accept, Visitor},
+    Enum, EnumValue, Field, File, Message, Method, Name, Oneof, Service,
+};
+
+pub trait NodeAtPath<'a, U> {
+    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>>;
+}
 
 #[derive(Debug, Clone)]
 pub enum Node<'a, U> {
@@ -13,6 +20,7 @@ pub enum Node<'a, U> {
     Method(Rc<Method<'a, U>>),
     Field(Rc<Field<'a, U>>),
 }
+
 impl<'a, U> Node<'a, U> {
     pub fn name(&self) -> &Name<U> {
         match self {
@@ -49,6 +57,36 @@ impl<'a, U> Node<'a, U> {
             Node::Service(s) => s.node_at_path(path),
             Node::Method(m) => m.node_at_path(path),
             Node::Field(f) => f.node_at_path(path),
+        }
+    }
+}
+
+impl<'a, U> NodeAtPath<'a, U> for Node<'a, U> {
+    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+        match self {
+            Node::File(f) => f.node_at_path(path),
+            Node::Message(m) => m.node_at_path(path),
+            Node::Oneof(o) => o.node_at_path(path),
+            Node::Enum(e) => e.node_at_path(path),
+            Node::EnumValue(ev) => ev.node_at_path(path),
+            Node::Service(s) => s.node_at_path(path),
+            Node::Method(m) => m.node_at_path(path),
+            Node::Field(f) => f.node_at_path(path),
+        }
+    }
+}
+
+impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Node<'a, U> {
+    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
+        match self {
+            Node::File(f) => f.accept(visitor),
+            Node::Message(m) => m.accept(visitor),
+            Node::Oneof(o) => o.accept(visitor),
+            Node::Enum(e) => e.accept(visitor),
+            Node::EnumValue(ev) => ev.accept(visitor),
+            Node::Service(s) => s.accept(visitor),
+            Node::Method(m) => m.accept(visitor),
+            Node::Field(f) => f.accept(visitor),
         }
     }
 }
@@ -94,10 +132,6 @@ impl<'a, U> From<EnumValue<'a, U>> for Node<'a, U> {
     fn from(enum_value: EnumValue<'a, U>) -> Self {
         Node::EnumValue(Rc::new(enum_value))
     }
-}
-
-pub trait NodeAtPath<'a, U> {
-    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>>;
 }
 
 pub(crate) fn format_fqn<'a, U>(container: &Node<'a, U>, name: &str) -> String {

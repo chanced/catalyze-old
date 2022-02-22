@@ -2,6 +2,8 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     container::{Container, WeakContainer},
+    iter::Iter,
+    visit::{Accept, Visitor},
     Field, Name, Node, NodeAtPath,
 };
 
@@ -12,7 +14,7 @@ pub struct Oneof<'a, U> {
     pub name: Name<U>,
     pub descriptor: &'a prost_types::OneofDescriptorProto,
     pub fully_qualified_name: String,
-    pub fields: Rc<RefCell<Vec<Rc<Field<'a, U>>>>>,
+    fields: Rc<RefCell<Vec<Rc<Field<'a, U>>>>>,
     container: WeakContainer<'a, U>,
 }
 
@@ -35,6 +37,9 @@ impl<'a, U> Oneof<'a, U> {
         self.container.upgrade()
     }
 
+    pub fn fields(&self) -> Iter<Field<'a, U>> {
+        Iter::from(&self.fields)
+    }
     pub(crate) fn add_field(&self, field: Rc<Field<'a, U>>) {
         self.fields.borrow_mut().push(field);
     }
@@ -46,5 +51,15 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<Oneof<'a, U>> {
         } else {
             None
         }
+    }
+}
+
+impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Oneof<'a, U>> {
+    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
+        visitor.visit_oneof(self.clone())?;
+        for fld in self.fields() {
+            fld.accept(visitor)?;
+        }
+        Ok(())
     }
 }

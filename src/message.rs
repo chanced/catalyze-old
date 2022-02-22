@@ -8,9 +8,11 @@ use prost_types::DescriptorProto;
 use crate::container::BuildTarget;
 use crate::iter::{Iter, UpgradeIter};
 use crate::path::DescriptorPath;
+use crate::visit::{Accept, Visitor};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
-    format_fqn, AllEnums, Enum, EnumList, Extension, FieldList, Node, NodeAtPath, Oneof, OneofList,
+    format_fqn, AllEnums, Enum, EnumList, Extension, Field, FieldList, Node, NodeAtPath, Oneof,
+    OneofList,
 };
 use crate::{Package, WellKnownType};
 
@@ -131,6 +133,10 @@ impl<'a, U> Message<'a, U> {
         self.container.upgrade()
     }
 
+    pub fn fields(&self) -> Iter<Field<'a, U>> {
+        Iter::from(&self.fields)
+    }
+
     pub fn messages(&self) -> Iter<Self> {
         Iter::from(&self.messages)
     }
@@ -149,6 +155,10 @@ impl<'a, U> Message<'a, U> {
 
     pub fn dependents(&self) -> UpgradeIter<Message<'a, U>> {
         UpgradeIter::new(self.dependents.clone())
+    }
+
+    pub fn defined_extensions(&self) -> Iter<Extension<'a, U>> {
+        Iter::from(&self.defined_extensions)
     }
 
     pub(crate) fn add_dependent(&self, dependent: Weak<Message<'a, U>>) {
@@ -209,9 +219,26 @@ impl<'a, U> Iterator for AllMessages<'a, U> {
     }
 }
 
-trait Hydrate<'a, U> {
-    fn hydrate(&self) -> Rc<Message<'a, U>>;
-    fn hydrate_nested(&self);
-    fn hydrate_enums(&self);
-    fn hydrate_oneofs(&self);
+impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Message<'a, U>> {
+    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
+        visitor.visit_message(self.clone())?;
+
+        for msg in self.messages() {
+            msg.accept(visitor)?;
+        }
+
+        for enm in self.enums() {
+            enm.accept(visitor)?;
+        }
+
+        for ext in self.defined_extensions() {
+            ext.accept(visitor)?;
+        }
+
+        for fld in self.fields() {
+            fld.accept(visitor)?;
+        }
+
+        Ok(())
+    }
 }

@@ -1,6 +1,7 @@
 use petgraph::visit::Walker;
 
 use crate::util::Generic;
+use crate::visit::{Accept, Visitor};
 pub use crate::File;
 use crate::Name;
 
@@ -55,5 +56,15 @@ impl<'a, U> Package<'a, U> {
     }
     pub fn comments(&self) -> Vec<String> {
         self.comments.borrow().clone()
+    }
+}
+
+impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Package<'a, U>> {
+    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
+        visitor.visit_package(self.clone())?;
+        for file in self.files() {
+            file.accept(visitor)?;
+        }
+        Ok(())
     }
 }

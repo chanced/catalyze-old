@@ -3,7 +3,11 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{Enum, Name, Node, NodeAtPath};
+use crate::{
+    iter::Iter,
+    visit::{Accept, Visitor},
+    Enum, Name, Node, NodeAtPath,
+};
 use prost_types::EnumValueDescriptorProto;
 
 pub(crate) type EnumValueList<'a, U> = Rc<RefCell<Vec<Rc<EnumValue<'a, U>>>>>;
@@ -30,6 +34,7 @@ impl<'a, U> EnumValue<'a, U> {
             container: Rc::downgrade(&container),
         })
     }
+
     /// Returns the enum that contains this enum value.
     pub fn containing_enum(&self) -> Rc<Enum<'a, U>> {
         self.container.upgrade().unwrap()
@@ -49,5 +54,11 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<EnumValue<'a, U>> {
         } else {
             None
         }
+    }
+}
+
+impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<EnumValue<'a, U>> {
+    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
+        visitor.visit_enum_value(self.clone())
     }
 }

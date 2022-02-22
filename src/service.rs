@@ -3,7 +3,11 @@ use std::{cell::RefCell, rc::Rc};
 use prost_types::ServiceDescriptorProto;
 
 use crate::{
-    container::Container, iter::Iter, path::ServiceDescriptorPath, Method, Name, Node, NodeAtPath,
+    container::Container,
+    iter::Iter,
+    path::ServiceDescriptorPath,
+    visit::{Accept, Visitor},
+    Method, Name, Node, NodeAtPath,
 };
 
 pub(crate) type ServiceList<'a, U> = Rc<RefCell<Vec<Rc<Service<'a, U>>>>>;
@@ -50,5 +54,15 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<Service<'a, U>> {
                 }
                 _ => None,
             })
+    }
+}
+
+impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Service<'a, U>> {
+    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
+        visitor.visit_service(self.clone())?;
+        for mth in self.methods.borrow().iter() {
+            mth.accept(visitor)?;
+        }
+        Ok(())
     }
 }

@@ -8,8 +8,10 @@ use prost_types::EnumDescriptorProto;
 
 use crate::{
     container::{Container, WeakContainer},
+    iter::Iter,
     path::EnumDescriptorPath,
     util::Generic,
+    visit::{Accept, Visitor},
     EnumValue, EnumValueList, Message, MessageList, Name, Node, NodeAtPath, Package,
 };
 
@@ -48,7 +50,9 @@ impl<'a, U> Enum<'a, U> {
 
         e
     }
-
+    pub fn values(&self) -> Iter<EnumValue<'a, U>> {
+        Iter::from(&self.values)
+    }
     pub fn package(&self) -> Option<Rc<Package<'a, U>>> {
         self.container.package()
     }
@@ -107,5 +111,14 @@ impl<'a, U> Iterator for AllEnums<'a, U> {
             }
             None
         }
+    }
+}
+impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Enum<'a, U>> {
+    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
+        visitor.visit_enum(self.clone())?;
+        for val in self.values() {
+            val.accept(visitor)?;
+        }
+        Ok(())
     }
 }

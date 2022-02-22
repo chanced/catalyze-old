@@ -7,6 +7,7 @@ use prost_types::FieldDescriptorProto;
 
 use crate::{
     container::{Container, WeakContainer},
+    visit::{Accept, Visitor},
     File, Name,
 };
 
@@ -37,5 +38,12 @@ impl<'a, U> Extension<'a, U> {
             container: container.downgrade(),
         });
         ext
+    }
+}
+
+impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Extension<'a, U>> {
+    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
+        visitor.visit_extension(self.clone())?;
+        Ok(())
     }
 }

@@ -4,105 +4,60 @@ use std::rc::Rc;
 
 use crate::{Enum, EnumValue, Extension, Field, File, Message, Method, Oneof, Package, Service};
 
-pub trait Visitor<'a, U> {
-    type Error;
+pub trait Accept<'a, U, V: Visitor<'a, U>> {
+    fn accept(&self, visitor: &mut V) -> Result<(), V::Error>;
+}
 
+pub fn walk<'a, U, V: Visitor<'a, U>, A: Accept<'a, U, V>>(
+    node: &A,
+    visitor: &mut V,
+) -> Result<(), V::Error> {
+    node.accept(visitor)
+}
+
+pub trait Visitor<'a, U>: Sized {
+    type Error;
     fn visit_package(&mut self, pkg: Rc<Package<'a, U>>) -> Result<(), Self::Error> {
-        visit_package(self, pkg)
+        pkg.accept(self)
     }
 
-    fn visit_file(&mut self, file: Rc<File<'a, U>>) -> Result<(), Self::Error> {
-        todo!("not done")
+    fn visit_file(&mut self, f: Rc<File<'a, U>>) -> Result<(), Self::Error> {
+        f.accept(self)
     }
 
     fn visit_message(&mut self, msg: Rc<Message<'a, U>>) -> Result<(), Self::Error> {
-        todo!("not done")
+        msg.accept(self)
     }
 
-    fn visit_enum(&mut self, e: Rc<Enum<'a, U>>) -> Result<(), Self::Error> {
-        todo!("not done")
+    fn visit_enum(&mut self, enm: Rc<Enum<'a, U>>) -> Result<(), Self::Error> {
+        enm.accept(self)
     }
 
-    fn visit_enum_value(&mut self, value: Rc<EnumValue<'a, U>>) -> Result<(), Self::Error> {
-        todo!("not done")
+    fn visit_enum_value(&mut self, val: Rc<EnumValue<'a, U>>) -> Result<(), Self::Error> {
+        val.accept(self)
     }
 
-    fn visit_field(&mut self, file: Rc<Field<'a, U>>) -> Result<(), Self::Error> {
-        todo!("not done")
+    fn visit_field(&mut self, fld: Rc<Field<'a, U>>) -> Result<(), Self::Error> {
+        fld.accept(self)
     }
 
     fn visit_extension(&mut self, ext: Rc<Extension<'a, U>>) -> Result<(), Self::Error> {
-        todo!("not done")
+        ext.accept(self)
     }
 
-    fn visit_one_of(&mut self, one_of: Rc<Oneof<'a, U>>) -> Result<(), Self::Error> {
-        todo!("not done")
+    fn visit_oneof(&mut self, oneof: Rc<Oneof<'a, U>>) -> Result<(), Self::Error> {
+        oneof.accept(self)
     }
 
-    fn visit_service(&mut self, service: Rc<Service<'a, U>>) -> Result<(), Self::Error> {
-        todo!("not done")
+    fn visit_service(&mut self, svc: Rc<Service<'a, U>>) -> Result<(), Self::Error> {
+        svc.accept(self)
     }
 
-    fn visit_method(&mut self, method: Rc<Method<'a, U>>) -> Result<(), Self::Error> {
-        todo!("not done")
+    fn visit_method(&mut self, mtd: Rc<Method<'a, U>>) -> Result<(), Self::Error> {
+        mtd.accept(self)
     }
 }
 
-pub fn visit_package<'a, U, V>(v: &mut V, pkg: Rc<Package<'a, U>>) -> Result<(), V::Error>
-where
-    V: Visitor<'a, U> + ?Sized,
-{
-    for file in pkg.files() {
-        v.visit_file(file)?;
-    }
-    Ok(())
-}
-
-pub fn visit_file<'a, U, V>(v: &mut V, file: Rc<File<'a, U>>) -> Result<(), V::Error>
-where
-    V: Visitor<'a, U> + ?Sized,
-{
-    for msg in file.messages() {
-        v.visit_message(msg)?;
-    }
-    for e in file.enums() {
-        v.visit_enum(e)?;
-    }
-
-    Ok(())
-}
-
-// pub fn visit_message(&mut self, file: &'a File) -> Result<(), Self::Error> {
-//     Ok(())
-// }
-
-// pub fn visit_enum(&mut self, enum_: &'a Enum) -> Result<(), Self::Error> {
-//     Ok(())
-// }
-
-// pub fn visit_enum_value(&mut self, enum_value: EnumValue) -> Result<(), Self::Error> {
-//     Ok(())
-// }
-
-// pub fn visit_field(&mut self, field: Field) -> Result<(), Self::Error> {
-//     Ok(())
-// }
-
-// pub fn visit_extension(&mut self, extension: Extension) -> Result<(), Self::Error> {
-//     Ok(())
-// }
-
-// pub fn visit_one_of(&mut self, one_of: OneOf) -> Result<(), Self::Error> {
-//     Ok(())
-// }
-
-// pub fn visit_service(&mut self, service: Service) -> Result<(), Self::Error> {
-//     Ok(())
-// }
-
-// pub fn visit_method(&mut self, method: Method) -> Result<(), Self::Error> {
-//     Ok(())
-// }
 #[cfg(test)]
 mod tests {
     // #[test]

@@ -15,7 +15,6 @@ mod node;
 mod oneof;
 mod package;
 pub mod path;
-mod protobuf;
 mod service;
 mod source;
 pub mod util;
@@ -35,12 +34,12 @@ pub use name::Name;
 pub use node::*;
 pub use oneof::*;
 pub use package::Package;
-pub use protobuf::*;
+
 pub use r#enum::*;
 pub use service::*;
 pub use source::*;
 pub use util::ToCase;
-pub use visit::*;
+
 pub use well_known_type::*;
 
 #[cfg(test)]

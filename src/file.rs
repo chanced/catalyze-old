@@ -3,6 +3,7 @@ use prost_types::FileDescriptorProto;
 use crate::container::{BuildTarget, Container};
 use crate::iter::{Iter, TransitiveImports, UpgradeIter};
 use crate::path::FileDescriptorPath;
+use crate::visit::{Accept, Visitor};
 use crate::{
     AllEnums, AllMessages, Enum, EnumList, Extension, ExtensionList, Message, MessageList, Name,
     Node, NodeAtPath, Package, Service, ServiceList,
@@ -194,5 +195,24 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<File<'a, U>> {
             }
             .and_then(|n| n.node_at_path(&path[2..]))
         })
+    }
+}
+
+impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<File<'a, U>> {
+    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
+        visitor.visit_file(self.clone())?;
+        for msg in self.messages() {
+            msg.accept(visitor)?;
+        }
+        for enm in self.enums() {
+            enm.accept(visitor)?;
+        }
+        for svc in self.services() {
+            svc.accept(visitor)?;
+        }
+        for ext in self.defined_extensions() {
+            ext.accept(visitor)?;
+        }
+        Ok(())
     }
 }
