@@ -5,8 +5,8 @@ use crate::iter::{Iter, TransitiveImports, UpgradeIter};
 use crate::path::FileDescriptorPath;
 use crate::visit::{Accept, Visitor};
 use crate::{
-    AllEnums, AllMessages, Enum, EnumList, Extension, ExtensionList, Message, MessageList, Name,
-    Node, NodeAtPath, Package, Service, ServiceList,
+    AllEnums, AllMessages, Enum, EnumList, Extension, ExtensionList, FullyQualified, Message,
+    MessageList, Name, Node, NodeAtPath, Package, Service, ServiceList,
 };
 use std::cell::RefCell;
 
@@ -16,7 +16,6 @@ use std::rc::{Rc, Weak};
 
 #[derive(Debug, Clone)]
 pub struct File<'a, U> {
-    pub fully_qualified_name: String,
     pub descriptor: &'a FileDescriptorProto,
     pub name: Name<U>,
     pub file_path: PathBuf,
@@ -24,6 +23,7 @@ pub struct File<'a, U> {
     pub pkg_info: Option<prost_types::SourceCodeInfo>,
     pub src_info: Option<prost_types::SourceCodeInfo>,
     pub util: Rc<RefCell<U>>,
+    fqn: String,
     pkg: Option<Weak<Package<'a, U>>>,
     messages: MessageList<'a, U>,
     enums: EnumList<'a, U>,
@@ -59,7 +59,7 @@ impl<'a, U> File<'a, U> {
             util: util.clone(),
             descriptor,
             pkg,
-            fully_qualified_name,
+            fqn: fully_qualified_name,
             build_target,
             file_path,
             dependents: Rc::new(RefCell::new(Vec::new())),
@@ -110,6 +110,7 @@ impl<'a, U> File<'a, U> {
 
         file
     }
+
     pub fn messages(&self) -> Iter<Message<'a, U>> {
         Iter::from(&self.messages)
     }
@@ -217,5 +218,11 @@ impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<File<'a, U>> {
             ext.accept(v)?;
         }
         Ok(())
+    }
+}
+
+impl<'a, U> FullyQualified for File<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        self.fqn.clone()
     }
 }

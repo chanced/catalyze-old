@@ -11,8 +11,8 @@ use crate::path::DescriptorPath;
 use crate::visit::{Accept, Visitor};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
-    format_fqn, AllEnums, Enum, EnumList, Extension, Field, FieldList, Node, NodeAtPath, Oneof,
-    OneofList,
+    fmt_fqn, AllEnums, Enum, EnumList, Extension, Field, FieldList, FullyQualified, Node,
+    NodeAtPath, Oneof, OneofList,
 };
 use crate::{Package, WellKnownType};
 
@@ -26,9 +26,9 @@ pub(crate) type MessageList<'a, U> = Rc<RefCell<Vec<Rc<Message<'a, U>>>>>;
 pub struct Message<'a, U> {
     pub name: Name<U>,
     pub is_map_entry: bool,
-    pub fully_qualified_name: String,
     pub descriptor: &'a DescriptorProto,
     pub well_known_type: Option<WellKnownType>,
+    fqn: String,
     util: Rc<RefCell<U>>,
     messages: MessageList<'a, U>,
     enums: EnumList<'a, U>,
@@ -62,7 +62,7 @@ impl<'a, U> Message<'a, U> {
         let msg = Rc::new(Message {
             name: Name::new(descriptor.name(), util.clone()),
             container: container.downgrade(),
-            fully_qualified_name: format_fqn(&container.node(), descriptor.name()),
+            fqn: fmt_fqn(&container, descriptor.name()),
             well_known_type,
             descriptor,
             util: util.clone(),
@@ -114,6 +114,9 @@ impl<'a, U> Message<'a, U> {
             }
         }
         msg
+    }
+    pub fn name(&self) -> Name<U> {
+        self.name.clone()
     }
     pub fn util(&self) -> Rc<RefCell<U>> {
         self.util.clone()
@@ -243,5 +246,11 @@ impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Message<'a, U>> {
         }
 
         Ok(())
+    }
+}
+
+impl<'a, U> FullyQualified for Message<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        self.fqn.clone()
     }
 }

@@ -1,8 +1,7 @@
-use std::ops::Deref;
 use std::rc::{Rc, Weak};
 
 use crate::{iter::Iter, Enum};
-use crate::{AllEnums, AllMessages, File, Message, Name, Node, Package};
+use crate::{AllEnums, AllMessages, File, FullyQualified, Message, Name, Node, Package};
 
 // pub enum Entity {
 
@@ -33,22 +32,6 @@ impl<'a, U> WeakContainer<'a, U> {
             WeakContainer::Message(m) => Container::Message(m.upgrade().unwrap()),
         }
     }
-    // pub(crate) fn add_message(&self, message: Rc<Message<'a, U>>) {
-    //     match self {
-    //         InternalContainer::File(f) => {
-    //             f.upgrade().unwrap().add_message(message);
-    //         }
-    //         InternalContainer::Message(m) => {
-    //             m.upgrade().unwrap().add_message(message);
-    //         }
-    //     }
-    // }
-    // pub(crate) fn fully_qualified_name(&self) -> String {
-    //     match self {
-    //         InternalContainer::File(f) => f.upgrade().unwrap().fully_qualified_name.clone(),
-    //         InternalContainer::Message(m) => m.upgrade().unwrap().fully_qualified_name.clone(),
-    //     }
-    // }
 
     pub(crate) fn package(&self) -> Option<Rc<Package<'a, U>>> {
         match self {
@@ -85,12 +68,6 @@ impl<'a, U> From<Rc<Message<'a, U>>> for Container<'a, U> {
 }
 
 impl<'a, U> Container<'a, U> {
-    pub fn fully_qualified_name(&self) -> &str {
-        match self {
-            Container::File(f) => &f.fully_qualified_name,
-            Container::Message(m) => &m.fully_qualified_name,
-        }
-    }
     pub fn node(&self) -> Node<'a, U> {
         match self {
             Container::File(f) => Node::File(f.clone()),
@@ -158,6 +135,24 @@ impl<'a, U> BuildTarget for WeakContainer<'a, U> {
         match self {
             WeakContainer::File(f) => f.upgrade().unwrap().build_target(),
             WeakContainer::Message(m) => m.upgrade().unwrap().build_target(),
+        }
+    }
+}
+
+impl<'a, U> FullyQualified for Container<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        match self {
+            Container::File(f) => f.fully_qualified_name(),
+            Container::Message(m) => m.fully_qualified_name(),
+        }
+    }
+}
+
+impl<'a, U> FullyQualified for WeakContainer<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        match self {
+            WeakContainer::File(f) => f.upgrade().unwrap().fully_qualified_name(),
+            WeakContainer::Message(m) => m.upgrade().unwrap().fully_qualified_name(),
         }
     }
 }

@@ -2,9 +2,10 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     container::{Container, WeakContainer},
+    fmt_fqn,
     iter::Iter,
     visit::{Accept, Visitor},
-    Field, Name, Node, NodeAtPath,
+    Field, FullyQualified, Name, Node, NodeAtPath,
 };
 
 pub(crate) type OneofList<'a, U> = Rc<RefCell<Vec<Rc<Oneof<'a, U>>>>>;
@@ -13,7 +14,7 @@ pub(crate) type OneofList<'a, U> = Rc<RefCell<Vec<Rc<Oneof<'a, U>>>>>;
 pub struct Oneof<'a, U> {
     pub name: Name<U>,
     pub descriptor: &'a prost_types::OneofDescriptorProto,
-    pub fully_qualified_name: String,
+    fqn: String,
     fields: Rc<RefCell<Vec<Rc<Field<'a, U>>>>>,
     container: WeakContainer<'a, U>,
 }
@@ -26,7 +27,7 @@ impl<'a, U> Oneof<'a, U> {
     ) -> Rc<Self> {
         Rc::new(Self {
             name: Name::new(desc.name(), util),
-            fully_qualified_name: format!("{}.{}", container.fully_qualified_name(), desc.name()),
+            fqn: fmt_fqn(&container, desc.name()),
             descriptor: desc,
             container: container.downgrade(),
             fields: Rc::new(RefCell::new(Vec::new())),
@@ -64,5 +65,11 @@ impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Oneof<'a, U>> {
             fld.accept(v)?;
         }
         Ok(())
+    }
+}
+
+impl<'a, U> FullyQualified for Oneof<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        self.fqn.clone()
     }
 }

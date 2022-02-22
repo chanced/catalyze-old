@@ -7,7 +7,7 @@ use crate::{
     iter::Iter,
     path::ServiceDescriptorPath,
     visit::{Accept, Visitor},
-    Method, Name, Node, NodeAtPath,
+    FullyQualified, Method, Name, Node, NodeAtPath,
 };
 
 pub(crate) type ServiceList<'a, U> = Rc<RefCell<Vec<Rc<Service<'a, U>>>>>;
@@ -15,7 +15,7 @@ pub(crate) type ServiceList<'a, U> = Rc<RefCell<Vec<Rc<Service<'a, U>>>>>;
 #[derive(Debug, Clone)]
 pub struct Service<'a, U> {
     pub name: Name<U>,
-    pub fully_qualified_name: String,
+    fqn: String,
     pub methods: Rc<RefCell<Vec<Rc<Method<'a, U>>>>>,
 }
 
@@ -28,7 +28,7 @@ impl<'a, U> Service<'a, U> {
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
         Rc::new(Service {
             name: Name::new(desc.name(), util.clone()),
-            fully_qualified_name,
+            fqn: fully_qualified_name,
             methods: Rc::new(RefCell::new(Vec::with_capacity(desc.method.len()))),
         })
     }
@@ -67,5 +67,11 @@ impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Service<'a, U>> {
             mth.accept(v)?;
         }
         Ok(())
+    }
+}
+
+impl<'a, U> FullyQualified for Rc<Service<'a, U>> {
+    fn fully_qualified_name(&self) -> String {
+        self.fqn.clone()
     }
 }

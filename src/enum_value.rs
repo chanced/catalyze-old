@@ -4,9 +4,10 @@ use std::{
 };
 
 use crate::{
+    fmt_fqn,
     iter::Iter,
     visit::{Accept, Visitor},
-    Enum, Name, Node, NodeAtPath,
+    Enum, FullyQualified, Name, Node, NodeAtPath,
 };
 use prost_types::EnumValueDescriptorProto;
 
@@ -15,7 +16,7 @@ pub(crate) type EnumValueList<'a, U> = Rc<RefCell<Vec<Rc<EnumValue<'a, U>>>>>;
 #[derive(Debug, Clone)]
 pub struct EnumValue<'a, U> {
     pub name: Name<U>,
-    pub fully_qualified_name: String,
+    fqn: String,
     pub descriptor: &'a EnumValueDescriptorProto,
     pub(crate) container: Weak<Enum<'a, U>>,
 }
@@ -23,15 +24,14 @@ pub struct EnumValue<'a, U> {
 impl<'a, U> EnumValue<'a, U> {
     pub fn new(
         desc: &'a EnumValueDescriptorProto,
-        container: Rc<Enum<'a, U>>,
+        enm: Rc<Enum<'a, U>>,
         util: Rc<RefCell<U>>,
     ) -> Rc<Self> {
-        let fully_qualified_name = format!("{}.{}", container.fully_qualified_name, desc.name());
         Rc::new(EnumValue {
             name: Name::new(desc.name(), util),
-            fully_qualified_name,
+            fqn: fmt_fqn(enm.as_ref(), desc.name()),
             descriptor: desc,
-            container: Rc::downgrade(&container),
+            container: Rc::downgrade(&enm),
         })
     }
 
@@ -63,5 +63,11 @@ impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<EnumValue<'a, U>> {
             return Ok(());
         }
         v.visit_enum_value(self.clone())
+    }
+}
+
+impl<'a, U> FullyQualified for EnumValue<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        self.fqn.clone()
     }
 }

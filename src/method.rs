@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     visit::{Accept, Visitor},
-    Name, Node, NodeAtPath,
+    FullyQualified, Name, Node, NodeAtPath,
 };
 
 pub(crate) type MethodList<'a, U> = Rc<RefCell<Vec<Rc<Method<'a, U>>>>>;
@@ -17,7 +17,7 @@ pub(crate) fn new_method_list<'a, U>(cap: usize) -> MethodList<'a, U> {
 pub struct Method<'a, U> {
     pub name: Name<U>,
     pub desc: &'a prost_types::MethodDescriptorProto,
-    pub fully_qualified_name: String,
+    fqn: String,
 }
 
 impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Method<'a, U>> {
@@ -36,5 +36,11 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<Method<'a, U>> {
         } else {
             None
         }
+    }
+}
+
+impl<'a, U> FullyQualified for Method<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        self.fqn.clone()
     }
 }

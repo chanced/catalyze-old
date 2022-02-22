@@ -9,6 +9,10 @@ pub trait NodeAtPath<'a, U> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>>;
 }
 
+pub trait FullyQualified {
+    fn fully_qualified_name(&self) -> String;
+}
+
 #[derive(Debug, Clone)]
 pub enum Node<'a, U> {
     File(Rc<File<'a, U>>),
@@ -32,31 +36,6 @@ impl<'a, U> Node<'a, U> {
             Node::EnumValue(ev) => &ev.name,
             Node::Service(s) => &s.name,
             Node::Method(m) => &m.name,
-        }
-    }
-    pub fn fully_qualified_name(&self) -> &str {
-        match self {
-            Node::File(f) => &f.fully_qualified_name,
-            Node::Message(m) => &m.fully_qualified_name,
-            Node::Oneof(o) => &o.fully_qualified_name,
-            Node::Enum(e) => &e.fully_qualified_name,
-            Node::EnumValue(ev) => &ev.fully_qualified_name,
-            Node::Service(s) => &s.fully_qualified_name,
-            Node::Method(m) => &m.fully_qualified_name,
-            Node::Field(f) => &f.fully_qualified_name,
-        }
-    }
-
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
-        match self {
-            Node::File(f) => f.node_at_path(path),
-            Node::Message(m) => m.node_at_path(path),
-            Node::Oneof(o) => o.node_at_path(path),
-            Node::Enum(e) => e.node_at_path(path),
-            Node::EnumValue(ev) => ev.node_at_path(path),
-            Node::Service(s) => s.node_at_path(path),
-            Node::Method(m) => m.node_at_path(path),
-            Node::Field(f) => f.node_at_path(path),
         }
     }
 }
@@ -137,6 +116,21 @@ impl<'a, U> From<EnumValue<'a, U>> for Node<'a, U> {
     }
 }
 
-pub(crate) fn format_fqn<'a, U>(container: &Node<'a, U>, name: &str) -> String {
-    format!("{}.{}", container.fully_qualified_name(), name)
+impl<'a, U> FullyQualified for Node<'a, Node<'a, U>> {
+    fn fully_qualified_name(&self) -> String {
+        match self {
+            Node::File(f) => f.fully_qualified_name(),
+            Node::Message(m) => m.fully_qualified_name(),
+            Node::Oneof(o) => o.fully_qualified_name(),
+            Node::Enum(e) => e.fully_qualified_name(),
+            Node::EnumValue(ev) => ev.fully_qualified_name(),
+            Node::Service(s) => s.fully_qualified_name(),
+            Node::Method(m) => m.fully_qualified_name(),
+            Node::Field(f) => f.fully_qualified_name(),
+        }
+    }
+}
+
+pub(crate) fn fmt_fqn<'a, N: FullyQualified>(n: &N, name: &str) -> String {
+    format!("{}.{}", n.fully_qualified_name(), name)
 }

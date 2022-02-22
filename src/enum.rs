@@ -10,9 +10,9 @@ use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
     path::EnumDescriptorPath,
-    util::Generic,
     visit::{Accept, Visitor},
-    EnumValue, EnumValueList, Message, MessageList, Name, Node, NodeAtPath, Package,
+    EnumValue, EnumValueList, FullyQualified, Message, MessageList, Name, Node, NodeAtPath,
+    Package,
 };
 
 pub(crate) type EnumList<'a, U> = Rc<RefCell<Vec<Rc<Enum<'a, U>>>>>;
@@ -20,7 +20,7 @@ pub(crate) type EnumList<'a, U> = Rc<RefCell<Vec<Rc<Enum<'a, U>>>>>;
 #[derive(Debug, Clone)]
 pub struct Enum<'a, U> {
     pub name: Name<U>,
-    pub fully_qualified_name: String,
+    fqn: String,
     values: EnumValueList<'a, U>,
     container: WeakContainer<'a, U>,
     dependents: Rc<RefCell<Vec<Weak<Message<'a, U>>>>>,
@@ -39,7 +39,7 @@ impl<'a, U> Enum<'a, U> {
             values: Rc::new(RefCell::new(Vec::with_capacity(desc.value.len()))),
             container: container.downgrade(),
             dependents: Rc::new(RefCell::new(Vec::default())),
-            fully_qualified_name,
+            fqn: fully_qualified_name,
         });
         {
             let mut values = e.values.borrow_mut();
@@ -123,5 +123,11 @@ impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Enum<'a, U>> {
             val.accept(v)?;
         }
         Ok(())
+    }
+}
+
+impl<'a, U> FullyQualified for Enum<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        self.fqn.clone()
     }
 }

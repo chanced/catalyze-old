@@ -7,16 +7,17 @@ use prost_types::{DescriptorProto, FieldDescriptorProto};
 
 use crate::{
     container::WeakContainer,
+    fmt_fqn,
     util::Generic,
     visit::{self, Accept, Visitor},
-    Message, Name, Node, NodeAtPath,
+    FullyQualified, Message, Name, Node, NodeAtPath,
 };
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field<'a, U> {
     pub name: Name<U>,
     pub desc: &'a FieldDescriptorProto,
-    pub fully_qualified_name: String,
+    fqn: String,
 }
 
 pub(crate) type FieldList<'a, U> = Rc<RefCell<Vec<Rc<Field<'a, U>>>>>;
@@ -30,9 +31,12 @@ impl<'a, U> Field<'a, U> {
         let field = Rc::new(Self {
             name: Name::new(desc.name(), util),
             desc,
-            fully_qualified_name: msg.fully_qualified_name.to_owned(),
+            fqn: fmt_fqn(msg.as_ref(), desc.name()),
         });
         field
+    }
+    pub fn name(&self) -> Name<U> {
+        self.name.clone()
     }
 }
 
@@ -49,5 +53,11 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<Field<'a, U>> {
 impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Field<'a, U>> {
     fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
         visitor.visit_field(self.clone())
+    }
+}
+
+impl<'a, U> FullyQualified for Field<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        self.fqn.clone()
     }
 }
