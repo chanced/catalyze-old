@@ -58,7 +58,10 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<EnumValue<'a, U>> {
 }
 
 impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<EnumValue<'a, U>> {
-    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
-        visitor.visit_enum_value(self.clone())
+    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
+        if v.done() {
+            return Ok(());
+        }
+        v.visit_enum_value(self.clone())
     }
 }

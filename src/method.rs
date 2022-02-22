@@ -21,8 +21,11 @@ pub struct Method<'a, U> {
 }
 
 impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Method<'a, U>> {
-    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
-        visitor.visit_method(self.clone())
+    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
+        if v.done() {
+            return Ok(());
+        }
+        v.visit_method(self.clone())
     }
 }
 

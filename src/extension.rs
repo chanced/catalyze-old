@@ -42,8 +42,11 @@ impl<'a, U> Extension<'a, U> {
 }
 
 impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Extension<'a, U>> {
-    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
-        visitor.visit_extension(self.clone())?;
+    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
+        if v.done() {
+            return Ok(());
+        }
+        v.visit_extension(self.clone())?;
         Ok(())
     }
 }

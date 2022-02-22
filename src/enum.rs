@@ -114,10 +114,13 @@ impl<'a, U> Iterator for AllEnums<'a, U> {
     }
 }
 impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Enum<'a, U>> {
-    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
-        visitor.visit_enum(self.clone())?;
+    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
+        if v.done() {
+            return Ok(());
+        }
+        v.visit_enum(self.clone())?;
         for val in self.values() {
-            val.accept(visitor)?;
+            val.accept(v)?;
         }
         Ok(())
     }

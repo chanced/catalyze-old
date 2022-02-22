@@ -58,10 +58,13 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<Service<'a, U>> {
 }
 
 impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Service<'a, U>> {
-    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
-        visitor.visit_service(self.clone())?;
+    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
+        if v.done() {
+            return Ok(());
+        }
+        v.visit_service(self.clone())?;
         for mth in self.methods.borrow().iter() {
-            mth.accept(visitor)?;
+            mth.accept(v)?;
         }
         Ok(())
     }

@@ -55,10 +55,13 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<Oneof<'a, U>> {
 }
 
 impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Oneof<'a, U>> {
-    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
-        visitor.visit_oneof(self.clone())?;
+    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
+        v.visit_oneof(self.clone())?;
+        if v.done() {
+            return Ok(());
+        }
         for fld in self.fields() {
-            fld.accept(visitor)?;
+            fld.accept(v)?;
         }
         Ok(())
     }

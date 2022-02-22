@@ -9,52 +9,55 @@ pub trait Accept<'a, U, V: Visitor<'a, U>> {
 }
 
 pub fn walk<'a, U, V: Visitor<'a, U>, A: Accept<'a, U, V>>(
+    v: &mut V,
     node: &A,
-    visitor: &mut V,
 ) -> Result<(), V::Error> {
-    node.accept(visitor)
+    node.accept(v)
 }
 
 pub trait Visitor<'a, U>: Sized {
     type Error;
+    fn done(&mut self) -> bool {
+        false
+    }
     fn visit_package(&mut self, pkg: Rc<Package<'a, U>>) -> Result<(), Self::Error> {
-        pkg.accept(self)
+        Ok(())
     }
 
     fn visit_file(&mut self, f: Rc<File<'a, U>>) -> Result<(), Self::Error> {
-        f.accept(self)
+        Ok(())
     }
 
     fn visit_message(&mut self, msg: Rc<Message<'a, U>>) -> Result<(), Self::Error> {
-        msg.accept(self)
+        Ok(())
     }
 
     fn visit_enum(&mut self, enm: Rc<Enum<'a, U>>) -> Result<(), Self::Error> {
-        enm.accept(self)
+        Ok(())
     }
 
     fn visit_enum_value(&mut self, val: Rc<EnumValue<'a, U>>) -> Result<(), Self::Error> {
-        val.accept(self)
+        Ok(())
     }
 
     fn visit_field(&mut self, fld: Rc<Field<'a, U>>) -> Result<(), Self::Error> {
-        fld.accept(self)
+        Ok(())
     }
 
     fn visit_extension(&mut self, ext: Rc<Extension<'a, U>>) -> Result<(), Self::Error> {
-        ext.accept(self)
+        Ok(())
     }
 
     fn visit_oneof(&mut self, oneof: Rc<Oneof<'a, U>>) -> Result<(), Self::Error> {
-        oneof.accept(self)
+        Ok(())
     }
 
     fn visit_service(&mut self, svc: Rc<Service<'a, U>>) -> Result<(), Self::Error> {
-        svc.accept(self)
+        Ok(())
     }
 
     fn visit_method(&mut self, mtd: Rc<Method<'a, U>>) -> Result<(), Self::Error> {
-        mtd.accept(self)
+        Ok(())
     }
 }
 

@@ -77,16 +77,19 @@ impl<'a, U> NodeAtPath<'a, U> for Node<'a, U> {
 }
 
 impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Node<'a, U> {
-    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
+    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
+        if v.done() {
+            return Ok(());
+        }
         match self {
-            Node::File(f) => f.accept(visitor),
-            Node::Message(m) => m.accept(visitor),
-            Node::Oneof(o) => o.accept(visitor),
-            Node::Enum(e) => e.accept(visitor),
-            Node::EnumValue(ev) => ev.accept(visitor),
-            Node::Service(s) => s.accept(visitor),
-            Node::Method(m) => m.accept(visitor),
-            Node::Field(f) => f.accept(visitor),
+            Node::File(f) => f.accept(v),
+            Node::Message(m) => m.accept(v),
+            Node::Oneof(o) => o.accept(v),
+            Node::Enum(e) => e.accept(v),
+            Node::EnumValue(ev) => ev.accept(v),
+            Node::Service(s) => s.accept(v),
+            Node::Method(m) => m.accept(v),
+            Node::Field(f) => f.accept(v),
         }
     }
 }

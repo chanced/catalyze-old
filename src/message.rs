@@ -220,23 +220,26 @@ impl<'a, U> Iterator for AllMessages<'a, U> {
 }
 
 impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Message<'a, U>> {
-    fn accept(&self, visitor: &mut V) -> Result<(), V::Error> {
-        visitor.visit_message(self.clone())?;
+    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
+        if v.done() {
+            return Ok(());
+        }
+        v.visit_message(self.clone())?;
 
         for msg in self.messages() {
-            msg.accept(visitor)?;
+            msg.accept(v)?;
         }
 
         for enm in self.enums() {
-            enm.accept(visitor)?;
+            enm.accept(v)?;
         }
 
         for ext in self.defined_extensions() {
-            ext.accept(visitor)?;
+            ext.accept(v)?;
         }
 
         for fld in self.fields() {
-            fld.accept(visitor)?;
+            fld.accept(v)?;
         }
 
         Ok(())
