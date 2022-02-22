@@ -71,8 +71,8 @@ impl<'a, U> Iterator for TransitiveImports<'a, U> {
         while let Some(file) = self.queue.pop_front() {
             if !self.processed.contains(&file.name) {
                 self.processed.insert(file.name.clone());
-                for f in file.dependencies.borrow().iter() {
-                    self.queue.push_back(f.upgrade().unwrap());
+                for d in file.dependencies() {
+                    self.queue.push_back(d);
                 }
                 return Some(file);
             }

@@ -9,7 +9,9 @@ use crate::container::BuildTarget;
 use crate::iter::{Iter, UpgradeIter};
 use crate::path::DescriptorPath;
 use crate::{container::Container, container::WeakContainer, Name};
-use crate::{format_fqn, AllEnums, Enum, EnumList, FieldList, Node, NodeAtPath, Oneof, OneofList};
+use crate::{
+    format_fqn, AllEnums, Enum, EnumList, Extension, FieldList, Node, NodeAtPath, Oneof, OneofList,
+};
 use crate::{Package, WellKnownType};
 
 pub(crate) type MessageList<'a, U> = Rc<RefCell<Vec<Rc<Message<'a, U>>>>>;
@@ -34,6 +36,10 @@ pub struct Message<'a, U> {
     container: WeakContainer<'a, U>,
     maps: MessageList<'a, U>,
     preserved_messages: MessageList<'a, U>,
+    /// `Extension`s defined by this message.
+    defined_extensions: Rc<RefCell<Vec<Rc<Extension<'a, U>>>>>,
+    /// `Extension`s applied to this `Message`
+    applied_extensions: Rc<RefCell<Vec<Weak<Extension<'a, U>>>>>,
 }
 
 impl<'a, U> Message<'a, U> {
@@ -70,6 +76,10 @@ impl<'a, U> Message<'a, U> {
             messages: Rc::new(RefCell::new(Vec::new())),
             maps: Rc::new(RefCell::new(Vec::new())),
             dependents: Rc::new(RefCell::new(Vec::new())),
+            applied_extensions: Rc::new(RefCell::new(Vec::new())),
+            defined_extensions: Rc::new(RefCell::new(Vec::with_capacity(
+                descriptor.extension.len(),
+            ))),
         });
 
         let container = Container::Message(msg.clone());
@@ -94,7 +104,13 @@ impl<'a, U> Message<'a, U> {
                 oneofs.push(o);
             }
         }
-
+        {
+            let mut def_exts = msg.defined_extensions.borrow_mut();
+            for xd in descriptor.extension.iter() {
+                let ext = Extension::new(xd, container.clone(), util.clone());
+                def_exts.push(ext);
+            }
+        }
         msg
     }
     pub fn util(&self) -> Rc<RefCell<U>> {

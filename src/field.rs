@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use prost_types::{DescriptorProto, FieldDescriptorProto};
+use prost_types::FieldDescriptorProto;
 
 use crate::{Message, Name, Node, NodeAtPath};
 

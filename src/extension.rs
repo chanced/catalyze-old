@@ -5,7 +5,10 @@ use std::{
 
 use prost_types::FieldDescriptorProto;
 
-use crate::{File, Name};
+use crate::{
+    container::{Container, WeakContainer},
+    File, Name,
+};
 
 pub(crate) type ExtensionList<'a, U> = Rc<RefCell<Vec<Rc<Extension<'a, U>>>>>;
 pub(crate) fn new_extension_list<'a, U>(cap: usize) -> ExtensionList<'a, U> {
@@ -19,26 +22,20 @@ pub(crate) fn new_extension_list<'a, U>(cap: usize) -> ExtensionList<'a, U> {
 pub struct Extension<'a, U> {
     pub name: Name<U>,
     pub descriptor: &'a FieldDescriptorProto,
-    pub(crate) file: Weak<File<'a, U>>,
+    pub(crate) container: WeakContainer<'a, U>,
 }
 
 impl<'a, U> Extension<'a, U> {
     pub fn new(
         desc: &'a FieldDescriptorProto,
-        file: Rc<File<'a, U>>,
+        container: Container<'a, U>,
         util: Rc<RefCell<U>>,
     ) -> Rc<Self> {
         let ext = Rc::new(Self {
             name: Name::new(desc.name(), util),
             descriptor: desc,
-            file: Rc::downgrade(&file),
+            container: container.downgrade(),
         });
         ext
-    }
-}
-
-impl<'a, U> Extension<'a, U> {
-    pub fn file(&self) -> Rc<File<'a, U>> {
-        self.file.upgrade().unwrap()
     }
 }
