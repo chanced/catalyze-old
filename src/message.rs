@@ -6,46 +6,42 @@ use std::str::FromStr;
 use prost_types::DescriptorProto;
 
 use crate::container::BuildTarget;
-use crate::iter::UpgradeIter;
+use crate::iter::{Iter, UpgradeIter};
 use crate::path::DescriptorPath;
-use crate::{container::Container, container::InternalContainer, Name};
-use crate::{AllEnums, EnumList, FieldList, Node, NodeAtPath, OneofList};
+use crate::{container::Container, container::WeakContainer, Name};
+use crate::{format_fqn, AllEnums, Enum, EnumList, FieldList, Node, NodeAtPath, Oneof, OneofList};
 use crate::{Package, WellKnownType};
 
 pub(crate) type MessageList<'a, U> = Rc<RefCell<Vec<Rc<Message<'a, U>>>>>;
 
 /// Message describes a proto message. Messages can be contained in either
-/// another Message or File, and may house further Messages and/or Enums. While
+/// another Message or a File, and may house further Messages and/or Enums. While
 /// all Fields technically live on the Message, some may be contained within
 /// OneOf blocks.
 #[derive(Debug, Clone)]
 pub struct Message<'a, U> {
+    pub name: Name<U>,
+    pub is_map_entry: bool,
     pub fully_qualified_name: String,
     pub descriptor: &'a DescriptorProto,
-    pub is_map_entry: bool,
-    pub name: Name<U>,
-    pub well_known_type: Option<WellKnownType>, // dependents_cache: RefCell<HashMap<String, Weak<Message<'a, U>>>>,
-    pub enums: EnumList<'a, U>,
-    pub(crate) preserved_messages: MessageList<'a, U>,
-    pub(crate) messages: MessageList<'a, U>,
-    pub(crate) maps: MessageList<'a, U>,
-    pub(crate) fields: FieldList<'a, U>,
-    pub(crate) oneofs: OneofList<'a, U>,
-    pub(crate) dependents: Rc<RefCell<Vec<Weak<Message<'a, U>>>>>,
-    pub(crate) container: InternalContainer<'a, U>,
+    pub well_known_type: Option<WellKnownType>,
+    util: Rc<RefCell<U>>,
+    messages: MessageList<'a, U>,
+    enums: EnumList<'a, U>,
+    fields: FieldList<'a, U>,
+    oneofs: OneofList<'a, U>,
+    dependents: Rc<RefCell<Vec<Weak<Message<'a, U>>>>>,
+    container: WeakContainer<'a, U>,
+    maps: MessageList<'a, U>,
+    preserved_messages: MessageList<'a, U>,
 }
 
 impl<'a, U> Message<'a, U> {
     pub(crate) fn new(
         descriptor: &'a DescriptorProto,
         container: Container<'a, U>,
-        lang: Rc<RefCell<U>>,
+        util: Rc<RefCell<U>>,
     ) -> Rc<Self> {
-        let fully_qualified_name = match descriptor.name() {
-            "" => String::from(""),
-            n => format!("{}.{}", container.fully_qualified_name(), n),
-        };
-
         let well_known_type = if container.package().map_or(false, |pkg| pkg.is_well_known()) {
             match WellKnownType::from_str(descriptor.name()) {
                 Ok(wkt) => Some(wkt),
@@ -55,13 +51,13 @@ impl<'a, U> Message<'a, U> {
             None
         };
 
-        let name = Name::new(descriptor.name(), lang);
-        Rc::new(Message {
-            name,
+        let msg = Rc::new(Message {
+            name: Name::new(descriptor.name(), util.clone()),
             container: container.downgrade(),
-            fully_qualified_name,
+            fully_qualified_name: format_fqn(&container.node(), descriptor.name()),
             well_known_type,
             descriptor,
+            util,
             is_map_entry: descriptor.options.as_ref().map_or(false, |o| o.map_entry()),
             enums: Rc::new(RefCell::new(Vec::with_capacity(descriptor.enum_type.len()))),
             fields: Rc::new(RefCell::new(Vec::with_capacity(descriptor.field.len()))),
@@ -74,9 +70,33 @@ impl<'a, U> Message<'a, U> {
             messages: Rc::new(RefCell::new(Vec::new())),
             maps: Rc::new(RefCell::new(Vec::new())),
             dependents: Rc::new(RefCell::new(Vec::new())),
-        })
-    }
+        });
 
+        let container = Container::Message(msg.clone());
+
+        let msgs = msg.messages.borrow_mut();
+        for md in msg.descriptor.nested_type.iter() {
+            let msg = Message::new(md, container.clone(), msg.util.clone());
+            msgs.push(msg);
+        }
+
+        let enums = msg.enums.borrow();
+        for ed in descriptor.enum_type.iter() {
+            let e = Enum::new(ed, container.clone(), util.clone());
+            enums.push(e);
+        }
+
+        let oneofs = msg.oneofs.borrow_mut();
+        for od in msg.descriptor.oneof_decl.iter() {
+            let o = Oneof::new(od, container.clone(), util.clone());
+            oneofs.push(o);
+        }
+
+        msg
+    }
+    pub fn util(&self) -> Rc<RefCell<U>> {
+        self.util.clone()
+    }
     pub fn build_target(&self) -> bool {
         self.container.build_target()
     }
@@ -91,6 +111,15 @@ impl<'a, U> Message<'a, U> {
     pub fn container(&self) -> Container<'a, U> {
         self.container.upgrade()
     }
+
+    pub fn messages(&self) -> Iter<Self> {
+        Iter::from(&self.messages)
+    }
+
+    pub fn enums(&self) -> Iter<Enum<'a, U>> {
+        Iter::from(&self.enums)
+    }
+
     pub fn all_messages(&self) -> AllMessages<'a, U> {
         AllMessages::new(self.messages.clone())
     }
@@ -124,7 +153,7 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<Message<'a, U>> {
                 DescriptorPath::EnumType => msg.enums.borrow().get(next).cloned().map(Node::Enum),
                 DescriptorPath::Field => msg.fields.borrow().get(next).cloned().map(Node::Field),
                 DescriptorPath::OneofDecl => {
-                    msg.oneofs.borrow().get(next).cloned().map(Node::OneOf)
+                    msg.oneofs.borrow().get(next).cloned().map(Node::Oneof)
                 }
                 DescriptorPath::NestedType => {
                     msg.messages.borrow().get(next).cloned().map(Node::Message)
@@ -162,11 +191,8 @@ impl<'a, U> Iterator for AllMessages<'a, U> {
 }
 
 trait Hydrate<'a, U> {
-    fn hydrate(&self) -> Rc<Self>;
-}
-
-impl<'a, U> Hydrate<'a, U> for Rc<Message<'a, U>> {
-    fn hydrate(&self) -> Rc<Self> {
-        todo!()
-    }
+    fn hydrate(&self) -> Rc<Message<'a, U>>;
+    fn hydrate_nested(&self);
+    fn hydrate_enums(&self);
+    fn hydrate_oneofs(&self);
 }

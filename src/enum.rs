@@ -7,7 +7,7 @@ use std::{
 use prost_types::EnumDescriptorProto;
 
 use crate::{
-    container::{Container, InternalContainer},
+    container::{Container, WeakContainer},
     util::Generic,
     EnumValue, EnumValueList, Message, MessageList, Name, Node, Package,
 };
@@ -19,7 +19,7 @@ pub struct Enum<'a, U> {
     pub name: Name<U>,
     pub fully_qualified_name: String,
     pub(crate) values: EnumValueList<'a, U>,
-    pub(crate) container: InternalContainer<'a, U>,
+    pub(crate) container: WeakContainer<'a, U>,
     pub(crate) dependents: Rc<RefCell<Vec<Weak<Message<'a, U>>>>>,
 }
 
@@ -62,7 +62,7 @@ impl Default for Enum<'_, Generic> {
         Self {
             name: Name::default(),
             fully_qualified_name: String::default(),
-            container: InternalContainer::File(Weak::new()),
+            container: WeakContainer::File(Weak::new()),
             dependents: Rc::new(RefCell::new(Vec::default())),
             values: Rc::new(RefCell::new(Vec::default())),
         }
@@ -90,7 +90,7 @@ impl<'a, U> Iterator for AllEnums<'a, U> {
             Some(e)
         } else {
             while let Some(msg) = self.msgs.pop_front() {
-                for v in msg.messages.borrow().iter().cloned() {
+                for v in msg.messages() {
                     self.msgs.push_back(v);
                 }
                 for v in msg.enums.borrow().iter().cloned() {

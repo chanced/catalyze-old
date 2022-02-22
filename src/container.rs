@@ -1,35 +1,36 @@
+use std::ops::Deref;
 use std::rc::{Rc, Weak};
 
 use crate::{iter::Iter, Enum};
-use crate::{AllEnums, AllMessages, File, Message, Name, Package};
+use crate::{AllEnums, AllMessages, File, Message, Name, Node, Package};
 
 // pub enum Entity {
 
 // }
 #[derive(Debug, Clone)]
-pub(crate) enum InternalContainer<'a, U> {
+pub(crate) enum WeakContainer<'a, U> {
     File(Weak<File<'a, U>>),
     Message(Weak<Message<'a, U>>),
 }
 
-impl<'a, U> From<Rc<File<'a, U>>> for InternalContainer<'a, U> {
+impl<'a, U> From<Rc<File<'a, U>>> for WeakContainer<'a, U> {
     fn from(file: Rc<File<'a, U>>) -> Self {
-        InternalContainer::File(Rc::downgrade(&file))
+        WeakContainer::File(Rc::downgrade(&file))
     }
 }
 
-impl<'a, U> From<Rc<Message<'a, U>>> for InternalContainer<'a, U> {
+impl<'a, U> From<Rc<Message<'a, U>>> for WeakContainer<'a, U> {
     fn from(message: Rc<Message<'a, U>>) -> Self {
-        InternalContainer::Message(Rc::downgrade(&message))
+        WeakContainer::Message(Rc::downgrade(&message))
     }
 }
 
-impl<'a, U> InternalContainer<'a, U> {
+impl<'a, U> WeakContainer<'a, U> {
     // TODO: should this return Option<Container<'a, U>>?
     pub(crate) fn upgrade(&self) -> Container<'a, U> {
         match self {
-            InternalContainer::File(f) => Container::File(f.upgrade().unwrap()),
-            InternalContainer::Message(m) => Container::Message(m.upgrade().unwrap()),
+            WeakContainer::File(f) => Container::File(f.upgrade().unwrap()),
+            WeakContainer::Message(m) => Container::Message(m.upgrade().unwrap()),
         }
     }
     // pub(crate) fn add_message(&self, message: Rc<Message<'a, U>>) {
@@ -51,15 +52,24 @@ impl<'a, U> InternalContainer<'a, U> {
 
     pub(crate) fn package(&self) -> Option<Rc<Package<'a, U>>> {
         match self {
-            InternalContainer::File(f) => f.upgrade().unwrap().package(),
-            InternalContainer::Message(m) => m.upgrade().unwrap().package(),
+            WeakContainer::File(f) => f.upgrade().unwrap().package(),
+            WeakContainer::Message(m) => m.upgrade().unwrap().package(),
         }
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Container<'a, U> {
     File(Rc<File<'a, U>>),
     Message(Rc<Message<'a, U>>),
+}
+
+impl<U> Clone for Container<'_, U> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::File(f) => Self::File(f.clone()),
+            Self::Message(m) => Self::Message(m.clone()),
+        }
+    }
 }
 
 impl<'a, U> From<Rc<File<'a, U>>> for Container<'a, U> {
@@ -81,12 +91,12 @@ impl<'a, U> Container<'a, U> {
             Container::Message(m) => &m.fully_qualified_name,
         }
     }
-    // pub(crate) fn msgs(&self) -> Rc<RefCell<Vec<Rc<Message<'a, U>>>>> {
-    //     match self {
-    //         Container::File(f) => f.messages.clone(),
-    //         Container::Message(m) => m.messages.clone(),
-    //     }
-    // }
+    pub fn node(&self) -> Node<'a, U> {
+        match self {
+            Container::File(f) => Node::File(f.clone()),
+            Container::Message(m) => Node::Message(m.clone()),
+        }
+    }
     pub fn name(&self) -> &Name<U> {
         match self {
             Container::File(f) => &f.name,
@@ -95,8 +105,8 @@ impl<'a, U> Container<'a, U> {
     }
     pub fn messages(&self) -> Iter<Message<'a, U>> {
         match self {
-            Container::File(f) => Iter::from(&f.messages),
-            Container::Message(m) => Iter::from(&m.messages),
+            Container::File(f) => f.messages(),
+            Container::Message(m) => m.messages(),
         }
     }
     pub fn all_messages(&self) -> AllMessages<'a, U> {
@@ -113,8 +123,8 @@ impl<'a, U> Container<'a, U> {
     }
     pub fn enums(&self) -> Iter<Enum<'a, U>> {
         match self {
-            Container::File(f) => Iter::from(&f.enums),
-            Container::Message(m) => Iter::from(&m.enums),
+            Container::File(f) => f.enums(),
+            Container::Message(m) => m.enums(),
         }
     }
     pub fn package(&self) -> Option<Rc<Package<'a, U>>> {
@@ -123,26 +133,12 @@ impl<'a, U> Container<'a, U> {
             Container::Message(m) => m.package(),
         }
     }
-    pub(crate) fn downgrade(&self) -> InternalContainer<'a, U> {
+    pub(crate) fn downgrade(&self) -> WeakContainer<'a, U> {
         match self {
-            Container::File(f) => InternalContainer::File(Rc::downgrade(f)),
-            Container::Message(m) => InternalContainer::Message(Rc::downgrade(m)),
+            Container::File(f) => WeakContainer::File(Rc::downgrade(f)),
+            Container::Message(m) => WeakContainer::Message(Rc::downgrade(m)),
         }
     }
-
-    // pub(crate) fn add_message(&self, msg: Rc<Message<'a, U>>) {
-    //     match self {
-    //         Container::File(f) => f.add_message(msg),
-    //         Container::Message(m) => m.add_message(msg),
-    //     }
-    // }
-
-    // pub(crate) fn add_enum(&self, e: Rc<Enum<'a, U>>) {
-    //     match self {
-    //         Container::File(f) => f.add_enum(e),
-    //         Container::Message(m) => m.add_enum(e),
-    //     }
-    // }
 }
 
 pub trait BuildTarget {
@@ -157,11 +153,11 @@ impl<'a, U> BuildTarget for Container<'a, U> {
     }
 }
 
-impl<'a, U> BuildTarget for InternalContainer<'a, U> {
+impl<'a, U> BuildTarget for WeakContainer<'a, U> {
     fn build_target(&self) -> bool {
         match self {
-            InternalContainer::File(f) => f.upgrade().unwrap().build_target(),
-            InternalContainer::Message(m) => m.upgrade().unwrap().build_target(),
+            WeakContainer::File(f) => f.upgrade().unwrap().build_target(),
+            WeakContainer::Message(m) => m.upgrade().unwrap().build_target(),
         }
     }
 }

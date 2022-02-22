@@ -3,7 +3,6 @@ use prost_types::FileDescriptorProto;
 use crate::container::{BuildTarget, Container};
 use crate::iter::{Iter, TransitiveImports, UpgradeIter};
 use crate::path::FileDescriptorPath;
-use crate::util::Generic;
 use crate::{
     AllEnums, AllMessages, Enum, EnumList, Extension, ExtensionList, Message, MessageList, Name,
     Node, NodeAtPath, Package, Service, ServiceList,
@@ -75,7 +74,33 @@ impl<'a, U> File<'a, U> {
             src_info: None,
             pkg_info: None,
         });
-        file.hydrate();
+
+        let container = || Container::File(file.clone());
+
+        let mut msgs = file.messages.borrow_mut();
+        for md in file.descriptor.message_type.iter() {
+            let msg = Message::new(md, container(), file.util.clone());
+            msgs.push(msg);
+        }
+
+        let mut enums = file.enums.borrow_mut();
+        for ed in file.descriptor.enum_type.iter() {
+            let e = Enum::new(ed, container(), file.util.clone());
+            enums.push(e);
+        }
+
+        let mut services = file.services.borrow_mut();
+        for sd in file.descriptor.service.iter() {
+            let svc = Service::new(sd, container(), file.util.clone());
+            services.push(svc);
+        }
+
+        let mut exts = file.def_exts.borrow_mut();
+        for ed in file.descriptor.extension.iter() {
+            let ext = Extension::new(ed, file.clone(), file.util.clone());
+            exts.push(ext);
+        }
+
         file
     }
     pub fn messages(&self) -> Iter<Message<'a, U>> {
@@ -131,54 +156,11 @@ impl<'a, U> File<'a, U> {
     }
 }
 trait Hydrate<'a, U> {
-    fn hydrate(&self);
+    fn hydrate(&self) -> Rc<File<'a, U>>;
     fn hydrate_messages(&self);
     fn hydrate_enums(&self);
     fn hydrate_services(&self);
     fn hydrate_extensions(&self);
-}
-
-impl<'a, U> Hydrate<'a, U> for Rc<File<'a, U>> {
-    fn hydrate(&self) {
-        self.hydrate_messages();
-        self.hydrate_enums();
-        self.hydrate_services();
-        self.hydrate_extensions();
-    }
-    fn hydrate_messages(&self) {
-        let file = self.clone();
-        let mut msgs = file.messages.borrow_mut();
-        for md in file.descriptor.message_type.iter() {
-            let msg = Message::new(md, Container::File(file.clone()), file.util.clone());
-            msgs.push(msg);
-        }
-    }
-    fn hydrate_enums(&self) {
-        let file = self.clone();
-        let mut enums = file.enums.borrow_mut();
-        for ed in file.descriptor.enum_type.iter() {
-            let e = Enum::new(ed, Container::File(file.clone()), file.util.clone());
-            enums.push(e);
-        }
-    }
-
-    fn hydrate_services(&self) {
-        let file = self.clone();
-        let mut services = file.services.borrow_mut();
-        for sd in file.descriptor.service.iter() {
-            let svc = Service::new(sd, Container::File(file.clone()), file.util.clone());
-            services.push(svc);
-        }
-    }
-
-    fn hydrate_extensions(&self) {
-        let file = self.clone();
-        let mut exts = file.def_exts.borrow_mut();
-        for ed in file.descriptor.extension.iter() {
-            let ext = Extension::new(ed, file.clone(), file.util.clone());
-            exts.push(ext);
-        }
-    }
 }
 
 impl<'a, U> NodeAtPath<'a, U> for Rc<File<'a, U>> {
