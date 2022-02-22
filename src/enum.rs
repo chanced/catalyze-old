@@ -8,8 +8,9 @@ use prost_types::EnumDescriptorProto;
 
 use crate::{
     container::{Container, WeakContainer},
+    path::EnumDescriptorPath,
     util::Generic,
-    EnumValue, EnumValueList, Message, MessageList, Name, Node, Package,
+    EnumValue, EnumValueList, Message, MessageList, Name, Node, NodeAtPath, Package,
 };
 
 pub(crate) type EnumList<'a, U> = Rc<RefCell<Vec<Rc<Enum<'a, U>>>>>;
@@ -51,21 +52,25 @@ impl<'a, U> Enum<'a, U> {
     pub fn package(&self) -> Option<Rc<Package<'a, U>>> {
         self.container.package()
     }
-
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
-        todo!()
-    }
 }
 
-impl Default for Enum<'_, Generic> {
-    fn default() -> Self {
-        Self {
-            name: Name::default(),
-            fully_qualified_name: String::default(),
-            container: WeakContainer::File(Weak::new()),
-            dependents: Rc::new(RefCell::new(Vec::default())),
-            values: Rc::new(RefCell::new(Vec::default())),
+impl<'a, U> NodeAtPath<'a, U> for Rc<Enum<'a, U>> {
+    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+        if path.is_empty() {
+            return Some(Node::Enum(self.clone()));
         }
+        if path.len() != 2 {
+            return None;
+        }
+        let next = path[1] as usize;
+        EnumDescriptorPath::try_from(path[0])
+            .ok()
+            .and_then(|p| match p {
+                EnumDescriptorPath::Value => {
+                    self.values.borrow().get(next).cloned().map(Node::EnumValue)
+                }
+                _ => None,
+            })
     }
 }
 
@@ -103,12 +108,4 @@ impl<'a, U> Iterator for AllEnums<'a, U> {
             None
         }
     }
-}
-
-pub enum CalculatorInput {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Value(i32),
 }
