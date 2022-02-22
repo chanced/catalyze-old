@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-prost = "0.9"
 prost-types = "0.9"
 heck = "0.4"
 anyhow = "1.0.53"
