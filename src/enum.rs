@@ -18,9 +18,9 @@ pub(crate) type EnumList<'a, U> = Rc<RefCell<Vec<Rc<Enum<'a, U>>>>>;
 pub struct Enum<'a, U> {
     pub name: Name<U>,
     pub fully_qualified_name: String,
-    pub(crate) values: EnumValueList<'a, U>,
-    pub(crate) container: WeakContainer<'a, U>,
-    pub(crate) dependents: Rc<RefCell<Vec<Weak<Message<'a, U>>>>>,
+    values: EnumValueList<'a, U>,
+    container: WeakContainer<'a, U>,
+    dependents: Rc<RefCell<Vec<Weak<Message<'a, U>>>>>,
 }
 
 impl<'a, U> Enum<'a, U> {
