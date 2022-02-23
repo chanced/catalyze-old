@@ -11,8 +11,8 @@ use crate::path::DescriptorPath;
 use crate::visit::{Accept, Visitor};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
-    fmt_fqn, AllEnums, Enum, EnumList, Extension, Field, FieldIter, FieldList, FullyQualified,
-    Node, NodeAtPath, Oneof, OneofList,
+    fmt_fqn, AllEnums, Enum, EnumList, Extension, Field, FieldList, FullyQualified, Node,
+    NodeAtPath, Oneof, OneofList,
 };
 use crate::{Package, WellKnownType};
 
@@ -138,8 +138,8 @@ impl<'a, U> Message<'a, U> {
         self.container.upgrade()
     }
 
-    pub fn fields(&self) -> FieldIter<'a, U> {
-        FieldIter::from(&self.fields)
+    pub fn fields(&self) -> Iter<Field<'a, U>> {
+        Iter::from(&self.fields)
     }
 
     pub fn messages(&self) -> Iter<Self> {
@@ -166,7 +166,7 @@ impl<'a, U> Message<'a, U> {
         Iter::from(&self.defined_extensions)
     }
 
-    pub(crate) fn add_field(&self, field: Field<'a, U>) {
+    pub(crate) fn add_field(&self, field: Rc<Field<'a, U>>) {
         self.fields.borrow_mut().push(field);
     }
 

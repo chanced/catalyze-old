@@ -1,6 +1,4 @@
 mod enum_field;
-mod field;
-mod field_iter;
 mod map_enum_field;
 mod map_field;
 mod map_field_key;
@@ -18,8 +16,6 @@ mod repeated_scalar_field;
 mod scalar_field;
 
 pub use enum_field::*;
-pub use field::*;
-pub use field_iter::*;
 pub use map_enum_field::*;
 pub use map_field::*;
 pub use map_field_key::*;
@@ -42,17 +38,20 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{visit::{Visitor, Accept}, FullyQualified, Message, Name, NodeAtPath, Node};
+use crate::{
+    visit::{Accept, Visitor},
+    FullyQualified, Message, Name, Node, NodeAtPath,
+};
 
-pub(crate) type FieldList<'a, U> = Rc<RefCell<Vec<Field<'a, U>>>>;
+pub(crate) type FieldList<'a, U> = Rc<RefCell<Vec<Rc<Field<'a, U>>>>>;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum Field<'a, U> {
-    Scalar(Rc<ScalarField<'a, U>>),
-    Message(Rc<MessageField<'a, U>>),
-    Map(MapField<'a, U>),
-    Repeated(RepeatedField<'a, U>),
-    Oneof(OneofField<'a, U>),
+    Scalar(ScalarField<'a, U>),
+    Message(MessageField<'a, U>),
+    // Map(MapField<'a, U>),
+    // Repeated(RepeatedField<'a, U>),
+    // Oneof(OneofField<'a, U>),
 }
 
 impl<'a, U> Field<'a, U> {
@@ -60,9 +59,9 @@ impl<'a, U> Field<'a, U> {
         match self {
             Field::Scalar(f) => f.name(),
             Field::Message(f) => f.name(),
-            Field::Map(f) => f.name(),
-            Field::Repeated(f) => f.name(),
-            Field::Oneof(f) => f.name(),
+            // Field::Map(f) => f.name(),
+            // Field::Repeated(f) => f.name(),
+            // Field::Oneof(f) => f.name(),
         }
     }
 }
@@ -149,3 +148,25 @@ impl<'a, U> FullyQualified for FieldDetail<'a, U> {
         self.fqn.clone()
     }
 }
+
+// #[derive(Clone)]
+// pub struct FieldIter<'a, U> {
+//     fields: FieldList<'a, U>,
+//     idx: usize,
+// }
+
+// impl<'a, U> Iterator for FieldIter<'a, U> {
+//     type Item = Field<'a, U>;
+//     fn next(&mut self) -> Option<Self::Item> {
+//         self.idx += 1;
+//         self.fields.borrow().get(self.idx - 1).cloned()
+//     }
+// }
+// impl<'a, U> From<&'a FieldList<'a, U>> for FieldIter<'a, U> {
+//     fn from(fields: &'a FieldList<'a, U>) -> Self {
+//         Self {
+//             fields: fields.clone(),
+//             idx: 0,
+//         }
+//     }
+// }

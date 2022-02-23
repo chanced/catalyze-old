@@ -4,9 +4,9 @@ use crate::{Name, RepeatedEnumField, RepeatedMessageField, RepeatedScalarField};
 
 #[derive(Debug, Clone)]
 pub enum RepeatedField<'a, U> {
-    Scalar(Rc<RepeatedScalarField<'a, U>>),
-    Enum(Rc<RepeatedEnumField<'a, U>>),
-    Message(Rc<RepeatedMessageField<'a, U>>),
+    Scalar(RepeatedScalarField<'a, U>),
+    Enum(RepeatedEnumField<'a, U>),
+    Message(RepeatedMessageField<'a, U>),
 }
 
 impl<'a, U> RepeatedField<'a, U> {
