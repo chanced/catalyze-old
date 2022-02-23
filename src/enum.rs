@@ -27,7 +27,7 @@ pub struct Enum<'a, U> {
 }
 
 impl<'a, U> Enum<'a, U> {
-    pub fn new(
+    pub(crate) fn new(
         desc: &'a EnumDescriptorProto,
         container: Container<'a, U>,
         util: Rc<RefCell<U>>,
@@ -50,6 +50,10 @@ impl<'a, U> Enum<'a, U> {
 
         e
     }
+    pub fn name(&self) -> Name<U> {
+        self.name.clone()
+    }
+
     pub fn values(&self) -> Iter<EnumValue<'a, U>> {
         Iter::from(&self.values)
     }

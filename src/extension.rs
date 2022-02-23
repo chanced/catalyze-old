@@ -27,7 +27,7 @@ pub struct Extension<'a, U> {
 }
 
 impl<'a, U> Extension<'a, U> {
-    pub fn new(
+    pub(crate) fn new(
         desc: &'a FieldDescriptorProto,
         container: Container<'a, U>,
         util: Rc<RefCell<U>>,

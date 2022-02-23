@@ -2,7 +2,12 @@
 
 use std::rc::Rc;
 
-use crate::{Enum, EnumValue, Extension, Field, File, Message, Method, Oneof, Package, Service};
+use crate::{
+    Enum, EnumValue, Extension, Field, File, MapEnumField, MapField, MapMessageField,
+    MapScalarField, Message, MessageField, Method, Oneof, OneofEnumField, OneofField,
+    OneofMessageField, OneofScalarField, Package, RepeatedEnumField, RepeatedField,
+    RepeatedMessageField, RepeatedScalarField, ScalarField, Service,
+};
 
 pub trait Accept<'a, U, V: Visitor<'a, U>> {
     fn accept(&self, visitor: &mut V) -> Result<(), V::Error>;
@@ -40,7 +45,77 @@ pub trait Visitor<'a, U>: Sized {
         Ok(())
     }
 
-    fn visit_field(&mut self, fld: Rc<Field<'a, U>>) -> Result<(), Self::Error> {
+    fn visit_field(&mut self, fld: Field<'a, U>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_scalar_field(&mut self, fld: Rc<ScalarField<'a, U>>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn visit_message_field(&mut self, fld: Rc<MessageField<'a, U>>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn visit_map_field(&mut self, fld: MapField<'a, U>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_map_scalar_field(
+        &mut self,
+        fld: Rc<MapScalarField<'a, U>>,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_map_enum_field(&mut self, fld: Rc<MapEnumField<'a, U>>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_map_message_field(
+        &mut self,
+        fld: Rc<MapMessageField<'a, U>>,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_repeated_field(&mut self, fld: RepeatedField<'a, U>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_repeated_scalar_field(
+        &mut self,
+        fld: Rc<RepeatedScalarField<'a, U>>,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_repeated_enum_field(
+        &mut self,
+        fld: Rc<RepeatedEnumField<'a, U>>,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_repeated_message_field(
+        &mut self,
+        fld: Rc<RepeatedMessageField<'a, U>>,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_oneof_field(&mut self, fld: OneofField<'a, U>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_oneof_scalar(&mut self, fld: Rc<OneofScalarField<'a, U>>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn visit_oneof_enum(&mut self, fld: Rc<OneofEnumField<'a, U>>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn visit_oneof_message(
+        &mut self,
+        fld: Rc<OneofMessageField<'a, U>>,
+    ) -> Result<(), Self::Error> {
         Ok(())
     }
 

@@ -20,6 +20,12 @@ pub struct Method<'a, U> {
     fqn: String,
 }
 
+impl<'a, U> Method<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.name.clone()
+    }
+}
+
 impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Method<'a, U>> {
     fn accept(&self, v: &mut V) -> Result<(), V::Error> {
         if v.done() {

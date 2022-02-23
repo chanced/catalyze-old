@@ -30,7 +30,7 @@ pub struct File<'a, U> {
     services: ServiceList<'a, U>,
     dependents: Rc<RefCell<Vec<Weak<File<'a, U>>>>>,
     dependencies: Rc<RefCell<Vec<Weak<File<'a, U>>>>>,
-    defined_extensions: Rc<RefCell<Vec<Rc<Extension<'a, U>>>>>,
+    defined_extensions: ExtensionList<'a, U>,
 }
 
 impl<'a, U> BuildTarget for File<'a, U> {
@@ -48,20 +48,19 @@ impl<'a, U> File<'a, U> {
     ) -> Rc<Self> {
         let pkg = package.map(|p| Rc::downgrade(&p));
         let name = Name::new(descriptor.name(), util.clone());
-        let fully_qualified_name = match descriptor.package() {
+        let fqn = match descriptor.package() {
             "" => String::default(),
             p => format!(".{}", p),
         };
-        let file_path = PathBuf::from(descriptor.name());
 
         let file = Rc::new(Self {
             name,
             util: util.clone(),
             descriptor,
             pkg,
-            fqn: fully_qualified_name,
             build_target,
-            file_path,
+            fqn,
+            file_path: PathBuf::from(descriptor.name()),
             dependents: Rc::new(RefCell::new(Vec::new())),
             dependencies: Rc::new(RefCell::new(Vec::with_capacity(
                 descriptor.dependency.len(),
@@ -109,6 +108,9 @@ impl<'a, U> File<'a, U> {
         }
 
         file
+    }
+    pub fn name(&self) -> Name<U> {
+        self.name.clone()
     }
 
     pub fn messages(&self) -> Iter<Message<'a, U>> {

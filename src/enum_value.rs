@@ -22,7 +22,7 @@ pub struct EnumValue<'a, U> {
 }
 
 impl<'a, U> EnumValue<'a, U> {
-    pub fn new(
+    pub(crate) fn new(
         desc: &'a EnumValueDescriptorProto,
         enm: Rc<Enum<'a, U>>,
         util: Rc<RefCell<U>>,
@@ -33,6 +33,9 @@ impl<'a, U> EnumValue<'a, U> {
             descriptor: desc,
             container: Rc::downgrade(&enm),
         })
+    }
+    pub fn name(&self) -> Name<U> {
+        self.name.clone()
     }
 
     /// Returns the enum that contains this enum value.

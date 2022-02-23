@@ -33,6 +33,9 @@ impl<'a, U> Oneof<'a, U> {
             fields: Rc::new(RefCell::new(Vec::new())),
         })
     }
+    pub fn name(&self) -> Name<U> {
+        self.name.clone()
+    }
 
     pub fn container(&self) -> Container<'a, U> {
         self.container.upgrade()

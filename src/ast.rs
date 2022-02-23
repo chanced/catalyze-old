@@ -1,3 +1,4 @@
+use crate::Enum;
 use crate::Extension;
 use crate::Node;
 use crate::Source;
@@ -18,6 +19,12 @@ use prost_types::FileDescriptorProto;
 // --descriptor_set_out=[path].bin
 // [path].proto
 
+trait Lookup<'a, U> {
+    fn must_seen_enum(&self, name: &str) -> Option<Rc<Enum<'a, U>>>;
+    fn must_seen_message(&self, name: &str) -> Option<Rc<Enum<'a, U>>>;
+    fn must_seen_file(&self, name: &str) -> Option<Rc<Enum<'a, U>>>;
+}
+
 #[derive(Debug)]
 pub struct Ast<'a, U> {
     pub targets: HashMap<String, Rc<File<'a, U>>>,
@@ -29,8 +36,8 @@ pub struct Ast<'a, U> {
     pub target_list: HashSet<String>,
 }
 
-// Ast encapsulates the entirety of the input CodeGeneratorRequest from protoc,
-// parsed to build the Node graph used by catalyze.
+/// Ast encapsulates the entirety of the input CodeGeneratorRequest from protoc,
+/// parsed to build the Node graph used by catalyze.
 impl<'a, U> Ast<'a, U> {
     pub fn package(&self, name: &str) -> Option<Rc<Package<'a, U>>> {
         self.packages.get(name).cloned()
@@ -58,6 +65,7 @@ impl<'a, U> Ast<'a, U> {
             file_descriptors,
         };
         let mut seen: HashMap<String, Rc<File<'a, U>>> = HashMap::default();
+
         for fd in ast.file_descriptors.iter() {
             let pkg = {
                 let name = fd.package();
@@ -91,12 +99,6 @@ impl<'a, U> Ast<'a, U> {
     // fn hydrate_package(&mut self, fd: Rc<FileDescriptorProto>) -> Option<Rc<Package<'a, U>>> {
 
     // }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_() {}
 }
 
 // // process_code_generator_request

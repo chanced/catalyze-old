@@ -26,16 +26,16 @@ pub enum Node<'a, U> {
 }
 
 impl<'a, U> Node<'a, U> {
-    pub fn name(&self) -> &Name<U> {
+    pub fn name(&self) -> Name<U> {
         match self {
-            Node::File(f) => &f.name,
-            Node::Message(m) => &m.name,
-            Node::Field(f) => &f.name,
-            Node::Oneof(o) => &o.name,
-            Node::Enum(e) => &e.name,
-            Node::EnumValue(ev) => &ev.name,
-            Node::Service(s) => &s.name,
-            Node::Method(m) => &m.name,
+            Node::File(f) => f.name(),
+            Node::Message(m) => m.name(),
+            Node::Field(f) => f.name(),
+            Node::Oneof(o) => o.name(),
+            Node::Enum(e) => e.name(),
+            Node::EnumValue(ev) => ev.name(),
+            Node::Service(s) => s.name(),
+            Node::Method(m) => m.name(),
         }
     }
 }

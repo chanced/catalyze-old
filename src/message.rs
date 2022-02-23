@@ -11,8 +11,8 @@ use crate::path::DescriptorPath;
 use crate::visit::{Accept, Visitor};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
-    fmt_fqn, AllEnums, Enum, EnumList, Extension, Field, FieldList, FullyQualified, Node,
-    NodeAtPath, Oneof, OneofList,
+    fmt_fqn, AllEnums, Enum, EnumList, Extension, Field, FieldIter, FieldList, FullyQualified,
+    Node, NodeAtPath, Oneof, OneofList,
 };
 use crate::{Package, WellKnownType};
 
@@ -113,8 +113,10 @@ impl<'a, U> Message<'a, U> {
                 def_exts.push(ext);
             }
         }
+
         msg
     }
+
     pub fn name(&self) -> Name<U> {
         self.name.clone()
     }
@@ -136,8 +138,8 @@ impl<'a, U> Message<'a, U> {
         self.container.upgrade()
     }
 
-    pub fn fields(&self) -> Iter<Field<'a, U>> {
-        Iter::from(&self.fields)
+    pub fn fields(&self) -> FieldIter<'a, U> {
+        FieldIter::from(&self.fields)
     }
 
     pub fn messages(&self) -> Iter<Self> {
@@ -162,6 +164,10 @@ impl<'a, U> Message<'a, U> {
 
     pub fn defined_extensions(&self) -> Iter<Extension<'a, U>> {
         Iter::from(&self.defined_extensions)
+    }
+
+    pub(crate) fn add_field(&self, field: Field<'a, U>) {
+        self.fields.borrow_mut().push(field);
     }
 
     pub(crate) fn add_dependent(&self, dependent: Weak<Message<'a, U>>) {

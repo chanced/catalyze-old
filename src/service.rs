@@ -20,7 +20,7 @@ pub struct Service<'a, U> {
 }
 
 impl<'a, U> Service<'a, U> {
-    pub fn new(
+    pub(crate) fn new(
         desc: &'a ServiceDescriptorProto,
         container: Container<'a, U>,
         util: Rc<RefCell<U>>,
@@ -32,6 +32,10 @@ impl<'a, U> Service<'a, U> {
             methods: Rc::new(RefCell::new(Vec::with_capacity(desc.method.len()))),
         })
     }
+    pub fn name(&self) -> Name<U> {
+        self.name.clone()
+    }
+
     pub fn methods(&self) -> Iter<Method<'a, U>> {
         Iter::from(&self.methods)
     }

@@ -1,7 +1,7 @@
 pub struct Generator {}
 
 impl Generator {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {}
     }
 }

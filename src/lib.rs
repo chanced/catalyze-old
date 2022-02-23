@@ -15,10 +15,12 @@ mod node;
 mod oneof;
 mod package;
 pub mod path;
+pub mod proto;
 mod service;
 mod source;
 pub mod util;
 pub mod visit;
+
 mod well_known_type;
 pub use ast::*;
 pub use enum_value::*;
