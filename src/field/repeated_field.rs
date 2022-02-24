@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{FieldDetail, Name};
+use crate::{name::Named, FieldDetail, Name};
 
 #[derive(Debug, Clone)]
 pub enum RepeatedField<'a, U> {
@@ -11,6 +11,16 @@ pub enum RepeatedField<'a, U> {
 
 impl<'a, U> RepeatedField<'a, U> {
     pub fn name(&self) -> Name<U> {
+        match self {
+            RepeatedField::Scalar(f) => f.name(),
+            RepeatedField::Enum(f) => f.name(),
+            RepeatedField::Message(f) => f.name(),
+        }
+    }
+}
+
+impl<'a, U> Named<U> for RepeatedField<'a, U> {
+    fn name(&self) -> Name<U> {
         match self {
             RepeatedField::Scalar(f) => f.name(),
             RepeatedField::Enum(f) => f.name(),

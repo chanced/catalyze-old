@@ -11,7 +11,7 @@ use crate::name::Named;
 use crate::path::DescriptorPath;
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
-    fmt_fqn, AllEnums, Enum, EnumList, Extension, Field, FieldList, FullyQualified, Node,
+    format_fqn, AllEnums, Enum, EnumList, Extension, Field, FieldList, FullyQualified, Node,
     NodeAtPath, Oneof, OneofList,
 };
 use crate::{Package, WellKnownType};
@@ -50,7 +50,7 @@ impl<'a, U> Message<'a, U> {
         container: Container<'a, U>,
         util: Rc<RefCell<U>>,
     ) -> Rc<Self> {
-        let fqn = fmt_fqn(&container, descriptor.name());
+        let fqn = format_fqn(&container, descriptor.name());
         let well_known_type = if container.package().map_or(false, |pkg| pkg.is_well_known()) {
             match WellKnownType::from_str(&fqn) {
                 Ok(wkt) => Some(wkt),

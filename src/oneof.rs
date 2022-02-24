@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     container::{Container, WeakContainer},
-    fmt_fqn,
+    format_fqn,
     iter::Iter,
     Field, FullyQualified, Name, Node, NodeAtPath,
 };
@@ -26,7 +26,7 @@ impl<'a, U> Oneof<'a, U> {
     ) -> Rc<Self> {
         Rc::new(Self {
             name: Name::new(desc.name(), util),
-            fqn: fmt_fqn(&container, desc.name()),
+            fqn: format_fqn(&container, desc.name()),
             descriptor: desc,
             container: container.downgrade(),
             fields: Rc::new(RefCell::new(Vec::new())),

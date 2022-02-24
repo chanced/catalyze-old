@@ -1,6 +1,6 @@
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
-use crate::{name::Named, EnumField, MessageField};
+use crate::{name::Named, EnumField, FieldDetail, FullyQualified, MessageField, Name, Oneof};
 
 #[derive(Clone, Debug)]
 /// Google provided, Well-Known Types
@@ -153,6 +153,82 @@ pub enum WellKnownTypeField<'a, U> {
     Value(Rc<WktMessageField<'a, U>>),
 }
 
+impl<'a, U> WellKnownTypeField<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        match self {
+            WellKnownTypeField::Any(wkt)
+            | WellKnownTypeField::Api(wkt)
+            | WellKnownTypeField::BoolValue(wkt)
+            | WellKnownTypeField::BytesValue(wkt)
+            | WellKnownTypeField::DoubleValue(wkt)
+            | WellKnownTypeField::Duration(wkt)
+            | WellKnownTypeField::Empty(wkt)
+            | WellKnownTypeField::Enum(wkt)
+            | WellKnownTypeField::EnumValue(wkt)
+            | WellKnownTypeField::Field(wkt)
+            | WellKnownTypeField::FieldMask(wkt)
+            | WellKnownTypeField::FloatValue(wkt)
+            | WellKnownTypeField::Int32Value(wkt)
+            | WellKnownTypeField::Int64Value(wkt)
+            | WellKnownTypeField::ListValue(wkt)
+            | WellKnownTypeField::Method(wkt)
+            | WellKnownTypeField::Mixin(wkt)
+            | WellKnownTypeField::Option(wkt)
+            | WellKnownTypeField::SourceContext(wkt)
+            | WellKnownTypeField::StringValue(wkt)
+            | WellKnownTypeField::Struct(wkt)
+            | WellKnownTypeField::Timestamp(wkt)
+            | WellKnownTypeField::Type(wkt)
+            | WellKnownTypeField::UInt32Value(wkt)
+            | WellKnownTypeField::UInt64Value(wkt)
+            | WellKnownTypeField::Value(wkt) => wkt.name(),
+
+            WellKnownTypeField::FieldCardinality(wkt)
+            | WellKnownTypeField::FieldKind(wkt)
+            | WellKnownTypeField::NullValue(wkt)
+            | WellKnownTypeField::Syntax(wkt) => wkt.name(),
+        }
+    }
+}
+
+impl<'a, U> FullyQualified for WellKnownTypeField<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        match self {
+            WellKnownTypeField::Any(wkt)
+            | WellKnownTypeField::Api(wkt)
+            | WellKnownTypeField::BoolValue(wkt)
+            | WellKnownTypeField::BytesValue(wkt)
+            | WellKnownTypeField::DoubleValue(wkt)
+            | WellKnownTypeField::Duration(wkt)
+            | WellKnownTypeField::Empty(wkt)
+            | WellKnownTypeField::Enum(wkt)
+            | WellKnownTypeField::EnumValue(wkt)
+            | WellKnownTypeField::Field(wkt)
+            | WellKnownTypeField::FieldMask(wkt)
+            | WellKnownTypeField::FloatValue(wkt)
+            | WellKnownTypeField::Int32Value(wkt)
+            | WellKnownTypeField::Int64Value(wkt)
+            | WellKnownTypeField::ListValue(wkt)
+            | WellKnownTypeField::Method(wkt)
+            | WellKnownTypeField::Mixin(wkt)
+            | WellKnownTypeField::Option(wkt)
+            | WellKnownTypeField::SourceContext(wkt)
+            | WellKnownTypeField::StringValue(wkt)
+            | WellKnownTypeField::Struct(wkt)
+            | WellKnownTypeField::Timestamp(wkt)
+            | WellKnownTypeField::Type(wkt)
+            | WellKnownTypeField::UInt32Value(wkt)
+            | WellKnownTypeField::UInt64Value(wkt)
+            | WellKnownTypeField::Value(wkt) => wkt.fully_qualified_name(),
+
+            WellKnownTypeField::FieldCardinality(wkt)
+            | WellKnownTypeField::FieldKind(wkt)
+            | WellKnownTypeField::NullValue(wkt)
+            | WellKnownTypeField::Syntax(wkt) => wkt.fully_qualified_name(),
+        }
+    }
+}
+
 impl<'a, U> Named<U> for WellKnownTypeField<'a, U> {
     fn name(&self) -> crate::Name<U> {
         match self {
@@ -193,9 +269,36 @@ impl<'a, U> Named<U> for WellKnownTypeField<'a, U> {
 
 #[derive(Clone, Debug)]
 pub struct WktMessageField<'a, U> {
-    message: Rc<MessageField<'a, U>>,
+    oneof: Weak<Oneof<'a, U>>,
+    msg_field: Rc<MessageField<'a, U>>,
 }
+
+impl<'a, U> WktMessageField<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.msg_field.name()
+    }
+    pub fn oneof(&self) -> Rc<Oneof<'a, U>> {
+        self.oneof.upgrade().unwrap()
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct WktEnumField<'a, U> {
-    r#enum: Rc<EnumField<'a, U>>,
+    oneof: Weak<Oneof<'a, U>>,
+    enum_field: Weak<EnumField<'a, U>>,
+    detail: Rc<FieldDetail<'a, U>>,
+}
+impl<'a, U> WktEnumField<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.enum_field.upgrade().unwrap().name()
+    }
+    pub fn oneof(&self) -> Rc<Oneof<'a, U>> {
+        self.oneof.upgrade().unwrap()
+    }
+}
+
+impl<'a, U> FullyQualified for WktEnumField<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        self.enum_field.fully_qualified_name()
+    }
 }

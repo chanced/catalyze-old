@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{ops::Deref, rc::Rc};
 
 use crate::{Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof, Service};
 

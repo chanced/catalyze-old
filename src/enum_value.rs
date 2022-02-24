@@ -3,7 +3,7 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{fmt_fqn, iter::Iter, visit::Visitor, Enum, FullyQualified, Name, Node, NodeAtPath};
+use crate::{format_fqn, iter::Iter, visit::Visitor, Enum, FullyQualified, Name, Node, NodeAtPath};
 use prost_types::EnumValueDescriptorProto;
 
 pub(crate) type EnumValueList<'a, U> = Rc<RefCell<Vec<Rc<EnumValue<'a, U>>>>>;
@@ -24,7 +24,7 @@ impl<'a, U> EnumValue<'a, U> {
     ) -> Rc<Self> {
         Rc::new(EnumValue {
             name: Name::new(desc.name(), util),
-            fqn: fmt_fqn(enm.as_ref(), desc.name()),
+            fqn: format_fqn(enm.as_ref(), desc.name()),
             descriptor: desc,
             container: Rc::downgrade(&enm),
         })
