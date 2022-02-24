@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{Name, RepeatedEnumField, RepeatedMessageField, RepeatedScalarField};
+use crate::{FieldDetail, Name};
 
 #[derive(Debug, Clone)]
 pub enum RepeatedField<'a, U> {
@@ -16,5 +16,38 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Enum(f) => f.name(),
             RepeatedField::Message(f) => f.name(),
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RepeatedEnumField<'a, U> {
+    detail: FieldDetail<'a, U>,
+}
+
+impl<'a, U> RepeatedEnumField<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.detail.name()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RepeatedMessageField<'a, U> {
+    detail: FieldDetail<'a, U>,
+}
+
+impl<'a, U> RepeatedMessageField<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.detail.name()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RepeatedScalarField<'a, U> {
+    detail: FieldDetail<'a, U>,
+}
+
+impl<'a, U> RepeatedScalarField<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.detail.name()
     }
 }

@@ -1,36 +1,17 @@
 mod enum_field;
-mod map_enum_field;
 mod map_field;
-mod map_field_key;
-mod map_message_field;
-mod map_scalar_field;
 mod message_field;
-mod oneof_enum_field;
 mod oneof_field;
-mod oneof_message_field;
-mod oneof_scalar_field;
-mod repeated_enum_field;
 mod repeated_field;
-mod repeated_message_field;
-mod repeated_scalar_field;
 mod scalar_field;
-
+mod wkt_field;
 pub use enum_field::*;
-pub use map_enum_field::*;
 pub use map_field::*;
-pub use map_field_key::*;
-pub use map_message_field::*;
-pub use map_scalar_field::*;
 pub use message_field::*;
-pub use oneof_enum_field::*;
 pub use oneof_field::*;
-pub use oneof_message_field::*;
-pub use oneof_scalar_field::*;
-pub use repeated_enum_field::*;
 pub use repeated_field::*;
-pub use repeated_message_field::*;
-pub use repeated_scalar_field::*;
 pub use scalar_field::*;
+pub use wkt_field::*;
 
 use prost_types::FieldDescriptorProto;
 use std::{
@@ -49,9 +30,10 @@ pub(crate) type FieldList<'a, U> = Rc<RefCell<Vec<Rc<Field<'a, U>>>>>;
 pub enum Field<'a, U> {
     Scalar(ScalarField<'a, U>),
     Message(MessageField<'a, U>),
-    // Map(MapField<'a, U>),
-    // Repeated(RepeatedField<'a, U>),
-    // Oneof(OneofField<'a, U>),
+    Map(MapField<'a, U>),
+    Repeated(RepeatedField<'a, U>),
+    Oneof(OneofField<'a, U>),
+    WellKnownType(WellKnownTypeField<'a, U>),
 }
 
 impl<'a, U> Field<'a, U> {
@@ -59,9 +41,10 @@ impl<'a, U> Field<'a, U> {
         match self {
             Field::Scalar(f) => f.name(),
             Field::Message(f) => f.name(),
-            // Field::Map(f) => f.name(),
-            // Field::Repeated(f) => f.name(),
-            // Field::Oneof(f) => f.name(),
+            Field::Map(f) => f.name(),
+            Field::Repeated(f) => f.name(),
+            Field::Oneof(f) => f.name(),
+            Field::WellKnownType(f) => f.name(),
         }
     }
 }

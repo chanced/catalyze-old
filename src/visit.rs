@@ -6,7 +6,8 @@ use crate::{
     Enum, EnumValue, Extension, Field, File, MapEnumField, MapField, MapMessageField,
     MapScalarField, Message, MessageField, Method, Oneof, OneofEnumField, OneofField,
     OneofMessageField, OneofScalarField, Package, RepeatedEnumField, RepeatedField,
-    RepeatedMessageField, RepeatedScalarField, ScalarField, Service,
+    RepeatedMessageField, RepeatedScalarField, ScalarField, Service, WellKnownTypeField,
+    WktMessageField,
 };
 
 pub trait Accept<'a, U, V: Visitor<'a, U>> {
@@ -116,6 +117,18 @@ pub trait Visitor<'a, U>: Sized {
         &mut self,
         fld: Rc<OneofMessageField<'a, U>>,
     ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_wkt_field(&mut self, fld: WellKnownTypeField<'a, U>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_wkt_message_field(&mut self, fld: WktMessageField<'a, U>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_wkit_enum_field(&mut self, fld: WktMessageField<'a, U>) -> Result<(), Self::Error> {
         Ok(())
     }
 

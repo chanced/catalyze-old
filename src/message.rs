@@ -50,8 +50,9 @@ impl<'a, U> Message<'a, U> {
         container: Container<'a, U>,
         util: Rc<RefCell<U>>,
     ) -> Rc<Self> {
+        let fqn = fmt_fqn(&container, descriptor.name());
         let well_known_type = if container.package().map_or(false, |pkg| pkg.is_well_known()) {
-            match WellKnownType::from_str(descriptor.name()) {
+            match WellKnownType::from_str(&fqn) {
                 Ok(wkt) => Some(wkt),
                 Err(_) => None,
             }
@@ -62,7 +63,7 @@ impl<'a, U> Message<'a, U> {
         let msg = Rc::new(Message {
             name: Name::new(descriptor.name(), util.clone()),
             container: container.downgrade(),
-            fqn: fmt_fqn(&container, descriptor.name()),
+            fqn,
             well_known_type,
             descriptor,
             util: util.clone(),
