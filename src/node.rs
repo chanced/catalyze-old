@@ -1,9 +1,6 @@
 use std::rc::Rc;
 
-use crate::{
-    visit::{Accept, Visitor},
-    Enum, EnumValue, Field, File, Message, Method, Name, Oneof, Service,
-};
+use crate::{Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof, Service};
 
 pub trait NodeAtPath<'a, U> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>>;
@@ -23,6 +20,7 @@ pub enum Node<'a, U> {
     Service(Rc<Service<'a, U>>),
     Method(Rc<Method<'a, U>>),
     Field(Rc<Field<'a, U>>),
+    Extension(Rc<Extension<'a, U>>),
 }
 
 impl<'a, U> Node<'a, U> {
@@ -36,6 +34,7 @@ impl<'a, U> Node<'a, U> {
             Node::EnumValue(ev) => ev.name(),
             Node::Service(s) => s.name(),
             Node::Method(m) => m.name(),
+            Node::Extension(e) => e.name(),
         }
     }
 }
@@ -51,70 +50,38 @@ impl<'a, U> NodeAtPath<'a, U> for Node<'a, U> {
             Node::Service(s) => s.node_at_path(path),
             Node::Method(m) => m.node_at_path(path),
             Node::Field(f) => f.node_at_path(path),
+            Node::Extension(_) => todo!(),
         }
     }
 }
 
-impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Node<'a, U> {
-    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
-        if v.done() {
-            return Ok(());
-        }
-        match self {
-            Node::File(f) => f.accept(v),
-            Node::Message(m) => m.accept(v),
-            Node::Oneof(o) => o.accept(v),
-            Node::Enum(e) => e.accept(v),
-            Node::EnumValue(ev) => ev.accept(v),
-            Node::Service(s) => s.accept(v),
-            Node::Method(m) => m.accept(v),
-            Node::Field(f) => f.accept(v),
-        }
-    }
+pub trait AsNode<'a, U> {
+    fn as_node(self) -> Node<'a, U>;
 }
 
-impl<'a, U> From<File<'a, U>> for Node<'a, U> {
-    fn from(file: File<'a, U>) -> Self {
-        Node::File(Rc::new(file))
-    }
-}
-impl<'a, U> From<Message<'a, U>> for Node<'a, U> {
-    fn from(message: Message<'a, U>) -> Self {
-        Node::Message(Rc::new(message))
-    }
-}
-impl<'a, U> From<Oneof<'a, U>> for Node<'a, U> {
-    fn from(oneof: Oneof<'a, U>) -> Self {
-        Node::Oneof(Rc::new(oneof))
-    }
-}
-impl<'a, U> From<Enum<'a, U>> for Node<'a, U> {
-    fn from(enum_: Enum<'a, U>) -> Self {
-        Node::Enum(Rc::new(enum_))
-    }
-}
-
-impl<'a, U> From<Service<'a, U>> for Node<'a, U> {
-    fn from(service: Service<'a, U>) -> Self {
-        Node::Service(Rc::new(service))
-    }
-}
-impl<'a, U> From<Method<'a, U>> for Node<'a, U> {
-    fn from(method: Method<'a, U>) -> Self {
-        Node::Method(Rc::new(method))
-    }
-}
-impl<'a, U> From<Field<'a, U>> for Node<'a, U> {
-    fn from(field: Field<'a, U>) -> Self {
-        Node::Field(Rc::new(field))
-    }
+macro_rules! from_and_as_node {
+    ($($t:ident),*) => {
+        $(
+            impl<'a, U> From<Rc<$t<'a, U>>> for Node<'a, U> {
+                fn from(node: Rc<$t<'a, U>>) -> Self {
+                    Node::$t(node)
+                }
+            }
+            impl<'a, U> From<&Rc<$t<'a, U>>> for Node<'a, U> {
+                fn from(node: &Rc<$t<'a, U>>) -> Self {
+                    Node::$t(node.clone())
+                }
+            }
+            impl<'a, U> AsNode<'a, U> for Rc<$t<'a, U>> {
+                fn as_node(self) -> Node<'a, U> {
+                    Node::from(self)
+                }
+            }
+        )*
+    };
 }
 
-impl<'a, U> From<EnumValue<'a, U>> for Node<'a, U> {
-    fn from(enum_value: EnumValue<'a, U>) -> Self {
-        Node::EnumValue(Rc::new(enum_value))
-    }
-}
+from_and_as_node!(File, Message, Oneof, Enum, EnumValue, Service, Method, Field, Extension);
 
 impl<'a, U> FullyQualified for Node<'a, Node<'a, U>> {
     fn fully_qualified_name(&self) -> String {
@@ -127,10 +94,11 @@ impl<'a, U> FullyQualified for Node<'a, Node<'a, U>> {
             Node::Service(s) => s.fully_qualified_name(),
             Node::Method(m) => m.fully_qualified_name(),
             Node::Field(f) => f.fully_qualified_name(),
+            Node::Extension(e) => e.fully_qualified_name(),
         }
     }
 }
 
-pub(crate) fn fmt_fqn<'a, N: FullyQualified>(n: &N, name: &str) -> String {
+pub(crate) fn format_fqn<'a, N: FullyQualified>(n: &N, name: &str) -> String {
     format!("{}.{}", n.fully_qualified_name(), name)
 }

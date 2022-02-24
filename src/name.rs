@@ -13,6 +13,10 @@ use std::rc::Rc;
 use std::str::FromStr;
 use std::{fmt, ops::Add};
 
+pub trait Named<U> {
+    fn name(&self) -> Name<U>;
+}
+
 pub struct Name<U> {
     val: String,
     pub util: Rc<RefCell<U>>,

@@ -3,12 +3,7 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{
-    fmt_fqn,
-    iter::Iter,
-    visit::{Accept, Visitor},
-    Enum, FullyQualified, Name, Node, NodeAtPath,
-};
+use crate::{fmt_fqn, iter::Iter, visit::Visitor, Enum, FullyQualified, Name, Node, NodeAtPath};
 use prost_types::EnumValueDescriptorProto;
 
 pub(crate) type EnumValueList<'a, U> = Rc<RefCell<Vec<Rc<EnumValue<'a, U>>>>>;
@@ -57,15 +52,6 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<EnumValue<'a, U>> {
         } else {
             None
         }
-    }
-}
-
-impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<EnumValue<'a, U>> {
-    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
-        if v.done() {
-            return Ok(());
-        }
-        v.visit_enum_value(self.clone())
     }
 }
 

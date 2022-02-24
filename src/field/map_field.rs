@@ -1,4 +1,13 @@
+use std::rc::Rc;
+
 use crate::{FieldDetail, Name};
+
+#[derive(Debug, Clone)]
+pub enum MapField<'a, U> {
+    Scalar(Rc<MapScalarField<'a, U>>),
+    Enum(Rc<MapEnumField<'a, U>>),
+    Message(Rc<MapMessageField<'a, U>>),
+}
 
 pub enum MapFieldKey {
     Int64 = 3,
@@ -12,13 +21,6 @@ pub enum MapFieldKey {
     Sfixed64 = 16,
     Sint32 = 17,
     Sint64 = 18,
-}
-
-#[derive(Debug, Clone)]
-pub enum MapField<'a, U> {
-    Scalar(MapScalarField<'a, U>),
-    Enum(MapEnumField<'a, U>),
-    Message(MapMessageField<'a, U>),
 }
 
 impl<'a, U> MapField<'a, U> {

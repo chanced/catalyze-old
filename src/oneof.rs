@@ -4,7 +4,6 @@ use crate::{
     container::{Container, WeakContainer},
     fmt_fqn,
     iter::Iter,
-    visit::{Accept, Visitor},
     Field, FullyQualified, Name, Node, NodeAtPath,
 };
 
@@ -55,19 +54,6 @@ impl<'a, U> NodeAtPath<'a, U> for Rc<Oneof<'a, U>> {
         } else {
             None
         }
-    }
-}
-
-impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Oneof<'a, U>> {
-    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
-        v.visit_oneof(self.clone())?;
-        if v.done() {
-            return Ok(());
-        }
-        for fld in self.fields() {
-            fld.accept(v)?;
-        }
-        Ok(())
     }
 }
 

@@ -7,8 +7,7 @@ use prost_types::FieldDescriptorProto;
 
 use crate::{
     container::{Container, WeakContainer},
-    visit::{Accept, Visitor},
-    File, Name,
+    format_fqn, File, FullyQualified, Name,
 };
 
 pub(crate) type ExtensionList<'a, U> = Rc<RefCell<Vec<Rc<Extension<'a, U>>>>>;
@@ -23,7 +22,8 @@ pub(crate) fn new_extension_list<'a, U>(cap: usize) -> ExtensionList<'a, U> {
 pub struct Extension<'a, U> {
     pub name: Name<U>,
     pub descriptor: &'a FieldDescriptorProto,
-    pub(crate) container: WeakContainer<'a, U>,
+    fqn: String,
+    container: WeakContainer<'a, U>,
 }
 
 impl<'a, U> Extension<'a, U> {
@@ -36,17 +36,17 @@ impl<'a, U> Extension<'a, U> {
             name: Name::new(desc.name(), util),
             descriptor: desc,
             container: container.downgrade(),
+            fqn: format_fqn(&container, desc.name()),
         });
         ext
     }
+    pub fn name(&self) -> Name<U> {
+        self.name.clone()
+    }
 }
 
-impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Extension<'a, U>> {
-    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
-        if v.done() {
-            return Ok(());
-        }
-        v.visit_extension(self.clone())?;
-        Ok(())
+impl<U> FullyQualified for Extension<'_, U> {
+    fn fully_qualified_name(&self) -> String {
+        self.fqn.clone()
     }
 }

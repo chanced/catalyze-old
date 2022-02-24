@@ -7,8 +7,8 @@ use prost_types::DescriptorProto;
 
 use crate::container::BuildTarget;
 use crate::iter::{Iter, UpgradeIter};
+use crate::name::Named;
 use crate::path::DescriptorPath;
-use crate::visit::{Accept, Visitor};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
     fmt_fqn, AllEnums, Enum, EnumList, Extension, Field, FieldList, FullyQualified, Node,
@@ -117,7 +117,6 @@ impl<'a, U> Message<'a, U> {
 
         msg
     }
-
     pub fn name(&self) -> Name<U> {
         self.name.clone()
     }
@@ -176,6 +175,18 @@ impl<'a, U> Message<'a, U> {
     }
 }
 
+impl<'a, U> FullyQualified for Message<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        self.fqn.clone()
+    }
+}
+
+impl<'a, U> Named<U> for Message<'a, U> {
+    fn name(&self) -> Name<U> {
+        self.name.clone()
+    }
+}
+
 impl<'a, U> NodeAtPath<'a, U> for Rc<Message<'a, U>> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         let msg = self.clone();
@@ -226,38 +237,5 @@ impl<'a, U> Iterator for AllMessages<'a, U> {
         } else {
             None
         }
-    }
-}
-
-impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Message<'a, U>> {
-    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
-        if v.done() {
-            return Ok(());
-        }
-        v.visit_message(self.clone())?;
-
-        for msg in self.messages() {
-            msg.accept(v)?;
-        }
-
-        for enm in self.enums() {
-            enm.accept(v)?;
-        }
-
-        for ext in self.defined_extensions() {
-            ext.accept(v)?;
-        }
-
-        for fld in self.fields() {
-            fld.accept(v)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl<'a, U> FullyQualified for Message<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.fqn.clone()
     }
 }

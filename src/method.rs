@@ -1,9 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{
-    visit::{Accept, Visitor},
-    FullyQualified, Name, Node, NodeAtPath,
-};
+use crate::{FullyQualified, Name, Node, NodeAtPath};
 
 pub(crate) type MethodList<'a, U> = Rc<RefCell<Vec<Rc<Method<'a, U>>>>>;
 pub(crate) fn new_method_list<'a, U>(cap: usize) -> MethodList<'a, U> {
@@ -23,15 +20,6 @@ pub struct Method<'a, U> {
 impl<'a, U> Method<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.name.clone()
-    }
-}
-
-impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Method<'a, U>> {
-    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
-        if v.done() {
-            return Ok(());
-        }
-        v.visit_method(self.clone())
     }
 }
 

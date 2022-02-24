@@ -10,7 +10,6 @@ use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
     path::EnumDescriptorPath,
-    visit::{Accept, Visitor},
     EnumValue, EnumValueList, FullyQualified, Message, MessageList, Name, Node, NodeAtPath,
     Package,
 };
@@ -115,18 +114,6 @@ impl<'a, U> Iterator for AllEnums<'a, U> {
             }
             None
         }
-    }
-}
-impl<'a, U, V: Visitor<'a, U>> Accept<'a, U, V> for Rc<Enum<'a, U>> {
-    fn accept(&self, v: &mut V) -> Result<(), V::Error> {
-        if v.done() {
-            return Ok(());
-        }
-        v.visit_enum(self.clone())?;
-        for val in self.values() {
-            val.accept(v)?;
-        }
-        Ok(())
     }
 }
 
