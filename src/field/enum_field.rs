@@ -11,7 +11,7 @@ impl<'a, U> EnumField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.detail.name()
     }
-    pub fn field(&self) -> Rc<Field<'a, U>> {
+    pub fn field(&self) -> Field<'a, U> {
         self.field.upgrade().unwrap()
     }
     pub fn fully_qualified_name(&self) -> Name<U> {

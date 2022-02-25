@@ -59,7 +59,7 @@ impl<'a, U> OneofScalarField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
-    pub fn field(&self) -> Rc<Field<'a, U>> {
+    pub fn field(&self) -> Field<'a, U> {
         self.field.upgrade().unwrap()
     }
     pub fn oneof_field(&self) -> Rc<OneofField<'a, U>> {
@@ -91,7 +91,7 @@ impl<'a, U> OneofMessageField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
-    pub fn field(&self) -> Rc<Field<'a, U>> {
+    pub fn field(&self) -> Field<'a, U> {
         self.field.upgrade().unwrap()
     }
     pub fn oneof_field(&self) -> Rc<OneofField<'a, U>> {
@@ -124,7 +124,7 @@ impl<'a, U> OneofEnumField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
-    pub fn field(&self) -> Rc<Field<'a, U>> {
+    pub fn field(&self) -> Field<'a, U> {
         self.field.upgrade().unwrap()
     }
     pub fn oneof_field(&self) -> Rc<OneofField<'a, U>> {

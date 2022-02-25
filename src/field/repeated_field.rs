@@ -17,7 +17,7 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Message(f) => f.name(),
         }
     }
-    pub fn field(&self) -> Rc<Field<'a, U>> {
+    pub fn field(&self) -> Field<'a, U> {
         match self {
             RepeatedField::Scalar(s) => s.field(),
             RepeatedField::Enum(e) => e.field(),
@@ -65,7 +65,7 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
-    pub fn field(&self) -> Rc<Field<'a, U>> {
+    pub fn field(&self) -> Field<'a, U> {
         self.field.upgrade().unwrap()
     }
     pub fn repeated_field(&self) -> Rc<RepeatedField<'a, U>> {
@@ -83,7 +83,7 @@ impl<'a, U> FullyQualified for RepeatedEnumField<'a, U> {
 pub struct RepeatedMessageField<'a, U> {
     detail: FieldDetail<'a, U>,
     repeated_field: Rc<RepeatedField<'a, U>>,
-    field: Rc<Field<'a, U>>,
+    field: Field<'a, U>,
 }
 
 impl<'a, U> RepeatedMessageField<'a, U> {
@@ -93,7 +93,7 @@ impl<'a, U> RepeatedMessageField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
-    pub fn field(&self) -> Rc<Field<'a, U>> {
+    pub fn field(&self) -> Field<'a, U> {
         self.field.clone()
     }
     pub fn repeated_field(&self) -> Rc<RepeatedField<'a, U>> {
@@ -111,7 +111,7 @@ impl<'a, U> FullyQualified for RepeatedMessageField<'a, U> {
 pub struct RepeatedScalarField<'a, U> {
     detail: FieldDetail<'a, U>,
     repeated_field: Weak<RepeatedField<'a, U>>,
-    field: Rc<Field<'a, U>>,
+    field: Field<'a, U>,
 }
 impl<'a, U> RepeatedScalarField<'a, U> {
     pub fn name(&self) -> Name<U> {
@@ -120,7 +120,7 @@ impl<'a, U> RepeatedScalarField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
-    pub fn field(&self) -> Rc<Field<'a, U>> {
+    pub fn field(&self) -> Field<'a, U> {
         self.field.clone()
     }
     pub fn repeated_field(&self) -> Rc<RepeatedField<'a, U>> {

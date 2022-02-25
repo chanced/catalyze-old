@@ -14,7 +14,7 @@ pub struct Oneof<'a, U> {
     pub name: Name<U>,
     pub descriptor: &'a prost_types::OneofDescriptorProto,
     fqn: String,
-    fields: Rc<RefCell<Vec<Rc<Field<'a, U>>>>>,
+    fields: Rc<RefCell<Vec<Field<'a, U>>>>,
     container: WeakContainer<'a, U>,
 }
 
@@ -43,7 +43,7 @@ impl<'a, U> Oneof<'a, U> {
     pub fn fields(&self) -> Iter<Field<'a, U>> {
         Iter::from(&self.fields)
     }
-    pub(crate) fn add_field(&self, field: Rc<Field<'a, U>>) {
+    pub(crate) fn add_field(&self, field: Field<'a, U>) {
         self.fields.borrow_mut().push(field);
     }
 }

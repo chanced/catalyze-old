@@ -37,7 +37,7 @@ impl<'a, U> MapField<'a, U> {
             MapField::Message(f) => f.fully_qualified_name(),
         }
     }
-    fn field(&self) -> Rc<Field<'a, U>> {
+    fn field(&self) -> Field<'a, U> {
         match self {
             MapField::Scalar(s) => s.field(),
             MapField::Enum(e) => e.field(),
@@ -80,7 +80,7 @@ impl<'a, U> MapScalarField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
-    pub fn field(&self) -> Rc<Field<'a, U>> {
+    pub fn field(&self) -> Field<'a, U> {
         self.field.upgrade().unwrap()
     }
     pub fn map_field(&self) -> Rc<MapField<'a, U>> {
@@ -114,7 +114,7 @@ impl<'a, U> MapMessageField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
-    pub fn field(&self) -> Rc<Field<'a, U>> {
+    pub fn field(&self) -> Field<'a, U> {
         self.field.upgrade().unwrap()
     }
     pub fn map_field(&self) -> Rc<MapField<'a, U>> {
@@ -148,7 +148,7 @@ impl<'a, U> MapEnumField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
-    pub fn field(&self) -> Rc<Field<'a, U>> {
+    pub fn field(&self) -> Field<'a, U> {
         self.field.upgrade().unwrap()
     }
     pub fn map_field(&self) -> Rc<MapField<'a, U>> {

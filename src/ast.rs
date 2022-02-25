@@ -20,9 +20,9 @@ use prost_types::FileDescriptorProto;
 // [path].proto
 
 trait Lookup<'a, U> {
-    fn must_seen_enum(&self, name: &str) -> Option<Rc<Enum<'a, U>>>;
-    fn must_seen_message(&self, name: &str) -> Option<Rc<Enum<'a, U>>>;
-    fn must_seen_file(&self, name: &str) -> Option<Rc<Enum<'a, U>>>;
+    fn must_seen_enum(&self, name: &str) -> Option<Enum<'a, U>>;
+    fn must_seen_message(&self, name: &str) -> Option<Enum<'a, U>>;
+    fn must_seen_file(&self, name: &str) -> Option<Enum<'a, U>>;
 }
 
 #[derive(Debug)]
@@ -30,7 +30,7 @@ pub struct Ast<'a, U> {
     pub targets: HashMap<String, File<'a, U>>,
     pub packages: HashMap<String, Package<'a, U>>,
     pub nodes: HashMap<String, Node<'a, U>>,
-    pub extensions: Vec<Rc<Extension<'a, U>>>,
+    pub extensions: Vec<Extension<'a, U>>,
     pub util: Rc<RefCell<U>>,
     pub file_descriptors: Vec<&'a FileDescriptorProto>,
     pub target_list: HashSet<String>,

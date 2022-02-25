@@ -15,7 +15,7 @@ impl<'a, U> ScalarField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
-    pub fn field(&self) -> Rc<Field<'a, U>> {
+    pub fn field(&self) -> Field<'a, U> {
         self.field.upgrade().unwrap()
     }
 }

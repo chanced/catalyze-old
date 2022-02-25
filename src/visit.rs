@@ -29,15 +29,15 @@ pub trait Visitor<'a, U>: Sized {
         visit_message(self, msg)
     }
 
-    fn visit_enum(&mut self, enm: Rc<Enum<'a, U>>) -> Result<(), Self::Error> {
+    fn visit_enum(&mut self, enm: Enum<'a, U>) -> Result<(), Self::Error> {
         visit_enum(self, enm)
     }
 
-    fn visit_enum_value(&mut self, val: Rc<EnumValue<'a, U>>) -> Result<(), Self::Error> {
+    fn visit_enum_value(&mut self, val: EnumValue<'a, U>) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn visit_extension(&mut self, ext: Rc<Extension<'a, U>>) -> Result<(), Self::Error> {
+    fn visit_extension(&mut self, ext: Extension<'a, U>) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -45,11 +45,11 @@ pub trait Visitor<'a, U>: Sized {
         Ok(())
     }
 
-    fn visit_service(&mut self, svc: Rc<Service<'a, U>>) -> Result<(), Self::Error> {
+    fn visit_service(&mut self, svc: Service<'a, U>) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn visit_method(&mut self, mtd: Rc<Method<'a, U>>) -> Result<(), Self::Error> {
+    fn visit_method(&mut self, mtd: Method<'a, U>) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -220,7 +220,7 @@ where
     Ok(())
 }
 
-pub fn visit_service<'a, U, V>(v: &mut V, svc: Rc<Service<'a, U>>) -> Result<(), V::Error>
+pub fn visit_service<'a, U, V>(v: &mut V, svc: Service<'a, U>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
 {
@@ -230,7 +230,7 @@ where
     Ok(())
 }
 
-pub fn visit_enum<'a, U, V>(v: &mut V, enm: Rc<Enum<'a, U>>) -> Result<(), V::Error>
+pub fn visit_enum<'a, U, V>(v: &mut V, enm: Enum<'a, U>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
 {
@@ -248,7 +248,7 @@ where
     todo!()
 }
 
-pub fn visit_field<'a, U, V>(v: &mut V, fld: Rc<Method<'a, U>>) -> Result<(), V::Error>
+pub fn visit_field<'a, U, V>(v: &mut V, fld: Method<'a, U>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
 {
@@ -317,7 +317,7 @@ where
         | WellKnownTypeField::Syntax(f) => v.visit_enum_field(f.enum_field()),
     }
 }
-pub fn visit_extension<'a, U, V>(v: &mut V, ext: Rc<Extension<'a, U>>) -> Result<(), V::Error>
+pub fn visit_extension<'a, U, V>(v: &mut V, ext: Extension<'a, U>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
 {

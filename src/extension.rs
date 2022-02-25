@@ -7,7 +7,7 @@ use crate::{
     format_fqn, FullyQualified, Name,
 };
 
-pub(crate) type ExtensionList<'a, U> = Rc<RefCell<Vec<Rc<Extension<'a, U>>>>>;
+pub(crate) type ExtensionList<'a, U> = Rc<RefCell<Vec<Extension<'a, U>>>>;
 pub(crate) fn new_extension_list<'a, U>(cap: usize) -> ExtensionList<'a, U> {
     match cap {
         0 => Rc::new(RefCell::new(Vec::new())),

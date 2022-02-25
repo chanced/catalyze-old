@@ -4,7 +4,7 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{File, Message, MessageList, Name};
+use crate::{EnumList, File, Message, MessageList, Name};
 
 pub struct Iter<T> {
     nodes: Rc<RefCell<Vec<Rc<T>>>>,
@@ -109,7 +109,7 @@ impl<'a, U> Iterator for AllMessages<'a, U> {
 
 pub struct AllEnums<'a, U> {
     msgs: VecDeque<Message<'a, U>>,
-    enums: VecDeque<Rc<Enum<'a, U>>>,
+    enums: VecDeque<Enum<'a, U>>,
 }
 
 impl<'a, U> AllEnums<'a, U> {
@@ -122,7 +122,7 @@ impl<'a, U> AllEnums<'a, U> {
 }
 
 impl<'a, U> Iterator for AllEnums<'a, U> {
-    type Item = Rc<Enum<'a, U>>;
+    type Item = Enum<'a, U>;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(e) = self.enums.pop_front() {
             Some(e)

@@ -7,13 +7,13 @@ use crate::{
     Method, Name, Node, NodeAtPath,
 };
 
-pub(crate) type ServiceList<'a, U> = Rc<RefCell<Vec<Rc<Service<'a, U>>>>>;
+pub(crate) type ServiceList<'a, U> = Rc<RefCell<Vec<Service<'a, U>>>>;
 
 #[derive(Debug, Clone)]
 pub struct Service<'a, U> {
     pub name: Name<U>,
     fqn: String,
-    pub methods: Rc<RefCell<Vec<Rc<Method<'a, U>>>>>,
+    pub methods: Rc<RefCell<Vec<Method<'a, U>>>>,
 }
 
 impl<'a, U> Service<'a, U> {
@@ -38,7 +38,7 @@ impl<'a, U> Service<'a, U> {
     }
 }
 
-impl<'a, U> NodeAtPath<'a, U> for Rc<Service<'a, U>> {
+impl<'a, U> NodeAtPath<'a, U> for Service<'a, U> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         if path.is_empty() {
             return Some(Node::Service(self.clone()));

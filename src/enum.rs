@@ -10,11 +10,10 @@ use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
     path::EnumDescriptorPath,
-    EnumValue, EnumValueList, FullyQualified, Message, MessageList, Name, Node, NodeAtPath,
-    Package,
+    EnumValue, EnumValueList, FullyQualified, Message, Name, Node, NodeAtPath, Package,
 };
 
-pub(crate) type EnumList<'a, U> = Rc<RefCell<Vec<Rc<Enum<'a, U>>>>>;
+pub(crate) type EnumList<'a, U> = Rc<RefCell<Vec<Enum<'a, U>>>>;
 
 #[derive(Debug, Clone)]
 pub struct Enum<'a, U> {
@@ -61,7 +60,7 @@ impl<'a, U> Enum<'a, U> {
     }
 }
 
-impl<'a, U> NodeAtPath<'a, U> for Rc<Enum<'a, U>> {
+impl<'a, U> NodeAtPath<'a, U> for Enum<'a, U> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         if path.is_empty() {
             return Some(Node::Enum(self.clone()));

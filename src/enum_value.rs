@@ -6,7 +6,7 @@ use std::{
 use crate::{format_fqn, Enum, FullyQualified, Name, Node, NodeAtPath};
 use prost_types::EnumValueDescriptorProto;
 
-pub(crate) type EnumValueList<'a, U> = Rc<RefCell<Vec<Rc<EnumValue<'a, U>>>>>;
+pub(crate) type EnumValueList<'a, U> = Rc<RefCell<Vec<EnumValue<'a, U>>>>;
 
 #[derive(Debug, Clone)]
 pub struct EnumValue<'a, U> {
@@ -19,7 +19,7 @@ pub struct EnumValue<'a, U> {
 impl<'a, U> EnumValue<'a, U> {
     pub(crate) fn new(
         desc: &'a EnumValueDescriptorProto,
-        enm: Rc<Enum<'a, U>>,
+        enm: Enum<'a, U>,
         util: Rc<RefCell<U>>,
     ) -> Rc<Self> {
         Rc::new(EnumValue {
@@ -34,18 +34,18 @@ impl<'a, U> EnumValue<'a, U> {
     }
 
     /// Returns the enum that contains this enum value.
-    pub fn containing_enum(&self) -> Rc<Enum<'a, U>> {
+    pub fn containing_enum(&self) -> Enum<'a, U> {
         self.container.upgrade().unwrap()
     }
     /// Alias for `containing_enum`.
     ///
     /// Returns the enum that contains this enum value.
-    pub fn container(&self) -> Rc<Enum<'a, U>> {
+    pub fn container(&self) -> Enum<'a, U> {
         self.containing_enum()
     }
 }
 
-impl<'a, U> NodeAtPath<'a, U> for Rc<EnumValue<'a, U>> {
+impl<'a, U> NodeAtPath<'a, U> for EnumValue<'a, U> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         if path.is_empty() {
             Some(Node::EnumValue(self.clone()))

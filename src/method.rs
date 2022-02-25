@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{FullyQualified, Name, Node, NodeAtPath};
 
-pub(crate) type MethodList<'a, U> = Rc<RefCell<Vec<Rc<Method<'a, U>>>>>;
+pub(crate) type MethodList<'a, U> = Rc<RefCell<Vec<Method<'a, U>>>>;
 pub(crate) fn new_method_list<'a, U>(cap: usize) -> MethodList<'a, U> {
     match cap {
         0 => Rc::new(RefCell::new(Vec::new())),
@@ -23,7 +23,7 @@ impl<'a, U> Method<'a, U> {
     }
 }
 
-impl<'a, U> NodeAtPath<'a, U> for Rc<Method<'a, U>> {
+impl<'a, U> NodeAtPath<'a, U> for Method<'a, U> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         if path.is_empty() {
             Some(Node::Method(self.clone()))

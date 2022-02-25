@@ -47,7 +47,7 @@ pub(crate) struct MessageDetail<'a, U> {
     maps: MessageList<'a, U>,
     preserved_messages: MessageList<'a, U>,
     /// `Extension`s defined by this message.
-    defined_extensions: Rc<RefCell<Vec<Rc<Extension<'a, U>>>>>,
+    defined_extensions: Rc<RefCell<Vec<Extension<'a, U>>>>,
     /// `Extension`s applied to this `Message`
     applied_extensions: Rc<RefCell<Vec<Weak<Extension<'a, U>>>>>,
 }

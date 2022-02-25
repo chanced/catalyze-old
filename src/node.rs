@@ -15,12 +15,12 @@ pub enum Node<'a, U> {
     File(File<'a, U>),
     Message(Message<'a, U>),
     Oneof(Rc<Oneof<'a, U>>),
-    Enum(Rc<Enum<'a, U>>),
-    EnumValue(Rc<EnumValue<'a, U>>),
-    Service(Rc<Service<'a, U>>),
-    Method(Rc<Method<'a, U>>),
+    Enum(Enum<'a, U>),
+    EnumValue(EnumValue<'a, U>),
+    Service(Service<'a, U>),
+    Method(Method<'a, U>),
     Field(Field<'a, U>),
-    Extension(Rc<Extension<'a, U>>),
+    Extension(Extension<'a, U>),
 }
 
 impl<'a, U> Clone for Node<'a, U> {
