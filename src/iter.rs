@@ -4,7 +4,7 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{File, Name};
+use crate::{File, Message, MessageList, Name};
 
 pub struct Iter<T> {
     nodes: Rc<RefCell<Vec<Rc<T>>>>,
@@ -52,7 +52,7 @@ impl<T> Iterator for UpgradeIter<T> {
 }
 
 pub struct TransitiveImports<'a, U> {
-    queue: VecDeque<Rc<File<'a, U>>>,
+    queue: VecDeque<File<'a, U>>,
     processed: HashSet<Name<U>>,
 }
 
@@ -78,6 +78,68 @@ impl<'a, U> Iterator for TransitiveImports<'a, U> {
             }
         }
         None
+    }
+}
+
+pub struct AllMessages<'a, U> {
+    q: VecDeque<Message<'a, U>>,
+}
+
+impl<'a, U> AllMessages<'a, U> {
+    pub(crate) fn new(msgs: MessageList<'a, U>) -> Self {
+        Self {
+            q: VecDeque::from_iter(msgs.borrow().iter().cloned()),
+        }
+    }
+}
+
+impl<'a, U> Iterator for AllMessages<'a, U> {
+    type Item = Message<'a, U>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(msg) = self.q.pop_front() {
+            for v in msg.messages() {
+                self.q.push_back(v);
+            }
+            Some(msg)
+        } else {
+            None
+        }
+    }
+}
+
+pub struct AllEnums<'a, U> {
+    msgs: VecDeque<Message<'a, U>>,
+    enums: VecDeque<Rc<Enum<'a, U>>>,
+}
+
+impl<'a, U> AllEnums<'a, U> {
+    pub(crate) fn new(enums: EnumList<'a, U>, msgs: MessageList<'a, U>) -> Self {
+        Self {
+            msgs: msgs.borrow().iter().cloned().collect(),
+            enums: enums.borrow().iter().cloned().collect(),
+        }
+    }
+}
+
+impl<'a, U> Iterator for AllEnums<'a, U> {
+    type Item = Rc<Enum<'a, U>>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(e) = self.enums.pop_front() {
+            Some(e)
+        } else {
+            while let Some(msg) = self.msgs.pop_front() {
+                for v in msg.messages() {
+                    self.msgs.push_back(v);
+                }
+                for v in msg.enums() {
+                    self.enums.push_back(v);
+                }
+                if let Some(e) = self.enums.pop_front() {
+                    return Some(e);
+                }
+            }
+            None
+        }
     }
 }
 

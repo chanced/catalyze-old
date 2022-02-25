@@ -1,13 +1,10 @@
-use std::{
-    cell::RefCell,
-    rc::{Rc, Weak},
-};
+use std::{cell::RefCell, rc::Rc};
 
 use prost_types::FieldDescriptorProto;
 
 use crate::{
     container::{Container, WeakContainer},
-    format_fqn, File, FullyQualified, Name,
+    format_fqn, FullyQualified, Name,
 };
 
 pub(crate) type ExtensionList<'a, U> = Rc<RefCell<Vec<Rc<Extension<'a, U>>>>>;

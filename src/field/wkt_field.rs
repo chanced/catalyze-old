@@ -1,33 +1,41 @@
 use std::rc::{Rc, Weak};
 
-use crate::{name::Named, EnumField, FieldDetail, FullyQualified, MessageField, Name, Oneof};
+use crate::{
+    name::Named, EnumField, Field, FieldDetail, FullyQualified, MessageField, Name, Oneof,
+};
 
-#[derive(Clone, Debug)]
 /// Google provided, Well-Known Types
 ///
 /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf
+#[derive(Clone, Debug)]
 pub enum WellKnownTypeField<'a, U> {
+    Message(WellKnownMessageField<'a, U>),
+    Enum(WellKnownEnumField<'a, U>),
+}
+
+#[derive(Clone, Debug)]
+pub enum WellKnownMessageField<'a, U> {
     /// Any contains an arbitrary serialized message along with a URL that
     /// describes the type of the serialized message.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Any
-    Any(Rc<WktMessageField<'a, U>>), // message
+    Any(WktMessageField<'a, U>), // message
     /// Api is a light-weight descriptor for a protocol buffer service.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Api
-    Api(Rc<WktMessageField<'a, U>>),
+    Api(WktMessageField<'a, U>),
     /// Wrapper message for bool.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.BoolValue
-    BoolValue(Rc<WktMessageField<'a, U>>),
+    BoolValue(WktMessageField<'a, U>),
     /// Wrapper message for bytes.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#bytesvalue
-    BytesValue(Rc<WktMessageField<'a, U>>),
+    BytesValue(WktMessageField<'a, U>),
     /// Wrapper message for double.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#doublevalue
-    DoubleValue(Rc<WktMessageField<'a, U>>),
+    DoubleValue(WktMessageField<'a, U>),
     /// A Duration represents a signed, fixed-length span of time represented as
     /// a count of seconds and fractions of seconds at nanosecond resolution. It
     /// is independent of any calendar and concepts like "day" or "month". It is
@@ -36,7 +44,7 @@ pub enum WellKnownTypeField<'a, U> {
     /// is approximately +-10,000 years.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#duration
-    Duration(Rc<WktMessageField<'a, U>>),
+    Duration(WktMessageField<'a, U>),
     /// A generic empty message that you can re-use to avoid defining duplicated
     /// empty messages in your APIs. A typical example is to use it as the
     /// request or the response type of an API method. For Instance:
@@ -47,54 +55,46 @@ pub enum WellKnownTypeField<'a, U> {
     /// }
     /// ```
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#empty
-    Empty(Rc<WktMessageField<'a, U>>),
+    Empty(WktMessageField<'a, U>),
     /// Enum type definition.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#enum
-    Enum(Rc<WktMessageField<'a, U>>),
+    Enum(WktMessageField<'a, U>),
     /// Enum value definition.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#enumvalue
-    EnumValue(Rc<WktMessageField<'a, U>>),
+    EnumValue(WktMessageField<'a, U>),
     /// A single field of a message type.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#field
-    Field(Rc<WktMessageField<'a, U>>),
-    /// Whether a field is optional, required, or repeated.
-    ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#cardinality
-    FieldCardinality(Rc<WktEnumField<'a, U>>),
-    /// Basic field types.
-    ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#kind
-    FieldKind(Rc<WktEnumField<'a, U>>),
+    Field(WktMessageField<'a, U>),
     /// FieldMask represents a set of symbolic field paths, for example:
     /// ```
     /// paths: "f.a"
     /// paths: "f.b.d"
     /// ```
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#fieldmask
-    FieldMask(Rc<WktMessageField<'a, U>>),
+    FieldMask(WktMessageField<'a, U>),
     /// Wrapper message for float.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#floatvalue
-    FloatValue(Rc<WktMessageField<'a, U>>),
+    FloatValue(WktMessageField<'a, U>),
     /// Wrapper message for int32.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#int32value
-    Int32Value(Rc<WktMessageField<'a, U>>),
+    Int32Value(WktMessageField<'a, U>),
     /// Wrapper message for int64.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#int64value
-    Int64Value(Rc<WktMessageField<'a, U>>),
+    Int64Value(WktMessageField<'a, U>),
     /// ListValue is a wrapper around a repeated field of values.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#listvalue
-    ListValue(Rc<WktMessageField<'a, U>>),
+    ListValue(WktMessageField<'a, U>),
     /// Method represents a method of an api.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#method
-    Method(Rc<WktMessageField<'a, U>>),
+    Method(WktMessageField<'a, U>),
     /// Declares an API to be included in this API. The including API must
     /// redeclare all the methods from the included API, but documentation and
     /// options are inherited as follows:
@@ -130,155 +130,110 @@ pub enum WellKnownTypeField<'a, U> {
     ///   }
     /// }
     /// ```
-    Mixin(Rc<WktMessageField<'a, U>>),
-    /// NullValue is a singleton enumeration to represent the null value for the
-    /// Value type union.
-    NullValue(Rc<WktEnumField<'a, U>>),
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#mixin
+    Mixin(WktMessageField<'a, U>),
     /// A protocol buffer option, which can be attached to a message, field,
     /// enumeration, etc.
-    Option(Rc<WktMessageField<'a, U>>),
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#option
+    Option(WktMessageField<'a, U>),
     /// SourceContext represents information about the source of a protobuf
     /// element, like the file in which it is defined.
-    SourceContext(Rc<WktMessageField<'a, U>>),
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#sourcecontext
+    SourceContext(WktMessageField<'a, U>),
     /// Wrapper message for string.
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#stringvalue
-    StringValue(Rc<WktMessageField<'a, U>>),
-    Struct(Rc<WktMessageField<'a, U>>),
+    StringValue(WktMessageField<'a, U>),
+    /// ## Struct
+    /// Struct represents a structured data value, consisting of fields which
+    /// map to dynamically typed values. In some languages, Struct might be
+    /// supported by a native representation. For example, in scripting
+    /// languages like JS a struct is represented as an object. The details of
+    /// that representation are described together with the proto support for
+    /// the language.
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#struct
+    Struct(WktMessageField<'a, U>),
+    /// ## Timestamp
+    /// A Timestamp represents a point in time independent of any time zone or
+    /// calendar, represented as seconds and fractions of seconds at nanosecond
+    /// resolution in UTC Epoch time. It is encoded using the Proleptic
+    /// Gregorian Calendar which extends the Gregorian calendar backwards to
+    /// year one. It is encoded assuming all minutes are 60 seconds long, i.e.
+    /// leap seconds are "smeared" so that no leap second table is needed for
+    /// interpretation. Range is from 0001-01-01T00:00:00Z to
+    /// 9999-12-31T23:59:59.999999999Z. By restricting to that range, we ensure
+    /// that we can convert to and from RFC 3339 date strings. See
+    /// https://www.ietf.org/rfc/rfc3339.txt.
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#timestamp
+    Timestamp(WktMessageField<'a, U>),
+    /// A protocol buffer message type.
+    Type(WktMessageField<'a, U>),
+    /// Wrapper message for `uint32`.
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#uint32value
+    UInt32Value(WktMessageField<'a, U>),
+    /// Wrapper message for `uint64`.
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#uint64value
+    UInt64Value(WktMessageField<'a, U>),
+    /// Value represents a dynamically typed value which can be either null, a
+    /// number, a string, a boolean, a recursive struct value, or a list of
+    /// values. A producer of value is expected to set one of that variants,
+    /// absence of any variant indicates an error.
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#value
+    Value(WktMessageField<'a, U>),
+}
+#[derive(Clone, Debug)]
+pub enum WellKnownEnumField<'a, U> {
+    /// Whether a field is optional, required, or repeated.
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#cardinality
+    FieldCardinality(Rc<WktEnumField<'a, U>>),
+    /// Basic field types.
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#kind
+    FieldKind(Rc<WktEnumField<'a, U>>),
+
+    /// NullValue is a singleton enumeration to represent the null value for the
+    /// Value type union.
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#nullvalue
+    NullValue(Rc<WktEnumField<'a, U>>),
+    /// The syntax in which a protocol buffer element is defined.
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#syntax
     Syntax(Rc<WktEnumField<'a, U>>),
-    Timestamp(Rc<WktMessageField<'a, U>>),
-    Type(Rc<WktMessageField<'a, U>>),
-    UInt32Value(Rc<WktMessageField<'a, U>>),
-    UInt64Value(Rc<WktMessageField<'a, U>>),
-    Value(Rc<WktMessageField<'a, U>>),
-}
-
-impl<'a, U> WellKnownTypeField<'a, U> {
-    pub fn name(&self) -> Name<U> {
-        match self {
-            WellKnownTypeField::Any(wkt)
-            | WellKnownTypeField::Api(wkt)
-            | WellKnownTypeField::BoolValue(wkt)
-            | WellKnownTypeField::BytesValue(wkt)
-            | WellKnownTypeField::DoubleValue(wkt)
-            | WellKnownTypeField::Duration(wkt)
-            | WellKnownTypeField::Empty(wkt)
-            | WellKnownTypeField::Enum(wkt)
-            | WellKnownTypeField::EnumValue(wkt)
-            | WellKnownTypeField::Field(wkt)
-            | WellKnownTypeField::FieldMask(wkt)
-            | WellKnownTypeField::FloatValue(wkt)
-            | WellKnownTypeField::Int32Value(wkt)
-            | WellKnownTypeField::Int64Value(wkt)
-            | WellKnownTypeField::ListValue(wkt)
-            | WellKnownTypeField::Method(wkt)
-            | WellKnownTypeField::Mixin(wkt)
-            | WellKnownTypeField::Option(wkt)
-            | WellKnownTypeField::SourceContext(wkt)
-            | WellKnownTypeField::StringValue(wkt)
-            | WellKnownTypeField::Struct(wkt)
-            | WellKnownTypeField::Timestamp(wkt)
-            | WellKnownTypeField::Type(wkt)
-            | WellKnownTypeField::UInt32Value(wkt)
-            | WellKnownTypeField::UInt64Value(wkt)
-            | WellKnownTypeField::Value(wkt) => wkt.name(),
-
-            WellKnownTypeField::FieldCardinality(wkt)
-            | WellKnownTypeField::FieldKind(wkt)
-            | WellKnownTypeField::NullValue(wkt)
-            | WellKnownTypeField::Syntax(wkt) => wkt.name(),
-        }
-    }
-}
-
-impl<'a, U> FullyQualified for WellKnownTypeField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        match self {
-            WellKnownTypeField::Any(wkt)
-            | WellKnownTypeField::Api(wkt)
-            | WellKnownTypeField::BoolValue(wkt)
-            | WellKnownTypeField::BytesValue(wkt)
-            | WellKnownTypeField::DoubleValue(wkt)
-            | WellKnownTypeField::Duration(wkt)
-            | WellKnownTypeField::Empty(wkt)
-            | WellKnownTypeField::Enum(wkt)
-            | WellKnownTypeField::EnumValue(wkt)
-            | WellKnownTypeField::Field(wkt)
-            | WellKnownTypeField::FieldMask(wkt)
-            | WellKnownTypeField::FloatValue(wkt)
-            | WellKnownTypeField::Int32Value(wkt)
-            | WellKnownTypeField::Int64Value(wkt)
-            | WellKnownTypeField::ListValue(wkt)
-            | WellKnownTypeField::Method(wkt)
-            | WellKnownTypeField::Mixin(wkt)
-            | WellKnownTypeField::Option(wkt)
-            | WellKnownTypeField::SourceContext(wkt)
-            | WellKnownTypeField::StringValue(wkt)
-            | WellKnownTypeField::Struct(wkt)
-            | WellKnownTypeField::Timestamp(wkt)
-            | WellKnownTypeField::Type(wkt)
-            | WellKnownTypeField::UInt32Value(wkt)
-            | WellKnownTypeField::UInt64Value(wkt)
-            | WellKnownTypeField::Value(wkt) => wkt.fully_qualified_name(),
-
-            WellKnownTypeField::FieldCardinality(wkt)
-            | WellKnownTypeField::FieldKind(wkt)
-            | WellKnownTypeField::NullValue(wkt)
-            | WellKnownTypeField::Syntax(wkt) => wkt.fully_qualified_name(),
-        }
-    }
-}
-
-impl<'a, U> Named<U> for WellKnownTypeField<'a, U> {
-    fn name(&self) -> crate::Name<U> {
-        match self {
-            WellKnownTypeField::Any(wkt)
-            | WellKnownTypeField::Api(wkt)
-            | WellKnownTypeField::BoolValue(wkt)
-            | WellKnownTypeField::BytesValue(wkt)
-            | WellKnownTypeField::DoubleValue(wkt)
-            | WellKnownTypeField::Duration(wkt)
-            | WellKnownTypeField::Empty(wkt)
-            | WellKnownTypeField::Enum(wkt)
-            | WellKnownTypeField::EnumValue(wkt)
-            | WellKnownTypeField::Field(wkt)
-            | WellKnownTypeField::FieldMask(wkt)
-            | WellKnownTypeField::FloatValue(wkt)
-            | WellKnownTypeField::Int32Value(wkt)
-            | WellKnownTypeField::Int64Value(wkt)
-            | WellKnownTypeField::ListValue(wkt)
-            | WellKnownTypeField::Method(wkt)
-            | WellKnownTypeField::Mixin(wkt)
-            | WellKnownTypeField::Option(wkt)
-            | WellKnownTypeField::SourceContext(wkt)
-            | WellKnownTypeField::StringValue(wkt)
-            | WellKnownTypeField::Struct(wkt)
-            | WellKnownTypeField::Timestamp(wkt)
-            | WellKnownTypeField::Type(wkt)
-            | WellKnownTypeField::UInt32Value(wkt)
-            | WellKnownTypeField::UInt64Value(wkt)
-            | WellKnownTypeField::Value(wkt) => wkt.name(),
-
-            WellKnownTypeField::FieldCardinality(wkt)
-            | WellKnownTypeField::FieldKind(wkt)
-            | WellKnownTypeField::NullValue(wkt)
-            | WellKnownTypeField::Syntax(wkt) => wkt.name(),
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
 pub struct WktMessageField<'a, U> {
     oneof: Weak<Oneof<'a, U>>,
-    msg_field: Rc<MessageField<'a, U>>,
+    msg_field: Weak<MessageField<'a, U>>,
+    field: Weak<Field<'a, U>>,
+    detail: FieldDetail<'a, U>,
 }
 
 impl<'a, U> WktMessageField<'a, U> {
     pub fn name(&self) -> Name<U> {
-        self.msg_field.name()
+        self.detail.name()
     }
     pub fn oneof(&self) -> Rc<Oneof<'a, U>> {
         self.oneof.upgrade().unwrap()
+    }
+    pub fn fully_qualified_name(&self) -> String {
+        self.detail.fully_qualified_name()
+    }
+}
+
+impl<'a, U> FullyQualified for WktMessageField<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        self.detail.fully_qualified_name()
     }
 }
 
@@ -286,7 +241,7 @@ impl<'a, U> WktMessageField<'a, U> {
 pub struct WktEnumField<'a, U> {
     oneof: Weak<Oneof<'a, U>>,
     enum_field: Weak<EnumField<'a, U>>,
-    detail: Rc<FieldDetail<'a, U>>,
+    detail: FieldDetail<'a, U>,
 }
 impl<'a, U> WktEnumField<'a, U> {
     pub fn name(&self) -> Name<U> {
@@ -299,6 +254,6 @@ impl<'a, U> WktEnumField<'a, U> {
 
 impl<'a, U> FullyQualified for WktEnumField<'a, U> {
     fn fully_qualified_name(&self) -> String {
-        self.enum_field.fully_qualified_name()
+        self.detail.fully_qualified_name()
     }
 }

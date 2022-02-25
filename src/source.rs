@@ -1,5 +1,3 @@
-use std::{collections::VecDeque, rc::Rc, slice};
-
 use prost_types::FileDescriptorProto;
 
 /// InputSource is composed of a `FileDescriptorSet` and a list of paths for

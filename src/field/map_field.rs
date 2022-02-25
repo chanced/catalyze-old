@@ -30,6 +30,20 @@ impl<'a, U> MapField<'a, U> {
             MapField::Message(f) => f.name(),
         }
     }
+    fn fully_qualified_name(&self) -> String {
+        match self {
+            MapField::Scalar(f) => f.fully_qualified_name(),
+            MapField::Enum(f) => f.fully_qualified_name(),
+            MapField::Message(f) => f.fully_qualified_name(),
+        }
+    }
+    fn field(&self) -> Rc<Field<'a, U>> {
+        match self {
+            MapField::Scalar(s) => s.field(),
+            MapField::Enum(e) => e.field(),
+            MapField::Message(m) => m.field(),
+        }
+    }
 }
 
 impl<'a, U> FullyQualified for MapField<'a, U> {
@@ -55,7 +69,23 @@ impl<'a, U> Named<U> for MapField<'a, U> {
 #[derive(Debug, Clone)]
 pub struct MapScalarField<'a, U> {
     field: Weak<Field<'a, U>>,
-    detail: Rc<FieldDetail<'a, U>>,
+    map_field: Weak<MapField<'a, U>>,
+    detail: FieldDetail<'a, U>,
+}
+
+impl<'a, U> MapScalarField<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.detail.name()
+    }
+    pub fn fully_qualified_name(&self) -> String {
+        self.detail.fully_qualified_name()
+    }
+    pub fn field(&self) -> Rc<Field<'a, U>> {
+        self.field.upgrade().unwrap()
+    }
+    pub fn map_field(&self) -> Rc<MapField<'a, U>> {
+        self.map_field.upgrade().unwrap()
+    }
 }
 
 impl<'a, U> Named<U> for MapScalarField<'a, U> {
@@ -72,6 +102,7 @@ impl<'a, U> FullyQualified for MapScalarField<'a, U> {
 
 #[derive(Debug, Clone)]
 pub struct MapMessageField<'a, U> {
+    field: Weak<Field<'a, U>>,
     map_field: Weak<MapField<'a, U>>,
     detail: FieldDetail<'a, U>,
 }
@@ -79,6 +110,15 @@ pub struct MapMessageField<'a, U> {
 impl<'a, U> MapMessageField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.detail.name()
+    }
+    pub fn fully_qualified_name(&self) -> String {
+        self.detail.fully_qualified_name()
+    }
+    pub fn field(&self) -> Rc<Field<'a, U>> {
+        self.field.upgrade().unwrap()
+    }
+    pub fn map_field(&self) -> Rc<MapField<'a, U>> {
+        self.map_field.upgrade().unwrap()
     }
 }
 
@@ -96,6 +136,7 @@ impl<'a, U> Named<U> for MapMessageField<'a, U> {
 
 #[derive(Debug, Clone)]
 pub struct MapEnumField<'a, U> {
+    field: Weak<Field<'a, U>>,
     map_field: Weak<MapField<'a, U>>,
     detail: FieldDetail<'a, U>,
 }
@@ -103,6 +144,15 @@ pub struct MapEnumField<'a, U> {
 impl<'a, U> MapEnumField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.detail.name()
+    }
+    pub fn fully_qualified_name(&self) -> String {
+        self.detail.fully_qualified_name()
+    }
+    pub fn field(&self) -> Rc<Field<'a, U>> {
+        self.field.upgrade().unwrap()
+    }
+    pub fn map_field(&self) -> Rc<MapField<'a, U>> {
+        self.map_field.upgrade().unwrap()
     }
 }
 

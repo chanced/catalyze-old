@@ -1,4 +1,4 @@
-use crate::{FieldDetail, Name, FullyQualified};
+use crate::{FieldDetail, FullyQualified, Name};
 
 #[derive(Debug, Clone)]
 pub struct MessageField<'a, U> {

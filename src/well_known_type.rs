@@ -1,7 +1,6 @@
 // use std::str::FromStr;
 
 pub const WELL_KNNOWN_TYPE_PACKAGE: &str = "google.protobuf";
-use anyhow::bail;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum WellKnownType {
     /// Any contains an arbitrary serialized message along with a URL that

@@ -1,9 +1,0 @@
-[package]
-name = "protoc-gen-echo"
-version = "0.2.0"
-edition = "2021"
-authors = ["chance dinkins chanceusc@gmail.com"]
-license = "MIT OR Apache-2.0"
-description = "protoc-gen-echo is a protoc plugin which simply echos the incoming CodeGeneratorRequest to stderr."
-
-[dependencies]

@@ -1,49 +1,38 @@
 use std::rc::{Rc, Weak};
 
-use crate::{iter::Iter, Enum};
-use crate::{AllEnums, AllMessages, File, FullyQualified, Message, Name, Node, Package};
+use crate::file::{FileDetail, WeakFile};
+use crate::iter::{AllEnums, AllMessages, Iter};
+use crate::{Enum, File, FullyQualified, Message, Name, Node, Package, WeakMessage};
 
 // pub enum Entity {
 
 // }
 #[derive(Debug, Clone)]
 pub(crate) enum WeakContainer<'a, U> {
-    File(Weak<File<'a, U>>),
-    Message(Weak<Message<'a, U>>),
-}
-
-impl<'a, U> From<Rc<File<'a, U>>> for WeakContainer<'a, U> {
-    fn from(file: Rc<File<'a, U>>) -> Self {
-        WeakContainer::File(Rc::downgrade(&file))
-    }
-}
-
-impl<'a, U> From<Rc<Message<'a, U>>> for WeakContainer<'a, U> {
-    fn from(message: Rc<Message<'a, U>>) -> Self {
-        WeakContainer::Message(Rc::downgrade(&message))
-    }
+    File(WeakFile<'a, U>),
+    Message(WeakMessage<'a, U>),
 }
 
 impl<'a, U> WeakContainer<'a, U> {
     // TODO: should this return Option<Container<'a, U>>?
     pub(crate) fn upgrade(&self) -> Container<'a, U> {
         match self {
-            WeakContainer::File(f) => Container::File(f.upgrade().unwrap()),
+            WeakContainer::File(f) => Container::File(File(f.upgrade().unwrap())),
             WeakContainer::Message(m) => Container::Message(m.upgrade().unwrap()),
         }
     }
 
-    pub(crate) fn package(&self) -> Option<Rc<Package<'a, U>>> {
+    pub(crate) fn package(&self) -> Option<Package<'a, U>> {
         match self {
-            WeakContainer::File(f) => f.upgrade().unwrap().package(),
-            WeakContainer::Message(m) => m.upgrade().unwrap().package(),
+            WeakContainer::File(f) => self.upgrade().package(),
+            WeakContainer::Message(m) => self.upgrade().package(),
         }
     }
 }
 #[derive(Debug)]
 pub enum Container<'a, U> {
-    File(Rc<File<'a, U>>),
-    Message(Rc<Message<'a, U>>),
+    File(File<'a, U>),
+    Message(Message<'a, U>),
 }
 
 impl<U> Clone for Container<'_, U> {
@@ -52,18 +41,6 @@ impl<U> Clone for Container<'_, U> {
             Self::File(f) => Self::File(f.clone()),
             Self::Message(m) => Self::Message(m.clone()),
         }
-    }
-}
-
-impl<'a, U> From<Rc<File<'a, U>>> for Container<'a, U> {
-    fn from(file: Rc<File<'a, U>>) -> Self {
-        Container::File(file)
-    }
-}
-
-impl<'a, U> From<Rc<Message<'a, U>>> for Container<'a, U> {
-    fn from(message: Rc<Message<'a, U>>) -> Self {
-        Container::Message(message)
     }
 }
 
@@ -104,7 +81,7 @@ impl<'a, U> Container<'a, U> {
             Container::Message(m) => m.enums(),
         }
     }
-    pub fn package(&self) -> Option<Rc<Package<'a, U>>> {
+    pub fn package(&self) -> Option<Package<'a, U>> {
         match self {
             Container::File(f) => f.package(),
             Container::Message(m) => m.package(),

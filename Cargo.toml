@@ -14,4 +14,4 @@ which = { version = "4.2" }
 
 
 [workspace]
-members = ["./catalyze-build", "./protoc-gen-echo"]
+members = ["./catalyze-build"]

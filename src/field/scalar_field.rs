@@ -1,4 +1,4 @@
-use std::rc::Weak;
+use std::rc::{Rc, Weak};
 
 use crate::{Field, FieldDetail, FullyQualified, Name};
 
@@ -11,6 +11,12 @@ pub struct ScalarField<'a, U> {
 impl<'a, U> ScalarField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.detail.name()
+    }
+    pub fn fully_qualified_name(&self) -> String {
+        self.detail.fully_qualified_name()
+    }
+    pub fn field(&self) -> Rc<Field<'a, U>> {
+        self.field.upgrade().unwrap()
     }
 }
 

@@ -3,7 +3,7 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{format_fqn, iter::Iter, visit::Visitor, Enum, FullyQualified, Name, Node, NodeAtPath};
+use crate::{format_fqn, Enum, FullyQualified, Name, Node, NodeAtPath};
 use prost_types::EnumValueDescriptorProto;
 
 pub(crate) type EnumValueList<'a, U> = Rc<RefCell<Vec<Rc<EnumValue<'a, U>>>>>;
