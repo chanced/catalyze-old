@@ -91,7 +91,7 @@ pub(crate) struct WellKnownEnumFieldDetail<'a, U> {
 }
 
 #[derive(Debug)]
-pub struct WellKnownEnumField<'a, U>(Rc<WellKnownMsgFieldDetail<'a, U>>);
+pub struct WellKnownEnumField<'a, U>(Rc<WellKnownEnumFieldDetail<'a, U>>);
 impl<'a, U> WellKnownEnumField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.0.name()
@@ -111,12 +111,12 @@ impl<'a, U> WellKnownEnumField<'a, U> {
 }
 impl<'a, U> Named<U> for WellKnownEnumField<'a, U> {
     fn name(&self) -> Name<U> {
-        self.0.name()
+        self.0.enum_field.fully_qualified_name()
     }
 }
 impl<'a, U> FullyQualified for WellKnownEnumField<'a, U> {
     fn fully_qualified_name(&self) -> String {
-        self.0.fully_qualified_name()
+        self.0.enum_field.fully_qualified_name()
     }
 }
 

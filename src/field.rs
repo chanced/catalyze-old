@@ -59,6 +59,10 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.name.clone()
     }
+
+    pub fn fully_qualified_name(&self) -> String {
+        self.fqn.clone()
+    }
 }
 
 impl<'a, U> Field<'a, U> {
@@ -103,10 +107,37 @@ impl<'a, U> FullyQualified for Field<'a, U> {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct WeakField<'a, U>(Weak<FieldDetail<'a, U>>);
+impl<'a, U> Clone for WeakField<'a, U> {
+    fn clone(&self) -> Self {
+        match self {
+            WeakField::Scalar(_) => todo!(),
+            WeakField::Message(_) => todo!(),
+            WeakField::Map(_) => todo!(),
+            Repeated(RepeatedField<'a, U>),
+            Oneof(OneofField<'a, U>),
+            WellKnownType(WellKnownTypeField<'a, U>),
+        }
+    }
+}
+
+impl<'a, U> Upgrade for WeakField<'a, U> {
+    type Target = Field<'a, U>;
+    fn upgrade(self) -> Self::Target {
+        match self {
+            WeakField::Scalar(f) => Field::Scalar(f.upgrade()),
+            WeakField::Message(f) => Field::Message(f.upgrade()),
+            WeakField::Map(f) => Field::Map(f.upgrade()),
+        }
+    }
+}
 
 enum WeakField<'a, U> {
     Scalar(Weak<ScalarFieldDetail<'a, U>>),
     Message(Weak<MessageFieldDetail<'a, U>>),
     Map(Weak<MapFieldDetail<'a, U>>),
+    Repeated(WeakRepeatedField<'a, U>),
+    Oneof(WeakOneofField<'a, U>),
+    WellKnownType(WeakWellKnownTypeField<'a, U>),
 }
