@@ -14,7 +14,7 @@ pub trait FullyQualified {
 pub enum Node<'a, U> {
     File(File<'a, U>),
     Message(Message<'a, U>),
-    Oneof(Rc<Oneof<'a, U>>),
+    Oneof(Oneof<'a, U>),
     Enum(Enum<'a, U>),
     EnumValue(EnumValue<'a, U>),
     Service(Service<'a, U>),
@@ -74,30 +74,6 @@ impl<'a, U> NodeAtPath<'a, U> for Node<'a, U> {
 pub trait IntoNode<'a, U> {
     fn into_node(self) -> Node<'a, U>;
 }
-
-macro_rules! from_and_into_node {
-    ($($t:ident),*) => {
-        $(
-            impl<'a, U> From<Rc<$t<'a, U>>> for Node<'a, U> {
-                fn from(node: Rc<$t<'a, U>>) -> Self {
-                    Node::$t(node)
-                }
-            }
-            impl<'a, U> From<&Rc<$t<'a, U>>> for Node<'a, U> {
-                fn from(node: &Rc<$t<'a, U>>) -> Self {
-                    Node::$t(node.clone())
-                }
-            }
-            impl<'a, U> IntoNode<'a, U> for Rc<$t<'a, U>> {
-                fn into_node(self) -> Node<'a, U> {
-                    Node::from(self)
-                }
-            }
-        )*
-    };
-}
-
-from_and_into_node!(File, Message, Oneof, Enum, EnumValue, Service, Method, Extension);
 
 impl<'a, U> From<Field<'a, U>> for Node<'a, U> {
     fn from(field: Field<'a, U>) -> Self {

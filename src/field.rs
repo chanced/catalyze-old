@@ -23,27 +23,14 @@ use crate::{proto::Type, FullyQualified, IntoNode, Message, Name, Node, NodeAtPa
 
 pub(crate) type FieldList<'a, U> = Rc<RefCell<Vec<Field<'a, U>>>>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Field<'a, U> {
-    Scalar(Rc<ScalarField<'a, U>>),
-    Message(Rc<MessageField<'a, U>>),
-    Map(Rc<MapField<'a, U>>),
-    Repeated(Rc<RepeatedField<'a, U>>),
-    Oneof(Rc<OneofField<'a, U>>),
-    WellKnownType(Rc<WellKnownTypeField<'a, U>>),
-}
-
-impl<'a, U> Clone for Field<'a, U> {
-    fn clone(&self) -> Self {
-        match self {
-            Field::Scalar(s) => Field::Scalar(Rc::clone(s)),
-            Field::Message(m) => Field::Message(Rc::clone(m)),
-            Field::Map(m) => Field::Map(Rc::clone(m)),
-            Field::Repeated(r) => Field::Repeated(Rc::clone(r)),
-            Field::Oneof(o) => Field::Oneof(Rc::clone(o)),
-            Field::WellKnownType(w) => Field::WellKnownType(Rc::clone(w)),
-        }
-    }
+    Scalar(ScalarField<'a, U>),
+    Message(MessageField<'a, U>),
+    Map(MapField<'a, U>),
+    Repeated(RepeatedField<'a, U>),
+    Oneof(OneofField<'a, U>),
+    WellKnownType(WellKnownTypeField<'a, U>),
 }
 
 #[derive(Debug, Clone)]

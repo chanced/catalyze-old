@@ -2,6 +2,7 @@ use std::rc::{Rc, Weak};
 
 use crate::file::{FileDetail, WeakFile};
 use crate::iter::{AllEnums, AllMessages, Iter};
+use crate::traits::Upgrade;
 use crate::{Enum, File, FullyQualified, Message, Name, Node, Package, WeakMessage};
 
 // pub enum Entity {
@@ -17,8 +18,8 @@ impl<'a, U> WeakContainer<'a, U> {
     // TODO: should this return Option<Container<'a, U>>?
     pub(crate) fn upgrade(&self) -> Container<'a, U> {
         match self {
-            WeakContainer::File(f) => Container::File(File(f.upgrade().unwrap())),
-            WeakContainer::Message(m) => Container::Message(m.upgrade().unwrap()),
+            WeakContainer::File(f) => Container::File(f.upgrade()),
+            WeakContainer::Message(m) => Container::Message(m.upgrade()),
         }
     }
 

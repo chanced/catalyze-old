@@ -21,7 +21,7 @@ pub trait Visitor<'a, U>: Sized {
         visit_package(self, pkg)
     }
 
-    fn visit_file(&mut self, f: Rc<File<'a, U>>) -> Result<(), Self::Error> {
+    fn visit_file(&mut self, f: File<'a, U>) -> Result<(), Self::Error> {
         visit_file(self, f)
     }
 
@@ -41,7 +41,7 @@ pub trait Visitor<'a, U>: Sized {
         Ok(())
     }
 
-    fn visit_oneof(&mut self, oneof: Rc<Oneof<'a, U>>) -> Result<(), Self::Error> {
+    fn visit_oneof(&mut self, oneof: Oneof<'a, U>) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -178,7 +178,7 @@ where
     Ok(())
 }
 
-pub fn visit_file<'a, U, V>(v: &mut V, f: Rc<File<'a, U>>) -> Result<(), V::Error>
+pub fn visit_file<'a, U, V>(v: &mut V, f: File<'a, U>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
 {
@@ -241,7 +241,7 @@ where
     Ok(())
 }
 
-pub fn visit_oneof<'a, U, V>(v: &mut V, one: Rc<Oneof<'a, U>>) -> Result<(), V::Error>
+pub fn visit_oneof<'a, U, V>(v: &mut V, one: Oneof<'a, U>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
 {

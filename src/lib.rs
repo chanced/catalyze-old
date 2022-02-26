@@ -18,24 +18,23 @@ pub mod path;
 pub mod proto;
 mod service;
 mod source;
+mod traits;
 pub mod util;
 pub mod visit;
-
 mod well_known_type;
 pub use ast::*;
 pub use enum_value::*;
 pub use extension::*;
-pub use field::*;
-pub use field::*;
-pub use file::File;
+pub use field::Field;
+pub use file::*;
 pub use generator::*;
 pub use message::*;
 pub use method::*;
 pub use method::*;
-pub use name::Name;
+pub use name::*;
 pub use node::*;
 pub use oneof::*;
-pub use package::Package;
+pub use package::*;
 
 pub use r#enum::*;
 pub use service::*;
@@ -43,12 +42,3 @@ pub use source::*;
 pub use util::ToCase;
 
 pub use well_known_type::*;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
-}

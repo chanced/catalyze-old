@@ -211,20 +211,28 @@ pub enum WellKnownEnumField<'a, U> {
     Syntax(Rc<WktEnumField<'a, U>>),
 }
 
+#[derive(Debug)]
+pub struct WktMessageField<'a, U>(Rc<WktMessageFieldDetail<'a, U>>);
+impl<'a, U> Clone for WktMessageField<'a, U> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
 #[derive(Clone, Debug)]
-pub struct WktMessageField<'a, U> {
-    oneof: Weak<Oneof<'a, U>>,
+struct WktMessageFieldDetail<'a, U> {
+    oneof: WeakOneof<'a, U>,
     msg_field: Weak<MessageField<'a, U>>,
     field: Weak<Field<'a, U>>,
-    detail: FieldDetail<'a, U>,
+    detail: Rc<FieldDetail<'a, U>>,
 }
 
 impl<'a, U> WktMessageField<'a, U> {
     pub fn name(&self) -> Name<U> {
-        self.detail.name()
+        self.0.detail.name()
     }
-    pub fn oneof(&self) -> Rc<Oneof<'a, U>> {
-        self.oneof.upgrade().unwrap()
+    pub fn oneof(&self) -> Oneof<'a, U> {
+        self.0.oneof.upgrade()
     }
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
@@ -247,7 +255,7 @@ impl<'a, U> WktEnumField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.enum_field.upgrade().unwrap().name()
     }
-    pub fn oneof(&self) -> Rc<Oneof<'a, U>> {
+    pub fn oneof(&self) -> Oneof<'a, U> {
         self.oneof.upgrade().unwrap()
     }
 }

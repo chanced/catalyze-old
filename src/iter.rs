@@ -1,24 +1,33 @@
 use std::{
     cell::RefCell,
     collections::{HashSet, VecDeque},
-    rc::{Rc, Weak},
+    marker::PhantomData,
+    rc::Rc,
 };
 
-use crate::{EnumList, File, Message, MessageList, Name};
+use crate::{
+    traits::{Downgrade, Upgrade},
+    Enum, EnumList, File, Message, MessageList, Name, WeakFile,
+};
 
 pub struct Iter<T> {
-    nodes: Rc<RefCell<Vec<Rc<T>>>>,
+    nodes: Rc<RefCell<Vec<T>>>,
     idx: usize,
 }
-impl<T> Iterator for Iter<T> {
-    type Item = Rc<T>;
-    fn next(&mut self) -> Option<Rc<T>> {
+
+impl<T> Iterator for Iter<T>
+where
+    T: Clone,
+{
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
         self.idx += 1;
         self.nodes.borrow().get(self.idx - 1).cloned()
     }
 }
-impl<T> From<&Rc<RefCell<Vec<Rc<T>>>>> for Iter<T> {
-    fn from(nodes: &Rc<RefCell<Vec<Rc<T>>>>) -> Self {
+
+impl<T> From<&Rc<RefCell<Vec<T>>>> for Iter<T> {
+    fn from(nodes: &Rc<RefCell<Vec<T>>>) -> Self {
         Iter {
             nodes: nodes.clone(),
             idx: 0,
@@ -26,25 +35,39 @@ impl<T> From<&Rc<RefCell<Vec<Rc<T>>>>> for Iter<T> {
     }
 }
 
-pub struct UpgradeIter<T> {
-    nodes: Rc<RefCell<Vec<Weak<T>>>>,
+pub struct UpgradeIter<T>
+where
+    T: Downgrade,
+{
+    nodes: Rc<RefCell<Vec<T::Target>>>,
     idx: usize,
+    phantom: PhantomData<T>,
 }
-impl<T> UpgradeIter<T> {
-    pub(crate) fn new(nodes: Rc<RefCell<Vec<Weak<T>>>>) -> Self {
-        Self { nodes, idx: 0 }
+impl<T> UpgradeIter<T>
+where
+    T: Downgrade,
+    T::Target: Upgrade<Target = T>,
+{
+    pub(crate) fn new(nodes: Rc<RefCell<Vec<T::Target>>>) -> Self {
+        Self {
+            nodes: nodes.clone(),
+            phantom: PhantomData,
+            idx: 0,
+        }
     }
 }
-impl<T> Iterator for UpgradeIter<T> {
-    type Item = Rc<T>;
+
+impl<T> Iterator for UpgradeIter<T>
+where
+    T: Downgrade,
+    T::Target: Upgrade<Target = T>,
+{
+    type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
         let nodes = self.nodes.borrow();
         if self.idx < nodes.len() {
             self.idx += 1;
-            nodes
-                .get(self.idx - 1)
-                .cloned()
-                .map(|n| n.upgrade().unwrap())
+            nodes.get(self.idx - 1).map(|n| n.upgrade())
         } else {
             None
         }
@@ -57,20 +80,20 @@ pub struct TransitiveImports<'a, U> {
 }
 
 impl<'a, U> TransitiveImports<'a, U> {
-    pub(crate) fn new(files: Rc<RefCell<Vec<Weak<File<'a, U>>>>>) -> Self {
+    pub(crate) fn new(files: Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
         Self {
-            queue: VecDeque::from_iter(files.borrow().iter().map(|f| f.upgrade().unwrap())),
+            queue: VecDeque::from_iter(files.borrow().iter().map(|f| f.upgrade())),
             processed: HashSet::new(),
         }
     }
 }
 
 impl<'a, U> Iterator for TransitiveImports<'a, U> {
-    type Item = Rc<File<'a, U>>;
+    type Item = File<'a, U>;
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(file) = self.queue.pop_front() {
-            if !self.processed.contains(&file.name) {
-                self.processed.insert(file.name.clone());
+            if !self.processed.contains(&file.name()) {
+                self.processed.insert(file.name());
                 for d in file.dependencies() {
                     self.queue.push_back(d);
                 }

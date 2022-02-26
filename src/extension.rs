@@ -1,49 +1,75 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    rc::{Rc, Weak},
+};
 
 use prost_types::FieldDescriptorProto;
 
 use crate::{
     container::{Container, WeakContainer},
-    format_fqn, FullyQualified, Name,
+    format_fqn,
+    traits::Upgrade,
+    FullyQualified, Name,
 };
 
 pub(crate) type ExtensionList<'a, U> = Rc<RefCell<Vec<Extension<'a, U>>>>;
-pub(crate) fn new_extension_list<'a, U>(cap: usize) -> ExtensionList<'a, U> {
-    match cap {
-        0 => Rc::new(RefCell::new(Vec::new())),
-        cap => Rc::new(RefCell::new(Vec::with_capacity(cap))),
-    }
-}
 
 #[derive(Debug, Clone)]
-pub struct Extension<'a, U> {
-    pub name: Name<U>,
-    pub descriptor: &'a FieldDescriptorProto,
+struct ExtensionDetail<'a, U> {
+    name: Name<U>,
+    descriptor: &'a FieldDescriptorProto,
     fqn: String,
     container: WeakContainer<'a, U>,
 }
+
+#[derive(Debug)]
+pub struct Extension<'a, U>(Rc<ExtensionDetail<'a, U>>);
 
 impl<'a, U> Extension<'a, U> {
     pub(crate) fn new(
         desc: &'a FieldDescriptorProto,
         container: Container<'a, U>,
         util: Rc<RefCell<U>>,
-    ) -> Rc<Self> {
-        let ext = Rc::new(Self {
+    ) -> Self {
+        let ext = Self(Rc::new(ExtensionDetail {
             name: Name::new(desc.name(), util),
             descriptor: desc,
             container: container.downgrade(),
             fqn: format_fqn(&container, desc.name()),
-        });
+        }));
         ext
     }
     pub fn name(&self) -> Name<U> {
-        self.name.clone()
+        self.0.name.clone()
+    }
+    fn fully_qualified_name(&self) -> String {
+        self.0.fqn.clone()
     }
 }
 
 impl<U> FullyQualified for Extension<'_, U> {
     fn fully_qualified_name(&self) -> String {
-        self.fqn.clone()
+        self.0.fqn.clone()
+    }
+}
+impl<'a, U> Clone for Extension<'a, U> {
+    fn clone(&self) -> Self {
+        Extension(self.0.clone())
+    }
+}
+
+pub(crate) struct WeakExtension<'a, U>(Weak<ExtensionDetail<'a, U>>);
+
+impl<'a, U> Upgrade for WeakExtension<'a, U> {
+    type Target = Extension<'a, U>;
+
+    fn upgrade(self) -> Self::Target {
+        Extension(self.0.upgrade().expect("Extension was dropped"))
+    }
+}
+
+impl<'a, U> Clone for WeakExtension<'a, U> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
     }
 }

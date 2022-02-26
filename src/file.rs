@@ -5,6 +5,7 @@ use crate::iter::{AllEnums, AllMessages, Iter, TransitiveImports, UpgradeIter};
 use crate::package::WeakPackage;
 use crate::path::FileDescriptorPath;
 
+use crate::traits::{Downgrade, Upgrade};
 use crate::{
     Enum, EnumList, Extension, ExtensionList, FullyQualified, Message, MessageList, Name, Node,
     NodeAtPath, Package, Service, ServiceList,
@@ -31,8 +32,8 @@ struct FileDetail<'a, U> {
     messages: MessageList<'a, U>,
     enums: EnumList<'a, U>,
     services: ServiceList<'a, U>,
-    dependents: Rc<RefCell<Vec<Weak<File<'a, U>>>>>,
-    dependencies: Rc<RefCell<Vec<Weak<File<'a, U>>>>>,
+    dependents: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
+    dependencies: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
     defined_extensions: ExtensionList<'a, U>,
 }
 
@@ -155,23 +156,33 @@ impl<'a, U> File<'a, U> {
         &self.0.file_path
     }
     pub fn package(&self) -> Option<Package<'a, U>> {
-        self.0.pkg.clone().map(|p| p.upgrade().unwrap())
+        self.0.pkg.clone().map(|p| p.upgrade())
     }
 
-    pub(crate) fn add_dependency(&self, file: Rc<File<'a, U>>) {
-        self.0.dependencies.borrow_mut().push(Rc::downgrade(&file));
+    pub(crate) fn add_dependency(&self, file: File<'a, U>) {
+        self.0.dependencies.borrow_mut().push(file.downgrade());
     }
 
-    pub(crate) fn add_dependent(&self, file: Rc<File<'a, U>>) {
-        self.0.dependents.borrow_mut().push(Rc::downgrade(&file));
+    pub(crate) fn add_dependent(&self, file: File<'a, U>) {
+        self.0.dependents.borrow_mut().push(file.downgrade());
     }
 }
-trait Hydrate<'a, U> {
-    fn hydrate(&self) -> Rc<File<'a, U>>;
-    fn hydrate_messages(&self);
-    fn hydrate_enums(&self);
-    fn hydrate_services(&self);
-    fn hydrate_extensions(&self);
+impl<'a, U> Downgrade for File<'a, U> {
+    type Target = WeakFile<'a, U>;
+    fn downgrade(self) -> Self::Target {
+        WeakFile(Rc::downgrade(&self.0))
+    }
+}
+
+impl<'a, U> Into<Node<'a, U>> for File<'a, U> {
+    fn into(self) -> Node<'a, U> {
+        Node::File(self)
+    }
+}
+impl<'a, U> Into<Node<'a, U>> for &File<'a, U> {
+    fn into(self) -> Node<'a, U> {
+        Node::File(self.clone())
+    }
 }
 
 impl<'a, U> NodeAtPath<'a, U> for File<'a, U> {
@@ -222,18 +233,14 @@ impl<'a, U> Into<Container<'a, U>> for File<'a, U> {
 }
 impl<'a, U> Into<WeakContainer<'a, U>> for File<'a, U> {
     fn into(self) -> WeakContainer<'a, U> {
-        WeakContainer::File(Rc::downgrade(&self.0))
+        WeakContainer::File(self.downgrade())
     }
 }
-impl<'a, U> Into<Node<'a, U>> for File<'a, U> {
-    fn into(self) -> Node<'a, U> {
-        Node::File(self)
-    }
-}
+
 impl<'a, U> Deref for File<'a, U> {
     type Target = Node<'a, U>;
     fn deref(&self) -> &Self::Target {
-        &Node::File(self.0.clone())
+        &Node::File(File(self.0.clone()))
     }
 }
 
@@ -241,14 +248,18 @@ impl<'a, U> Deref for File<'a, U> {
 pub(crate) struct WeakFile<'a, U>(Weak<FileDetail<'a, U>>);
 
 impl<'a, U> WeakFile<'a, U> {
-    pub(crate) fn upgrade(&self) -> File<'a, U> {
-        File(self.0.upgrade().unwrap())
-    }
-
     pub(crate) fn package(&self) -> Option<Package<'a, U>> {
-        self.0.upgrade().map(|f| Package(f.package.clone()))
+        self.upgrade().package()
     }
 }
+
+impl<'a, U> Upgrade for WeakFile<'a, U> {
+    type Target = File<'a, U>;
+    fn upgrade(self) -> Self::Target {
+        File(self.0.upgrade().expect("File was dropped"))
+    }
+}
+
 impl<'a, U> Clone for WeakFile<'a, U> {
     fn clone(&self) -> Self {
         WeakFile(self.0.clone())

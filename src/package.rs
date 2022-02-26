@@ -37,7 +37,7 @@ impl<'a, U> Package<'a, U> {
         }))
     }
 
-    pub(crate) fn add_file(&self, file: Rc<File<'a, U>>) {
+    pub(crate) fn add_file(&self, file: File<'a, U>) {
         self.0.files.borrow_mut().push(file);
     }
 

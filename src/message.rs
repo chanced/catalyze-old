@@ -6,13 +6,15 @@ use std::str::FromStr;
 use prost_types::DescriptorProto;
 
 use crate::container::BuildTarget;
+use crate::field::FieldList;
 use crate::iter::{AllEnums, AllMessages, Iter, UpgradeIter};
 use crate::name::Named;
 use crate::path::DescriptorPath;
+use crate::traits::{Downgrade, Upgrade};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
-    format_fqn, Enum, EnumList, Extension, Field, FieldList, FullyQualified, Node, NodeAtPath,
-    Oneof, OneofList,
+    format_fqn, Enum, EnumList, Extension, Field, FullyQualified, Node, NodeAtPath, Oneof,
+    OneofList,
 };
 use crate::{Package, WellKnownType};
 
@@ -49,7 +51,7 @@ pub(crate) struct MessageDetail<'a, U> {
     /// `Extension`s defined by this message.
     defined_extensions: Rc<RefCell<Vec<Extension<'a, U>>>>,
     /// `Extension`s applied to this `Message`
-    applied_extensions: Rc<RefCell<Vec<Weak<Extension<'a, U>>>>>,
+    applied_extensions: Rc<RefCell<Vec<WeakExtension<'a, U>>>>,
 }
 
 impl<'a, U> Message<'a, U> {
@@ -93,33 +95,25 @@ impl<'a, U> Message<'a, U> {
         }));
 
         let container = Container::Message(msg.clone());
-        {
-            let mut msgs = msg.0.messages.borrow_mut();
-            for md in msg.0.descriptor.nested_type.iter() {
-                let msg = Message::new(md, container.clone(), util.clone());
-                msgs.push(msg);
-            }
+        let mut msgs = msg.0.messages.borrow_mut();
+        for md in msg.0.descriptor.nested_type.iter() {
+            let msg = Message::new(md, container.clone(), util.clone());
+            msgs.push(msg);
         }
-        {
-            let mut enums = msg.0.enums.borrow_mut();
-            for ed in descriptor.enum_type.iter() {
-                let e = Enum::new(ed, container.clone(), util.clone());
-                enums.push(e);
-            }
+        let mut enums = msg.0.enums.borrow_mut();
+        for ed in descriptor.enum_type.iter() {
+            let e = Enum::new(ed, container.clone(), util.clone());
+            enums.push(e);
         }
-        {
-            let mut oneofs = msg.0.oneofs.borrow_mut();
-            for od in msg.0.descriptor.oneof_decl.iter() {
-                let o = Oneof::new(od, container.clone(), util.clone());
-                oneofs.push(o);
-            }
+        let mut oneofs = msg.0.oneofs.borrow_mut();
+        for od in msg.0.descriptor.oneof_decl.iter() {
+            let o = Oneof::new(od, container.clone(), util.clone());
+            oneofs.push(o);
         }
-        {
-            let mut def_exts = msg.0.defined_extensions.borrow_mut();
-            for xd in descriptor.extension.iter() {
-                let ext = Extension::new(xd, container.clone(), util.clone());
-                def_exts.push(ext);
-            }
+        let mut def_exts = msg.0.defined_extensions.borrow_mut();
+        for xd in descriptor.extension.iter() {
+            let ext = Extension::new(xd, container.clone(), util.clone());
+            def_exts.push(ext);
         }
 
         msg
@@ -184,6 +178,14 @@ impl<'a, U> Message<'a, U> {
     }
 }
 
+impl<'a, U> Downgrade for Message<'a, U> {
+    type Target = WeakMessage<'a, U>;
+
+    fn downgrade(self) -> Self::Target {
+        todo!()
+    }
+}
+
 impl<'a, U> FullyQualified for Message<'a, U> {
     fn fully_qualified_name(&self) -> String {
         self.0.fqn.clone()
@@ -232,11 +234,7 @@ impl<'a, U> Into<Container<'a, U>> for Message<'a, U> {
         Container::Message(self)
     }
 }
-impl<'a, U> Into<WeakContainer<'a, U>> for Message<'a, U> {
-    fn into(self) -> WeakContainer<'a, U> {
-        WeakContainer::Message(Rc::downgrade(&self.0))
-    }
-}
+
 impl<'a, U> Into<Node<'a, U>> for Message<'a, U> {
     fn into(self) -> Node<'a, U> {
         Node::Message(self)
@@ -246,5 +244,20 @@ impl<'a, U> Deref for Message<'a, U> {
     type Target = Node<'a, U>;
     fn deref(&self) -> &Self::Target {
         &Node::Message(self.clone())
+    }
+}
+#[derive(Debug)]
+pub(crate) struct WeakMessage<'a, U>(Weak<MessageDetail<'a, U>>);
+impl<'a, U> Upgrade for WeakMessage<'a, U> {
+    type Target = Message<'a, U>;
+
+    fn upgrade(self) -> Self::Target {
+        Message(self.0.upgrade().expect("Message was dropped"))
+    }
+}
+
+impl<'a, U> Clone for WeakMessage<'a, U> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
     }
 }
