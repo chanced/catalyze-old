@@ -1,11 +1,9 @@
-use std::rc::{Rc, Weak};
-
-use crate::{Field, FieldDetail, FullyQualified, Name};
-
+use super::FieldDetail;
+use crate::{Field, FullyQualified, Name};
 #[derive(Debug, Clone)]
 pub struct ScalarField<'a, U> {
     detail: FieldDetail<'a, U>,
-    field: Weak<Field<'a, U>>,
+    field: WeakField<'a, U>,
 }
 
 impl<'a, U> ScalarField<'a, U> {

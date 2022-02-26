@@ -35,7 +35,7 @@ impl<'a, U> Oneof<'a, U> {
         desc: &'a prost_types::OneofDescriptorProto,
         container: Container<'a, U>,
         util: Rc<RefCell<U>>,
-    ) -> Rc<Self> {
+    ) -> Self {
         Oneof(Rc::new(OneofDetail {
             name: Name::new(desc.name(), util),
             fqn: format_fqn(&container, desc.name()),
@@ -71,7 +71,7 @@ impl<'a, U> NodeAtPath<'a, U> for Oneof<'a, U> {
 
 impl<'a, U> Downgrade for Oneof<'a, U> {
     type Target = WeakOneof<'a, U>;
-    fn downgrade(&self) -> Self::Target {
+    fn downgrade(self) -> Self::Target {
         WeakOneof(Rc::downgrade(&self.0))
     }
 }
@@ -81,9 +81,13 @@ impl<'a, U> FullyQualified for Oneof<'a, U> {
         self.0.fqn.clone()
     }
 }
-
+#[derive(Debug)]
 pub(crate) struct WeakOneof<'a, U>(Weak<OneofDetail<'a, U>>);
-
+impl<'a, U> Clone for WeakOneof<'a, U> {
+    fn clone(&self) -> Self {
+        WeakOneof(self.0.clone())
+    }
+}
 impl<'a, U> WeakOneof<'a, U> {
     pub(crate) fn upgrade(&self) -> Oneof<'a, U> {
         Oneof(self.0.upgrade().unwrap())
@@ -91,7 +95,7 @@ impl<'a, U> WeakOneof<'a, U> {
 }
 impl<'a, U> Upgrade for WeakOneof<'a, U> {
     type Target = Oneof<'a, U>;
-    fn upgrade(&self) -> Self::Target {
+    fn upgrade(self) -> Self::Target {
         Oneof(self.0.upgrade().unwrap())
     }
 }

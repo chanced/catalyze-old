@@ -1,6 +1,8 @@
 use std::rc::{Rc, Weak};
 
-use crate::{name::Named, Field, FieldDetail, FullyQualified, Name};
+use crate::{name::Named, Field, FullyQualified, Name};
+
+use super::WeakField;
 
 pub enum MapFieldKey {
     Int64 = 3,
@@ -17,9 +19,9 @@ pub enum MapFieldKey {
 }
 #[derive(Debug, Clone)]
 pub enum MapField<'a, U> {
-    Scalar(Rc<MapScalarField<'a, U>>),
-    Enum(Rc<MapEnumField<'a, U>>),
-    Message(Rc<MapMessageField<'a, U>>),
+    Scalar(MapScalarField<'a, U>),
+    Enum(MapEnumField<'a, U>),
+    Message(MapMessageField<'a, U>),
 }
 
 impl<'a, U> MapField<'a, U> {
@@ -67,12 +69,10 @@ impl<'a, U> Named<U> for MapField<'a, U> {
 }
 
 #[derive(Debug, Clone)]
-pub struct MapScalarField<'a, U> {
-    field: Weak<Field<'a, U>>,
-    map_field: Weak<MapField<'a, U>>,
-    detail: FieldDetail<'a, U>,
+pub struct MapScalarFieldDetail<'a, U> {
+    field: WeakField<'a, U>,
 }
-
+pub struct MapScalarField<'a, U>(Rc<MapScalarFieldDetail<'a, U>>);
 impl<'a, U> MapScalarField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.detail.name()

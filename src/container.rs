@@ -1,6 +1,6 @@
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 
-use crate::file::{FileDetail, WeakFile};
+use crate::file::WeakFile;
 use crate::iter::{AllEnums, AllMessages, Iter};
 use crate::traits::Upgrade;
 use crate::{Enum, File, FullyQualified, Message, Name, Node, Package, WeakMessage};

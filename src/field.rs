@@ -19,9 +19,19 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{proto::Type, FullyQualified, IntoNode, Message, Name, Node, NodeAtPath};
+use crate::{
+    proto::Type, traits::Upgrade, FullyQualified, IntoNode, Message, Name, Node, NodeAtPath,
+};
 
 pub(crate) type FieldList<'a, U> = Rc<RefCell<Vec<Field<'a, U>>>>;
+
+pub enum FieldType {
+    Scalar,
+    Message,
+    Map,
+    Repeated,
+    WellKnownType,
+}
 
 #[derive(Debug, Clone)]
 pub enum Field<'a, U> {
@@ -42,29 +52,6 @@ pub(crate) struct FieldDetail<'a, U> {
 }
 
 impl<'a, U> FieldDetail<'a, U> {
-    //     pub(crate) fn new(
-    //         desc: &'a FieldDescriptorProto,
-    //         msg: Message<'a, U>,
-    //         util: Rc<RefCell<U>>,
-    //     ) -> Rc<Self> {
-    //         let field = Rc::new(Self {
-    //             name: Name::new(desc.name(), util),
-    //             descriptor: desc,
-    //             fqn: fmt_fqn(msg.as_ref(), desc.name()),
-    //             msg: Rc::downgrade(&msg),
-    //             oneof: RefCell::new(Weak::new()),
-    //             field_type: RefCell::new(None),
-    //         });
-    //         field
-    //     }
-
-    //     pub fn message(&self) -> Message<'a, U> {
-    //         self.msg.upgrade().unwrap()
-    //     }
-    //     pub fn field_type(&self) -> Rc<FieldType<'a, U>> {
-    //         self.field_type.borrow().as_ref().unwrap().clone()
-    //     }
-
     pub fn proto_type(&self) -> Type {
         self.descriptor.r#type()
     }
@@ -114,4 +101,12 @@ impl<'a, U> FullyQualified for Field<'a, U> {
             Field::WellKnownType(f) => f.fully_qualified_name(),
         }
     }
+}
+
+pub(crate) struct WeakField<'a, U>(Weak<FieldDetail<'a, U>>);
+
+enum WeakField<'a, U> {
+    Scalar(Weak<ScalarFieldDetail<'a, U>>),
+    Message(Weak<MessageFieldDetail<'a, U>>),
+    Map(Weak<MapFieldDetail<'a, U>>),
 }

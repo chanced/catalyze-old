@@ -1,8 +1,13 @@
 // use std::str::FromStr;
 
 pub const WELL_KNNOWN_TYPE_PACKAGE: &str = "google.protobuf";
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WellKnownType {
+    Enum(WellKnownEnum),
+    Message(WellKnownMessage),
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WellKnownMessage {
     /// Any contains an arbitrary serialized message along with a URL that
     /// describes the type of the serialized message.
     ///
@@ -56,13 +61,6 @@ pub enum WellKnownType {
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#field
     Field,
-    /// Whether a field is optional, required, or repeated.
-    ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#cardinality
-    FieldCardinality,
-    /// Basic field types.
-    ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#kind
     FieldKind,
     /// FieldMask represents a set of symbolic field paths, for example:
     /// ```protobuf
@@ -128,11 +126,6 @@ pub enum WellKnownType {
     /// ```
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Mixin
     Mixin,
-    /// NullValue is a singleton enumeration to represent the null value for the
-    /// Value type union.
-    ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#nullvalue
-    NullValue,
     /// A protocol buffer option, which can be attached to a message, field,
     /// enumeration, etc.
     ///
@@ -156,10 +149,6 @@ pub enum WellKnownType {
     ///
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#struct
     Struct,
-    /// The syntax in which a protocol buffer element is defined.
-    ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#syntax
-    Syntax,
     /// A Timestamp represents a point in time independent of any time zone or
     /// calendar, represented as seconds and fractions of seconds at nanosecond
     /// resolution in UTC Epoch time. It is encoded using the Proleptic
@@ -193,6 +182,7 @@ pub enum WellKnownType {
     /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#value
     Value,
 }
+
 impl std::str::FromStr for WellKnownType {
     type Err = anyhow::Error;
 
@@ -220,4 +210,25 @@ impl std::str::FromStr for WellKnownType {
         //     _ => bail!("Unknown WellKnownType"),
         // }
     }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WellKnownEnum {
+    /// Whether a field is optional, required, or repeated.
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#cardinality
+    FieldCardinality,
+    /// Basic field types.
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#kind
+    FieldKind,
+
+    /// NullValue is a singleton enumeration to represent the null value for the
+    /// Value type union.
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#nullvalue
+    NullValue,
+    /// The syntax in which a protocol buffer element is defined.
+    ///
+    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#syntax
+    Syntax,
 }
