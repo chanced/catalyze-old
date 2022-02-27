@@ -29,7 +29,6 @@ impl<'a, U> Clone for Oneof<'a, U> {
         Oneof(self.0.clone())
     }
 }
-
 impl<'a, U> Oneof<'a, U> {
     pub(crate) fn new(
         desc: &'a prost_types::OneofDescriptorProto,

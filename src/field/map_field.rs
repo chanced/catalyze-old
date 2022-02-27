@@ -1,8 +1,11 @@
-use std::rc::{Rc, Weak};
+use std::{
+    marker::PhantomData,
+    rc::{Rc, Weak},
+};
 
-use crate::{name::Named, Field, FullyQualified, Name};
+use crate::{name::Named, Field, FullyQualified, Name, WeakMessage};
 
-use super::WeakField;
+use super::{EnumField, FieldDetail, ScalarField};
 
 pub enum MapFieldKey {
     Int64 = 3,
@@ -17,6 +20,14 @@ pub enum MapFieldKey {
     Sint32 = 17,
     Sint64 = 18,
 }
+
+#[derive(Debug, Clone)]
+
+struct MapFieldDetail<'a, U> {
+    key: MapFieldKey,
+    detail: FieldDetail<'a, U>,
+}
+
 #[derive(Debug, Clone)]
 pub enum MapField<'a, U> {
     Scalar(MapScalarField<'a, U>),
@@ -70,15 +81,20 @@ impl<'a, U> Named<U> for MapField<'a, U> {
 
 #[derive(Debug, Clone)]
 pub struct MapScalarFieldDetail<'a, U> {
-    field: WeakField<'a, U>,
+    scalar_field: ScalarField<'a, U>,
+    key: MapFieldKey,
+    phantom: PhantomData<&'a U>,
 }
+#[derive(Debug)]
+
 pub struct MapScalarField<'a, U>(Rc<MapScalarFieldDetail<'a, U>>);
+
 impl<'a, U> MapScalarField<'a, U> {
     pub fn name(&self) -> Name<U> {
-        self.detail.name()
+        self.0.name()
     }
     pub fn fully_qualified_name(&self) -> String {
-        self.detail.fully_qualified_name()
+        self.0.fully_qualified_name()
     }
     pub fn field(&self) -> Field<'a, U> {
         self.field.upgrade().unwrap()
@@ -102,9 +118,8 @@ impl<'a, U> FullyQualified for MapScalarField<'a, U> {
 
 #[derive(Debug, Clone)]
 pub struct MapMessageField<'a, U> {
-    field: Weak<Field<'a, U>>,
-    map_field: Weak<MapField<'a, U>>,
-    detail: FieldDetail<'a, U>,
+    message: WeakMessage<'a, U>,
+    detail: MapFieldDetail<'a, U>,
 }
 
 impl<'a, U> MapMessageField<'a, U> {
@@ -135,11 +150,14 @@ impl<'a, U> Named<U> for MapMessageField<'a, U> {
 }
 
 #[derive(Debug, Clone)]
-pub struct MapEnumField<'a, U> {
+pub struct MapEnumFieldDetail<'a, U> {
     field: Weak<Field<'a, U>>,
-    map_field: Weak<MapField<'a, U>>,
-    detail: FieldDetail<'a, U>,
+    msg: WeakMessage<'a, U>,
+    enum_field: EnumField<'a, U>,
+    key: MapFieldKey,
 }
+
+pub struct MapEnumField<'a, U>(Rc<MapEnumFieldDetail<'a, U>>);
 
 impl<'a, U> MapEnumField<'a, U> {
     pub fn name(&self) -> Name<U> {

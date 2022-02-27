@@ -1,13 +1,14 @@
 #![allow(unused_variables)]
 
-use std::rc::Rc;
-
+use crate::field::{
+    EnumField, MapEnumField, MapField, MapMessageField, MapScalarField, MessageField,
+    OneofEnumField, OneofField, OneofMessageField, OneofScalarField, RealOneofField,
+    RepeatedEnumField, RepeatedField, RepeatedMessageField, RepeatedScalarField, ScalarField,
+    SyntheticOneofField, WellKnownEnumField, WellKnownMessageField, WellKnownTypeField,
+};
 use crate::{
-    Enum, EnumField, EnumValue, Extension, Field, File, IntoNode, MapEnumField, MapField,
-    MapMessageField, MapScalarField, Message, MessageField, Method, Node, Oneof, OneofEnumField,
-    OneofField, OneofMessageField, OneofScalarField, Package, RepeatedEnumField, RepeatedField,
-    RepeatedMessageField, RepeatedScalarField, ScalarField, Service, WellKnownTypeField,
-    WktMessageField,
+    Enum, EnumValue, Extension, Field, File, IntoNode, Message, Method, Node, Oneof, Package,
+    Service,
 };
 
 pub trait Visitor<'a, U>: Sized {
@@ -34,23 +35,31 @@ pub trait Visitor<'a, U>: Sized {
     }
 
     fn visit_enum_value(&mut self, val: EnumValue<'a, U>) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 
     fn visit_extension(&mut self, ext: Extension<'a, U>) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 
     fn visit_oneof(&mut self, oneof: Oneof<'a, U>) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
+    }
+
+    fn visit_real_oneof(&mut self, oneof: RealOneof<'a, U>) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn visit_synthetic_oneof(&mut self, oneof: SyntheticOneof<'a, U>) -> Result<(), Self::Error> {
+        todo!()
     }
 
     fn visit_service(&mut self, svc: Service<'a, U>) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 
     fn visit_method(&mut self, mtd: Method<'a, U>) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 
     fn visit_field(&mut self, fld: Field<'a, U>) -> Result<(), Self::Error> {
@@ -58,14 +67,14 @@ pub trait Visitor<'a, U>: Sized {
     }
 
     fn visit_scalar_field(&mut self, fld: ScalarField<'a, U>) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
     fn visit_message_field(&mut self, fld: MessageField<'a, U>) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 
     fn visit_enum_field(&mut self, fld: EnumField<'a, U>) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 
     fn visit_map_field(&mut self, fld: MapField<'a, U>) -> Result<(), Self::Error> {
@@ -73,15 +82,15 @@ pub trait Visitor<'a, U>: Sized {
     }
 
     fn visit_map_scalar_field(&mut self, fld: MapScalarField<'a, U>) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 
     fn visit_map_enum_field(&mut self, fld: MapEnumField<'a, U>) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 
     fn visit_map_message_field(&mut self, fld: MapMessageField<'a, U>) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 
     fn visit_repeated_field(&mut self, fld: RepeatedField<'a, U>) -> Result<(), Self::Error> {
@@ -92,62 +101,95 @@ pub trait Visitor<'a, U>: Sized {
         &mut self,
         fld: RepeatedScalarField<'a, U>,
     ) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 
     fn visit_repeated_enum_field(
         &mut self,
         fld: RepeatedEnumField<'a, U>,
     ) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 
     fn visit_repeated_message_field(
         &mut self,
         fld: RepeatedMessageField<'a, U>,
     ) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 
     fn visit_oneof_field(&mut self, fld: OneofField<'a, U>) -> Result<(), Self::Error> {
         visit_oneof_field(self, fld)
     }
 
-    fn visit_oneof_scalar_field(
+    fn visit_real_oneof_field(&mut self, fld: RealOneofField<'a, U>) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn visit_real_oneof_scalar_field(
         &mut self,
         fld: OneofScalarField<'a, U>,
     ) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
-    fn visit_oneof_enum_field(&mut self, fld: OneofEnumField<'a, U>) -> Result<(), Self::Error> {
-        Ok(())
+    fn visit_real_oneof_enum_field(
+        &mut self,
+        fld: OneofEnumField<'a, U>,
+    ) -> Result<(), Self::Error> {
+        todo!()
     }
-    fn visit_oneof_message_field(
+    fn visit_real_oneof_message_field(
         &mut self,
         fld: OneofMessageField<'a, U>,
     ) -> Result<(), Self::Error> {
-        Ok(())
-    }
-    fn visit_oneof_message(&mut self, fld: OneofMessageField<'a, U>) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 
-    fn visit_wkt_field(&mut self, fld: WellKnownTypeField<'a, U>) -> Result<(), Self::Error> {
-        visit_wkt_field(self, fld)
+    fn visit_synthetic_oneof_field(
+        &mut self,
+        fld: SyntheticOneofField<'a, U>,
+    ) -> Result<(), Self::Error> {
+        todo!()
+    }
+
+    fn visit_synthetic_oneof_scalar_field(
+        &mut self,
+        fld: OneofScalarField<'a, U>,
+    ) -> Result<(), Self::Error> {
+        todo!()
+    }
+    fn visit_synthetic_oneof_enum_field(
+        &mut self,
+        fld: OneofEnumField<'a, U>,
+    ) -> Result<(), Self::Error> {
+        todo!()
+    }
+    fn visit_synthetic_oneof_message_field(
+        &mut self,
+        fld: OneofMessageField<'a, U>,
+    ) -> Result<(), Self::Error> {
+        todo!()
+    }
+    fn visit_well_known_type_field(
+        &mut self,
+        fld: WellKnownTypeField<'a, U>,
+    ) -> Result<(), Self::Error> {
+        todo!()
+        // visit_well_known_type_field(self, fld)
     }
 
     fn visit_well_known_message_field(
         &mut self,
-        fld: WktMessageField<'a, U>,
+        fld: WellKnownMessageField<'a, U>,
     ) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 
     fn visit_well_known_enum_field(
         &mut self,
-        fld: WktMessageField<'a, U>,
+        fld: WellKnownEnumField<'a, U>,
     ) -> Result<(), Self::Error> {
-        Ok(())
+        todo!()
     }
 }
 
@@ -279,44 +321,6 @@ where
     }
 }
 
-pub fn visit_wkt_field<'a, U, V>(v: &mut V, fld: WellKnownTypeField<'a, U>) -> Result<(), V::Error>
-where
-    V: Visitor<'a, U>,
-{
-    match fld.as_ref() {
-        WellKnownTypeField::Any(f)
-        | WellKnownTypeField::Api(f)
-        | WellKnownTypeField::BoolValue(f)
-        | WellKnownTypeField::BytesValue(f)
-        | WellKnownTypeField::DoubleValue(f)
-        | WellKnownTypeField::Duration(f)
-        | WellKnownTypeField::Empty(f)
-        | WellKnownTypeField::Enum(f)
-        | WellKnownTypeField::EnumValue(f)
-        | WellKnownTypeField::Field(f)
-        | WellKnownTypeField::FieldMask(f)
-        | WellKnownTypeField::FloatValue(f)
-        | WellKnownTypeField::Int32Value(f)
-        | WellKnownTypeField::Int64Value(f)
-        | WellKnownTypeField::ListValue(f)
-        | WellKnownTypeField::Method(f)
-        | WellKnownTypeField::Mixin(f)
-        | WellKnownTypeField::Option(f)
-        | WellKnownTypeField::SourceContext(f)
-        | WellKnownTypeField::StringValue(f)
-        | WellKnownTypeField::Struct(f)
-        | WellKnownTypeField::Timestamp(f)
-        | WellKnownTypeField::Type(f)
-        | WellKnownTypeField::UInt32Value(f)
-        | WellKnownTypeField::UInt64Value(f)
-        | WellKnownTypeField::Value(f) => v.visit_message_field(f.message_field()),
-
-        WellKnownTypeField::FieldCardinality(f)
-        | WellKnownTypeField::FieldKind(f)
-        | WellKnownTypeField::NullValue(f)
-        | WellKnownTypeField::Syntax(f) => v.visit_enum_field(f.enum_field()),
-    }
-}
 pub fn visit_extension<'a, U, V>(v: &mut V, ext: Extension<'a, U>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
