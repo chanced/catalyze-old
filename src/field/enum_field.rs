@@ -2,10 +2,10 @@ use std::rc::{Rc, Weak};
 
 use crate::{traits::Upgrade, Enum, Field, FullyQualified, Name, Named, WeakEnum};
 
-use super::{FieldDetail, WeakField};
+use super::{FieldDetail};
 
 #[derive(Debug, Clone)]
-struct EnumFieldDetail<'a, U> {
+pub(crate) struct EnumFieldDetail<'a, U> {
     detail: FieldDetail<'a, U>,
     r#enum: WeakEnum<'a, U>,
 }

@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 use super::{FieldDetail, MapScalarFieldDetail, WeakField};
 use crate::{Field, FullyQualified, Name};
@@ -35,3 +35,5 @@ impl<'a, U> FullyQualified for ScalarField<'a, U> {
         self.detail.fully_qualified_name()
     }
 }
+#[derive(Debug, Clone)]
+pub(crate) struct WeakScalarField<'a, U>(Weak<MapScalarFieldDetail<'a, U>>);

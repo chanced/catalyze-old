@@ -1,13 +1,13 @@
 use std::rc::{Rc, Weak};
 
-use crate::{FullyQualified, Name, WeakMessage};
+use crate::{FullyQualified, Message, Name, WeakMessage};
+
+use super::FieldDetail;
 
 #[derive(Debug, Clone)]
-struct MessageFieldDetail<'a, U> {
-    descriptor: &'a prost_types::FieldDescriptorProto,
-    name: Name<U>,
-    fqn: String,
-    container: WeakMessage<'a, U>,
+pub(crate) struct MessageFieldDetail<'a, U> {
+    pub detail: FieldDetail<'a, U>,
+    pub message: Message<'a, U>,
 }
 
 #[derive(Debug, Clone)]

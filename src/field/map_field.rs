@@ -3,7 +3,7 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{name::Named, Field, FullyQualified, Name, WeakMessage};
+use crate::{name::Named, proto::Syntax, Field, FullyQualified, Name, WeakMessage};
 
 use super::{EnumField, FieldDetail, ScalarField};
 
@@ -25,6 +25,7 @@ pub enum MapFieldKey {
 
 struct MapFieldDetail<'a, U> {
     key: MapFieldKey,
+    syntax: Syntax,
     detail: FieldDetail<'a, U>,
 }
 
@@ -116,11 +117,13 @@ impl<'a, U> FullyQualified for MapScalarField<'a, U> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct MapMessageField<'a, U> {
+pub struct MapMessageFieldDetail<'a, U> {
     message: WeakMessage<'a, U>,
     detail: MapFieldDetail<'a, U>,
 }
+
+#[derive(Debug, Clone)]
+pub struct MapMessageField<'a, U>(Rc<MapMessageFieldDetail<'a, U>>);
 
 impl<'a, U> MapMessageField<'a, U> {
     pub fn name(&self) -> Name<U> {
@@ -184,3 +187,13 @@ impl<'a, U> Named<U> for MapEnumField<'a, U> {
         self.detail.name()
     }
 }
+#[derive(Clone, Debug)]
+pub(crate) enum WeakMapField<'a, U> {
+    Scalar(WeakMapScalarField<'a, U>),
+    Enum(WeakMapEnumField<'a, U>),
+    Message(WeakMapMessageField<'a, U>),
+}
+
+pub(crate) struct WeakMapScalarField<'a, U>(Weak<MapScalarFieldDetail<'a, U>>);
+pub(crate) struct WeakMapEnumField<'a, U>(Weak<MapEnumFieldDetail<'a, U>>);
+pub(crate) struct WeakMapMessageField<'a, U>(Weak<MapMessageFieldDetail<'a, U>>);

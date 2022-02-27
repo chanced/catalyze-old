@@ -26,10 +26,18 @@ impl<'a, U> FieldDescriptor<'a, U> {
         self.desc.label()
     }
     /// If type_name is set, this need not be set.  If both this and type_name
-    /// are set, this must be one of TYPE_ENUM, TYPE_MESSAGE or TYPE_GROUP.
+    /// are set, this must be one of Enum, Message or Group.
     pub fn r#type(&self) -> Type {
         Type::from(self.desc.r#type())
     }
+    /// alias for `r#type`
+    ///
+    /// If type_name is set, this need not be set.  If both this and type_name
+    /// are set, this must be one of Enum, Message or Group.
+    pub fn proto_type(&self) -> Type {
+        return self.r#type();
+    }
+
     /// For message and enum types, this is the name of the type.  If the name
     /// starts with a '.', it is fully-qualified.  Otherwise, C++-like scoping
     /// rules are used to find the type (i.e. first the nested types within this
@@ -97,12 +105,25 @@ impl<'a, U> FieldDescriptor<'a, U> {
     ///
     /// - `syntax` is `Syntax::Proto3` and `proto3_optional` is `true`
     /// - `syntax` is `Syntax::Proto2` and `label` is `Label::Optional`.
-    pub fn is_optional(&self, syntax: Syntax) -> bool {
+    pub(crate) fn is_optional(&self, syntax: Syntax) -> bool {
         match syntax {
             Syntax::Proto2 => self.label() == Label::Optional,
             Syntax::Proto3 => self.proto3_optional(),
         }
     }
+    pub(crate) fn is_required(&self, syntax: Syntax) -> bool {
+        return syntax.supports_required_prefix() && self.label() == Label::Required;
+    }
+
+    pub fn is_map(&self) -> bool {
+        self.label() == Label::Map
+    }
+
+    pub fn is_repeated(&self) -> bool {
+        self.label() == Label::Repeated
+    }
+
+    pub fn is_scalar(&self) -> bool {}
 }
 
 impl<'a, U> Clone for FieldDescriptor<'a, U> {

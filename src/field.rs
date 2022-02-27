@@ -14,14 +14,12 @@ pub use oneof_field::*;
 pub use repeated_field::*;
 pub use scalar_field::*;
 
-use std::{
-    cell::RefCell,
-    rc::{Rc, Weak},
-};
+use std::{cell::RefCell, rc::Rc};
 pub use wkt_field::*;
 
 use crate::{
-    traits::Upgrade, FullyQualified, IntoNode, Message, Name, Node, NodeAtPath, WeakMessage,
+    proto::Syntax, traits::Upgrade, util::Util, FullyQualified, IntoNode, Message, Name, Node,
+    NodeAtPath, WeakMessage,
 };
 
 use self::descriptor::*;
@@ -52,26 +50,67 @@ pub(crate) struct FieldDetail<'a, U> {
     name: Name<U>,
     descriptor: FieldDescriptor<'a, U>,
     fqn: String,
-    containing_message: WeakMessage<'a, U>,
+    containing_msg: WeakMessage<'a, U>,
+    util: Util<U>,
+    syntax: Syntax,
 }
 
 impl<'a, U> FieldDetail<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.name.clone()
     }
-
     pub fn fully_qualified_name(&self) -> String {
         self.fqn.clone()
     }
-
+    pub fn container(&self) -> Message<'a, U> {
+        self.containing_message()
+    }
     pub fn containing_message(&self) -> Message<'a, U> {
         self.msg.upgrade()
+    }
+    pub fn util(&self) -> Util<U> {
+        self.util.clone()
+    }
+    pub fn syntax(&self) -> Syntax {
+        self.syntax
+    }
+
+    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+        self.descriptor.clone()
+    }
+
+    pub fn is_map(&self) -> bool {
+        return self.descriptor.is_map();
+    }
+
+    pub fn is_repeated(&self) -> bool {
+        return self.descriptor.is_repeated();
+    }
+
+    pub fn is_scalar(&self) -> bool {
+        return self.descriptor.is_scalar();
+    }
+
+    pub fn is_optional(&self) -> bool {
+        return self.descriptor.is_optional(self.syntax);
+    }
+
+    pub fn is_required(&self) -> bool {
+        return self.descriptor.is_required(self.syntax);
     }
 }
 
 impl<'a, U> Field<'a, U> {
     pub fn name(&self) -> Name<U> {
-        match self {}
+        match self {
+            Field::Enum(f) => f.name(),
+            Field::Map(f) => f.name(),
+            Field::Message(f) => f.name(),
+            Field::Oneof(f) => f.name(),
+            Field::Repeated(f) => f.name(),
+            Field::Scalar(f) => f.name(),
+            Field::WellKnownType(f) => f.name(),
+        }
     }
 }
 
@@ -82,12 +121,6 @@ impl<'a, U> NodeAtPath<'a, U> for Field<'a, U> {
         } else {
             None
         }
-    }
-}
-
-impl<'a, U> FullyQualified for FieldDetail<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.fqn.clone()
     }
 }
 
@@ -105,8 +138,15 @@ impl<'a, U> FullyQualified for Field<'a, U> {
     }
 }
 
-#[derive(Debug)]
-pub(crate) struct WeakField<'a, U>(Weak<FieldDetail<'a, U>>);
+pub(crate) enum WeakField<'a, U> {
+    Scalar(WeakScalarField<'a, U>),
+    Message(WeakMessageField<'a, U>),
+    Map(WeakMapField<'a, U>),
+    Repeated(WeakRepeatedField<'a, U>),
+    Oneof(WeakOneofField<'a, U>),
+    WellKnownType(WeakWellKnownTypeField<'a, U>),
+}
+
 impl<'a, U> Clone for WeakField<'a, U> {
     fn clone(&self) -> Self {
         match self {
@@ -132,13 +172,4 @@ impl<'a, U> Upgrade for WeakField<'a, U> {
             WeakField::WellKnownType(_) => todo!(),
         }
     }
-}
-
-enum WeakField<'a, U> {
-    Scalar(WeakScalarFieldDetail<'a, U>),
-    Message(WeakMessageField<'a, U>),
-    Map(WeakMapField<'a, U>),
-    Repeated(WeakRepeatedField<'a, U>),
-    Oneof(WeakOneofField<'a, U>),
-    WellKnownType(WeakWellKnownTypeField<'a, U>),
 }
