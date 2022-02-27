@@ -1,6 +1,5 @@
 mod ast;
 pub mod container;
-pub mod descriptor;
 mod r#enum;
 mod enum_value;
 mod extension;
@@ -16,6 +15,7 @@ mod node;
 mod oneof;
 mod package;
 pub mod path;
+pub mod proto;
 mod service;
 mod source;
 mod traits;

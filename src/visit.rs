@@ -8,7 +8,7 @@ use crate::field::{
 };
 use crate::{
     Enum, EnumValue, Extension, Field, File, IntoNode, Message, Method, Node, Oneof, Package,
-    Service,
+    RealOneof, Service, SyntheticOneof,
 };
 
 pub trait Visitor<'a, U>: Sized {

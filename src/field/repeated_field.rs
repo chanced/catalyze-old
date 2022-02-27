@@ -1,6 +1,6 @@
 use std::rc::{Rc, Weak};
 
-use crate::{name::Named, Field, FieldDetail, FullyQualified, Name};
+use crate::{name::Named, Field, FullyQualified, Name};
 
 #[derive(Debug, Clone)]
 pub enum RepeatedField<'a, U> {
@@ -54,8 +54,6 @@ impl<'a, U> FullyQualified for RepeatedField<'a, U> {
 #[derive(Debug, Clone)]
 pub struct RepeatedEnumField<'a, U> {
     detail: FieldDetail<'a, U>,
-    repeated_field: Weak<RepeatedField<'a, U>>,
-    field: Weak<Field<'a, U>>,
 }
 
 impl<'a, U> RepeatedEnumField<'a, U> {
@@ -109,9 +107,7 @@ impl<'a, U> FullyQualified for RepeatedMessageField<'a, U> {
 
 #[derive(Debug, Clone)]
 pub struct RepeatedScalarField<'a, U> {
-    detail: FieldDetail<'a, U>,
-    repeated_field: Weak<RepeatedField<'a, U>>,
-    field: Field<'a, U>,
+    detail: RepeatedFieldDetail<'a, U>,
 }
 impl<'a, U> RepeatedScalarField<'a, U> {
     pub fn name(&self) -> Name<U> {

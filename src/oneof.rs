@@ -22,8 +22,17 @@ pub struct OneofDetail<'a, U> {
     container: WeakContainer<'a, U>,
 }
 
+pub enum Oneof<'a, U> {
+    Real(Oneof<'a, U>),
+    Synthetic(SyntheticOneof<'a, U>),
+}
+
+pub struct RealOneof<'a, U>(Rc<OneofDetail<'a, U>>);
+
+pub struct SyntheticOneof<'a, U>(Rc<OneofDetail<'a, U>>);
+
 #[derive(Debug)]
-pub struct Oneof<'a, U>(Rc<OneofDetail<'a, U>>);
+pub struct OneofDetail<'a, U>(Rc<OneofDetail<'a, U>>);
 impl<'a, U> Clone for Oneof<'a, U> {
     fn clone(&self) -> Self {
         Oneof(self.0.clone())

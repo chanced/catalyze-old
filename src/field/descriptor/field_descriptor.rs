@@ -67,10 +67,7 @@ impl<'a, U> FieldDescriptor<'a, U> {
         self.desc.json_name()
     }
     pub fn options(&self) -> FieldOptions<'a, U> {
-        FieldOptions {
-            options: self.util.options(),
-            util: self.util,
-        }
+        let x = self.desc.options();
     }
     /// If true, this is a proto3 "optional". When a proto3 field is optional, it
     /// tracks presence regardless of field type.
