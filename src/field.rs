@@ -6,19 +6,14 @@ mod message_field;
 mod oneof_field;
 mod repeated_field;
 mod scalar_field;
-mod r#type;
 mod wkt_field;
-mod label;
-
 pub use enum_field::*;
 pub use map_field::*;
 pub use message_field::*;
 pub use oneof_field::*;
-use prost_types::FieldDescriptorProto;
-pub use r#type::*;
 pub use repeated_field::*;
 pub use scalar_field::*;
-pub use label::*;
+
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
@@ -26,10 +21,10 @@ use std::{
 pub use wkt_field::*;
 
 use crate::{
-    proto::{Label, Type},
-    traits::Upgrade,
-    FullyQualified, IntoNode, Message, Name, Node, NodeAtPath, WeakMessage,
+    traits::Upgrade, FullyQualified, IntoNode, Message, Name, Node, NodeAtPath, WeakMessage,
 };
+
+use self::descriptor::*;
 
 pub(crate) type FieldList<'a, U> = Rc<RefCell<Vec<Field<'a, U>>>>;
 
@@ -55,7 +50,7 @@ pub enum Field<'a, U> {
 #[derive(Debug, Clone)]
 pub(crate) struct FieldDetail<'a, U> {
     name: Name<U>,
-    descriptor: &'a FieldDescriptorProto,
+    descriptor: FieldDescriptor<'a, U>,
     fqn: String,
     containing_message: WeakMessage<'a, U>,
 }

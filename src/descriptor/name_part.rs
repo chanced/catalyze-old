@@ -38,6 +38,10 @@ impl<'a, U> NamePart<'a, U> {
     pub fn is_extension(&self) -> bool {
         self.part.is_extension
     }
+
+    pub fn util(&self) -> Util<U> {
+        return self.util.clone();
+    }
 }
 
 impl<'a, U> ToString for NamePart<'a, U> {

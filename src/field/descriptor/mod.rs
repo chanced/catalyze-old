@@ -1,11 +1,14 @@
 mod c_type;
 mod field_descriptor;
 mod js_type;
+mod label;
 mod name_part;
 mod options;
-
+mod r#type;
 pub use c_type::CType;
 pub use field_descriptor::*;
 pub use js_type::JsType;
+pub use label::*;
 pub use name_part::*;
 pub use options::*;
+pub use r#type::*;
