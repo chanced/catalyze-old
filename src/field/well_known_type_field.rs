@@ -125,3 +125,8 @@ impl<'a, U> Clone for WellKnownEnumField<'a, U> {
         WellKnownEnumField(self.0.clone())
     }
 }
+#[derive(Clone, Debug)]
+pub(crate) enum WeakWellKnownTypeField<'a, U> {
+    Message(WeakWellKnownMessageField<'a, U>),
+    Enum(WeakWellKnownEnumField<'a, U>),
+}

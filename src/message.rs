@@ -14,7 +14,7 @@ use crate::traits::{Downgrade, Upgrade};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
     format_fqn, Enum, EnumList, Extension, Field, FullyQualified, Node, NodeAtPath, Oneof,
-    OneofList,
+    OneofList, WeakExtension,
 };
 use crate::{Package, WellKnownType};
 

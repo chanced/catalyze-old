@@ -1,4 +1,4 @@
-use crate::{proto::UninterpretedOption, util::Util};
+use crate::{proto::descriptor::UninterpretedOption, util::Util};
 
 use std::slice;
 
