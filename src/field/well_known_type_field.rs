@@ -1,8 +1,9 @@
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 use crate::{
-    name::Named, traits::Upgrade, FullyQualified, Name, Oneof, WellKnownEnum, WellKnownMessage,
-    WellKnownType,
+    name::Named,
+    traits::{Downgrade, Upgrade},
+    FullyQualified, Name, Oneof, WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
 use super::{EnumField, MessageField};
@@ -23,7 +24,7 @@ impl<'a, U> WellKnownTypeField<'a, U> {
             WellKnownTypeField::Enum(e) => e.name(),
         }
     }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         match self {
             WellKnownTypeField::Message(m) => m.fully_qualified_name(),
             WellKnownTypeField::Enum(e) => e.fully_qualified_name(),
@@ -31,7 +32,7 @@ impl<'a, U> WellKnownTypeField<'a, U> {
     }
 }
 impl<'a, U> FullyQualified for WellKnownTypeField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    fn fully_qualified_name(&self) -> &str {
         match self {
             WellKnownTypeField::Message(m) => m.fully_qualified_name(),
             WellKnownTypeField::Enum(e) => e.fully_qualified_name(),
@@ -43,6 +44,16 @@ impl<'a, U> Named<U> for WellKnownTypeField<'a, U> {
         match self {
             WellKnownTypeField::Message(m) => m.name(),
             WellKnownTypeField::Enum(e) => e.name(),
+        }
+    }
+}
+impl<'a, U> Downgrade for WellKnownTypeField<'a, U> {
+    type Target = WeakWellKnownTypeField<'a, U>;
+
+    fn downgrade(self) -> Self::Target {
+        match self {
+            WellKnownTypeField::Message(m) => WeakWellKnownTypeField::Message(m.downgrade()),
+            WellKnownTypeField::Enum(e) => WeakWellKnownTypeField::Enum(e.downgrade()),
         }
     }
 }
@@ -62,12 +73,12 @@ impl<'a, U> WellKnownMessageField<'a, U> {
     fn name(&self) -> Name<U> {
         self.0.msg_fld.name()
     }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         self.0.msg_fld.fully_qualified_name()
     }
 }
 impl<'a, U> FullyQualified for WellKnownMessageField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    fn fully_qualified_name(&self) -> &str {
         self.0.msg_fld.fully_qualified_name()
     }
 }
@@ -79,6 +90,13 @@ impl<'a, U> Named<U> for WellKnownMessageField<'a, U> {
 impl<'a, U> Clone for WellKnownMessageField<'a, U> {
     fn clone(&self) -> Self {
         WellKnownMessageField(self.0.clone())
+    }
+}
+impl<'a, U> Downgrade for WellKnownMessageField<'a, U> {
+    type Target = WeakWellKnownMessageField<'a, U>;
+
+    fn downgrade(self) -> Self::Target {
+        WeakWellKnownMessageField(Rc::downgrade(&self.0))
     }
 }
 
@@ -105,7 +123,7 @@ impl<'a, U> WellKnownEnumField<'a, U> {
     pub fn oneof(&self) -> Oneof<'a, U> {
         self.0.oneof.upgrade()
     }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         self.0.fully_qualified_name()
     }
 }
@@ -115,7 +133,7 @@ impl<'a, U> Named<U> for WellKnownEnumField<'a, U> {
     }
 }
 impl<'a, U> FullyQualified for WellKnownEnumField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    fn fully_qualified_name(&self) -> &str {
         self.0.enum_field.fully_qualified_name()
     }
 }
@@ -125,8 +143,59 @@ impl<'a, U> Clone for WellKnownEnumField<'a, U> {
         WellKnownEnumField(self.0.clone())
     }
 }
+
 #[derive(Clone, Debug)]
 pub(crate) enum WeakWellKnownTypeField<'a, U> {
     Message(WeakWellKnownMessageField<'a, U>),
     Enum(WeakWellKnownEnumField<'a, U>),
+}
+impl<'a, U> Upgrade for WeakWellKnownTypeField<'a, U> {
+    type Target = WellKnownTypeField<'a, U>;
+
+    fn upgrade(self) -> Self::Target {
+        match self {
+            WeakWellKnownTypeField::Message(m) => WellKnownTypeField::Message(m.upgrade()),
+            WeakWellKnownTypeField::Enum(e) => WellKnownTypeField::Enum(e.upgrade()),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct WeakWellKnownEnumField<'a, U>(Weak<WellKnownEnumFieldDetail<'a, U>>);
+impl<'a, U> Clone for WeakWellKnownEnumField<'a, U> {
+    fn clone(&self) -> Self {
+        WeakWellKnownEnumField(self.0.clone())
+    }
+}
+
+impl<'a, U> Upgrade for WeakWellKnownEnumField<'a, U> {
+    type Target = WellKnownMessageField<'a, U>;
+
+    fn upgrade(self) -> Self::Target {
+        WellKnownMessageField(
+            self.0
+                .upgrade()
+                .expect("failed to upgrade Well-Known Message Field"),
+        )
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct WeakWellKnownMessageField<'a, U>(Weak<WellKnownMsgFieldDetail<'a, U>>);
+
+impl<'a, U> Clone for WeakWellKnownMessageField<'a, U> {
+    fn clone(&self) -> Self {
+        WeakWellKnownMessageField(self.0.clone())
+    }
+}
+impl<'a, U> Upgrade for WeakWellKnownMessageField<'a, U> {
+    type Target = WellKnownMessageField<'a, U>;
+
+    fn upgrade(self) -> Self::Target {
+        WellKnownMessageField(
+            self.0
+                .upgrade()
+                .expect("failed to upgrade Well-Known Message Field"),
+        )
+    }
 }

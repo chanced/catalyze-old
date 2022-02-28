@@ -221,8 +221,8 @@ impl<'a, U> NodeAtPath<'a, U> for File<'a, U> {
 }
 
 impl<'a, U> FullyQualified for File<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
+    fn fully_qualified_name(&self) -> &str {
+        &self.0.fqn
     }
 }
 

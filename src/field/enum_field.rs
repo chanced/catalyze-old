@@ -2,7 +2,7 @@ use std::rc::{Rc, Weak};
 
 use crate::{traits::Upgrade, Enum, Field, FullyQualified, Name, Named, WeakEnum};
 
-use super::{FieldDetail};
+use super::FieldDetail;
 
 #[derive(Debug, Clone)]
 pub(crate) struct EnumFieldDetail<'a, U> {
@@ -17,10 +17,7 @@ impl<'a, U> EnumField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.0.detail.name()
     }
-    pub fn field(&self) -> Field<'a, U> {
-        Field::Enum(self.clone())
-    }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         self.0.detail.fully_qualified_name()
     }
     pub fn r#enum(&self) -> Enum<'a, U> {
@@ -38,7 +35,7 @@ impl<'a, U> Named<U> for EnumField<'a, U> {
     }
 }
 impl<'a, U> FullyQualified for EnumField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    fn fully_qualified_name(&self) -> &str {
         self.0.detail.fully_qualified_name()
     }
 }

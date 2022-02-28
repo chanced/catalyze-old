@@ -100,8 +100,8 @@ impl<'a, U> Downgrade for Enum<'a, U> {
 }
 
 impl<'a, U> FullyQualified for Enum<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
+    fn fully_qualified_name(&self) -> &str {
+        &self.0.fqn
     }
 }
 

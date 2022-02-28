@@ -63,7 +63,7 @@ pub trait Visitor<'a, U>: Sized {
     }
 
     fn visit_field(&mut self, fld: Field<'a, U>) -> Result<(), Self::Error> {
-        visit_node(self, fld.into_node())
+        visit_node(self, fld.into())
     }
 
     fn visit_scalar_field(&mut self, fld: ScalarField<'a, U>) -> Result<(), Self::Error> {
@@ -215,7 +215,7 @@ where
     V: Visitor<'a, U>,
 {
     for file in pkg.files() {
-        v.visit_node(file.into_node())?;
+        v.visit_node(file.into())?;
     }
     Ok(())
 }
@@ -225,16 +225,16 @@ where
     V: Visitor<'a, U>,
 {
     for msg in f.messages() {
-        v.visit_node(msg.into_node())?;
+        v.visit_node(msg.into())?;
     }
     for enm in f.enums() {
-        v.visit_node(enm.into_node())?;
+        v.visit_node(enm.into())?;
     }
     for svc in f.services() {
-        v.visit_node(svc.into_node())?;
+        v.visit_node(svc.into())?;
     }
     for ext in f.defined_extensions() {
-        v.visit_node(ext.into_node())?;
+        v.visit_node(ext.into())?;
     }
     Ok(())
 }
@@ -244,19 +244,19 @@ where
     V: Visitor<'a, U>,
 {
     for ext in msg.defined_extensions() {
-        v.visit_node(ext.into_node())?;
+        v.visit_node(ext.into())?;
     }
 
     for enm in msg.enums() {
-        v.visit_node(enm.into_node())?;
+        v.visit_node(enm.into())?;
     }
 
     for nm in msg.messages() {
-        v.visit_node(nm.into_node())?;
+        v.visit_node(nm.into())?;
     }
 
     for fld in msg.fields() {
-        v.visit_node(fld.into_node())?;
+        v.visit_node(fld.into())?;
     }
 
     Ok(())
@@ -267,7 +267,7 @@ where
     V: Visitor<'a, U>,
 {
     for mth in svc.methods() {
-        v.visit_node(mth.into_node())?;
+        v.visit_node(mth.into())?;
     }
     Ok(())
 }
@@ -277,7 +277,7 @@ where
     V: Visitor<'a, U>,
 {
     for ev in enm.values() {
-        v.visit_node(ev.into_node())?;
+        v.visit_node(ev.into())?;
     }
 
     Ok(())

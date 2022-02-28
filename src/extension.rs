@@ -42,14 +42,14 @@ impl<'a, U> Extension<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.0.name.clone()
     }
-    fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
+    fn fully_qualified_name(&self) -> &str {
+        &self.0.fqn
     }
 }
 
 impl<U> FullyQualified for Extension<'_, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
+    fn fully_qualified_name(&self) -> &str {
+        &self.0.fqn
     }
 }
 impl<'a, U> Clone for Extension<'a, U> {
@@ -57,7 +57,7 @@ impl<'a, U> Clone for Extension<'a, U> {
         Extension(self.0.clone())
     }
 }
-
+#[derive(Debug)]
 pub(crate) struct WeakExtension<'a, U>(Weak<ExtensionDetail<'a, U>>);
 
 impl<'a, U> Upgrade for WeakExtension<'a, U> {

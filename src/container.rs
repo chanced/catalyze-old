@@ -36,7 +36,7 @@ pub enum Container<'a, U> {
     Message(Message<'a, U>),
 }
 
-impl<U> Clone for Container<'_, U> {
+impl<'a, U> Clone for Container<'a, U> {
     fn clone(&self) -> Self {
         match self {
             Self::File(f) => Self::File(f.clone()),
@@ -118,7 +118,7 @@ impl<'a, U> BuildTarget for WeakContainer<'a, U> {
 }
 
 impl<'a, U> FullyQualified for Container<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    fn fully_qualified_name(&self) -> &str {
         match self {
             Container::File(f) => f.fully_qualified_name(),
             Container::Message(m) => m.fully_qualified_name(),
@@ -127,7 +127,7 @@ impl<'a, U> FullyQualified for Container<'a, U> {
 }
 
 impl<'a, U> FullyQualified for WeakContainer<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    fn fully_qualified_name(&self) -> &str {
         match self {
             WeakContainer::File(f) => f.upgrade().unwrap().fully_qualified_name(),
             WeakContainer::Message(m) => m.upgrade().unwrap().fully_qualified_name(),

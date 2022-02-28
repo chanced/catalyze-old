@@ -1,32 +1,45 @@
-use std::{
-    marker::PhantomData,
-    rc::{Rc, Weak},
-};
+mod map_enum_field;
+mod map_key;
+mod map_message_field;
+mod map_scalar_field;
 
-use crate::{name::Named, proto::Syntax, Field, FullyQualified, Name, WeakMessage};
+pub use map_enum_field::*;
+pub use map_key::*;
+pub use map_message_field::*;
+pub use map_scalar_field::*;
 
-use super::{EnumField, FieldDetail, ScalarField};
+use crate::{name::Named, proto::Syntax, Field, FullyQualified, Message, Name};
 
-pub enum MapFieldKey {
-    Int64 = 3,
-    Uint64 = 4,
-    Int32 = 5,
-    Fixed64 = 6,
-    Fixed32 = 7,
-    String = 9,
-    Uint32 = 13,
-    Sfixed32 = 15,
-    Sfixed64 = 16,
-    Sint32 = 17,
-    Sint64 = 18,
-}
+use super::FieldDetail;
 
-#[derive(Debug, Clone)]
-
-struct MapFieldDetail<'a, U> {
-    key: MapFieldKey,
+#[derive(Debug)]
+pub(crate) struct MapFieldDetail<'a, U> {
+    key: MapKey,
     syntax: Syntax,
     detail: FieldDetail<'a, U>,
+}
+
+impl<'a, U> MapFieldDetail<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.detail.name()
+    }
+
+    pub fn fully_qualified_name(&self) -> &str {
+        self.detail.fully_qualified_name()
+    }
+    pub fn container(&self) -> Message<'a, U> {
+        self.detail.container()
+    }
+}
+
+impl<'a, U> Clone for MapFieldDetail<'a, U> {
+    fn clone(&self) -> Self {
+        Self {
+            key: self.key.clone(),
+            syntax: self.syntax.clone(),
+            detail: self.detail.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -44,24 +57,17 @@ impl<'a, U> MapField<'a, U> {
             MapField::Message(f) => f.name(),
         }
     }
-    fn fully_qualified_name(&self) -> String {
+    fn fully_qualified_name(&self) -> &str {
         match self {
             MapField::Scalar(f) => f.fully_qualified_name(),
             MapField::Enum(f) => f.fully_qualified_name(),
             MapField::Message(f) => f.fully_qualified_name(),
         }
     }
-    fn field(&self) -> Field<'a, U> {
-        match self {
-            MapField::Scalar(s) => s.field(),
-            MapField::Enum(e) => e.field(),
-            MapField::Message(m) => m.field(),
-        }
-    }
 }
 
 impl<'a, U> FullyQualified for MapField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    fn fully_qualified_name(&self) -> &str {
         match self {
             MapField::Scalar(f) => f.fully_qualified_name(),
             MapField::Enum(f) => f.fully_qualified_name(),
@@ -80,120 +86,42 @@ impl<'a, U> Named<U> for MapField<'a, U> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct MapScalarFieldDetail<'a, U> {
-    scalar_field: ScalarField<'a, U>,
-    key: MapFieldKey,
-    phantom: PhantomData<&'a U>,
+impl<'a, U> From<MapEnumField<'a, U>> for MapField<'a, U> {
+    fn from(f: MapEnumField<'a, U>) -> Self {
+        MapField::Enum(f)
+    }
 }
-#[derive(Debug)]
-
-pub struct MapScalarField<'a, U>(Rc<MapScalarFieldDetail<'a, U>>);
-
-impl<'a, U> MapScalarField<'a, U> {
-    pub fn name(&self) -> Name<U> {
-        self.0.name()
-    }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.fully_qualified_name()
-    }
-    pub fn field(&self) -> Field<'a, U> {
-        self.field.upgrade().unwrap()
-    }
-    pub fn map_field(&self) -> Rc<MapField<'a, U>> {
-        self.map_field.upgrade().unwrap()
+impl<'a, U> From<&MapEnumField<'a, U>> for MapField<'a, U> {
+    fn from(f: &MapEnumField<'a, U>) -> Self {
+        MapField::Enum(f.clone())
     }
 }
 
-impl<'a, U> Named<U> for MapScalarField<'a, U> {
-    fn name(&self) -> Name<U> {
-        self.detail.name()
+impl<'a, U> From<MapScalarField<'a, U>> for MapField<'a, U> {
+    fn from(f: MapScalarField<'a, U>) -> Self {
+        MapField::Scalar(f)
+    }
+}
+impl<'a, U> From<&MapScalarField<'a, U>> for MapField<'a, U> {
+    fn from(f: &MapScalarField<'a, U>) -> Self {
+        MapField::Scalar(f.clone())
     }
 }
 
-impl<'a, U> FullyQualified for MapScalarField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.detail.fully_qualified_name()
+impl<'a, U> From<MapMessageField<'a, U>> for MapField<'a, U> {
+    fn from(f: MapMessageField<'a, U>) -> Self {
+        MapField::Message(f)
+    }
+}
+impl<'a, U> From<&MapMessageField<'a, U>> for MapField<'a, U> {
+    fn from(f: &MapMessageField<'a, U>) -> Self {
+        MapField::Message(f.clone())
     }
 }
 
-pub struct MapMessageFieldDetail<'a, U> {
-    message: WeakMessage<'a, U>,
-    detail: MapFieldDetail<'a, U>,
-}
-
-#[derive(Debug, Clone)]
-pub struct MapMessageField<'a, U>(Rc<MapMessageFieldDetail<'a, U>>);
-
-impl<'a, U> MapMessageField<'a, U> {
-    pub fn name(&self) -> Name<U> {
-        self.detail.name()
-    }
-    pub fn fully_qualified_name(&self) -> String {
-        self.detail.fully_qualified_name()
-    }
-    pub fn field(&self) -> Field<'a, U> {
-        self.field.upgrade().unwrap()
-    }
-    pub fn map_field(&self) -> Rc<MapField<'a, U>> {
-        self.map_field.upgrade().unwrap()
-    }
-}
-
-impl<'a, U> FullyQualified for MapMessageField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.detail.fully_qualified_name()
-    }
-}
-
-impl<'a, U> Named<U> for MapMessageField<'a, U> {
-    fn name(&self) -> Name<U> {
-        self.detail.name()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct MapEnumFieldDetail<'a, U> {
-    field: Weak<Field<'a, U>>,
-    msg: WeakMessage<'a, U>,
-    enum_field: EnumField<'a, U>,
-    key: MapFieldKey,
-}
-
-pub struct MapEnumField<'a, U>(Rc<MapEnumFieldDetail<'a, U>>);
-
-impl<'a, U> MapEnumField<'a, U> {
-    pub fn name(&self) -> Name<U> {
-        self.detail.name()
-    }
-    pub fn fully_qualified_name(&self) -> String {
-        self.detail.fully_qualified_name()
-    }
-    pub fn field(&self) -> Field<'a, U> {
-        self.field.upgrade().unwrap()
-    }
-    pub fn map_field(&self) -> Rc<MapField<'a, U>> {
-        self.map_field.upgrade().unwrap()
-    }
-}
-
-impl<'a, U> FullyQualified for MapEnumField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.detail.fully_qualified_name()
-    }
-}
-impl<'a, U> Named<U> for MapEnumField<'a, U> {
-    fn name(&self) -> Name<U> {
-        self.detail.name()
-    }
-}
 #[derive(Clone, Debug)]
 pub(crate) enum WeakMapField<'a, U> {
     Scalar(WeakMapScalarField<'a, U>),
     Enum(WeakMapEnumField<'a, U>),
     Message(WeakMapMessageField<'a, U>),
 }
-
-pub(crate) struct WeakMapScalarField<'a, U>(Weak<MapScalarFieldDetail<'a, U>>);
-pub(crate) struct WeakMapEnumField<'a, U>(Weak<MapEnumFieldDetail<'a, U>>);
-pub(crate) struct WeakMapMessageField<'a, U>(Weak<MapMessageFieldDetail<'a, U>>);

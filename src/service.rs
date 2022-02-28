@@ -83,8 +83,8 @@ impl<'a, U> NodeAtPath<'a, U> for Service<'a, U> {
 }
 
 impl<'a, U> FullyQualified for Service<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
+    fn fully_qualified_name(&self) -> &str {
+        &self.0.fqn
     }
 }
 impl<'a, U> Named<U> for Service<'a, U> {

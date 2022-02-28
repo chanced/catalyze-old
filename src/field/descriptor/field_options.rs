@@ -7,19 +7,28 @@ use super::{CType, JsType};
 #[derive(Debug)]
 pub struct FieldOptions<'a, U> {
     opts: &'a prost_types::FieldOptions,
+    uninterpreted_option: Vec<UninterpretedOption<'a, U>>,
     pub util: Util<U>,
 }
 
 impl<'a, U> FieldOptions<'a, U> {
     pub fn new(opts: &'a prost_types::FieldOptions, util: Util<U>) -> Self {
-        Self { opts, util }
+        Self {
+            opts,
+            util,
+            uninterpreted_option: opts
+                .uninterpreted_option
+                .iter()
+                .map(|o| UninterpretedOption { opt: o, util })
+                .collect(),
+        }
     }
     /// The ctype option instructs the C++ code generator to use a different
     /// representation of the field than it normally would.  See the specific
     /// options below.  This option is not yet implemented in the open source
     /// release -- sorry, we'll try to include it in a future version!
     pub fn c_type(&self) -> CType {
-        CType::from(self.opts.ctype)
+        CType::from(self.opts.ctype())
     }
     /// The packed option can be enabled for repeated primitive fields to enable
     /// a more efficient representation on the wire. Rather than repeatedly
@@ -41,7 +50,7 @@ impl<'a, U> FieldOptions<'a, U> {
     /// This option is an enum to permit additional types to be added, e.g.
     /// goog.math.Integer.
     pub fn js_type(&self) -> JsType {
-        JsType::from(self.opts.js_type)
+        JsType::from(self.opts.jstype())
     }
     /// Should this field be parsed lazily?  Lazy applies only to message-type
     /// fields.  It means that when the outer message is initially parsed, the
@@ -87,8 +96,8 @@ impl<'a, U> FieldOptions<'a, U> {
     }
 
     /// Options the parser does not recognize.
-    pub fn uninterpreted_options(&self) -> slice::Iter<'a, UninterpretedOption<U>> {
-        self.opts.uninterpreted_option.iter().map
+    pub fn uninterpreted_options(&self) -> slice::Iter<UninterpretedOption<'a, U>> {
+        self.uninterpreted_option.iter()
     }
     /// Clones and returns `Rc<RefCell<U>>`
     pub fn util(&self) -> Util<U> {
@@ -101,6 +110,7 @@ impl<'a, U> Clone for FieldOptions<'a, U> {
         Self {
             opts: self.opts,
             util: self.util.clone(),
+            uninterpreted_option: self.uninterpreted_option.clone(),
         }
     }
 }

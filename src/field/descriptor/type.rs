@@ -5,6 +5,7 @@ pub enum Type {
     /// not supported
     Group,
 }
+#[derive(Debug, Clone, Copy)]
 pub enum Scalar {
     /// 0 is reserved for errors.
     /// Order is weird for historical reasons.

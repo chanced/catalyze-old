@@ -61,21 +61,21 @@ impl ToCamelCase for str {
 
 pub trait ToCase: Sized + Clone {
     fn to_screaming_kebab_case(&self, name: &Name<Self>) -> Name<Self> {
-        name.assign(&name.as_str().to_screaming_kebab_case())
+        name.with_value(&name.as_str().to_screaming_kebab_case())
     }
     fn to_screaming_snake_case(&self, name: &Name<Self>) -> Name<Self> {
-        name.assign(&name.as_str().to_screaming_snake_case())
+        name.with_value(&name.as_str().to_screaming_snake_case())
     }
     fn to_kebab_case(&self, name: &Name<Self>) -> Name<Self> {
-        name.assign(&name.as_str().to_kebab_case())
+        name.with_value(&name.as_str().to_kebab_case())
     }
     fn to_camel_case(&self, name: &Name<Self>) -> Name<Self> {
-        name.assign(&name.as_str().to_lower_camel_case())
+        name.with_value(&name.as_str().to_lower_camel_case())
     }
     fn to_pascal_case(&self, name: &Name<Self>) -> Name<Self> {
-        name.assign(&name.as_str().to_pascal_case())
+        name.with_value(&name.as_str().to_pascal_case())
     }
     fn to_snake_case(&self, name: &Name<Self>) -> Name<Self> {
-        name.assign(&name.as_str().to_snake_case())
+        name.with_value(&name.as_str().to_snake_case())
     }
 }

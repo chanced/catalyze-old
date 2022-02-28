@@ -21,9 +21,9 @@ impl ToCase for Rust {
                     | "abstract" | "become" | "box" | "do" | "final" | "macro" | "override" | "priv" | "typeof"
                     | "unsized" | "virtual" | "yield"
                      // 2018 reserved keywords.
-                    | "async" | "await" | "try" => name.assign(&format!("r#{}",name)),
+                    | "async" | "await" | "try" => name.with_value(&format!("r#{}",name)),
                     // the following keywords are not supported as raw identifiers and are therefore suffixed with an underscore.
-                    "self" | "super" | "extern" | "crate" => name.assign(&format!("r#{}_",name)),
+                    "self" | "super" | "extern" | "crate" => name.with_value(&format!("r#{}_",name)),
                     _ => name.clone(),
                 }
     }

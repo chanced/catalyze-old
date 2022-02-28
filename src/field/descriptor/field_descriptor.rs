@@ -23,7 +23,7 @@ impl<'a, U> FieldDescriptor<'a, U> {
         self.desc.number()
     }
     pub fn label(&self) -> Label {
-        self.desc.label()
+        Label::from(self.desc.label())
     }
     /// If type_name is set, this need not be set.  If both this and type_name
     /// are set, this must be one of Enum, Message or Group.
@@ -74,8 +74,12 @@ impl<'a, U> FieldDescriptor<'a, U> {
     pub fn json_name(&self) -> &str {
         self.desc.json_name()
     }
-    pub fn options(&self) -> FieldOptions<'a, U> {
-        let x = self.desc.options();
+    pub fn options(&self) -> Option<FieldOptions<'a, U>> {
+        self.desc
+            .options
+            .or(Some(prost_types::FieldOptions::default()))
+            .as_ref()
+            .map(|o| FieldOptions::new(o, self.util))
     }
     /// If true, this is a proto3 "optional". When a proto3 field is optional, it
     /// tracks presence regardless of field type.
@@ -115,15 +119,16 @@ impl<'a, U> FieldDescriptor<'a, U> {
         return syntax.supports_required_prefix() && self.label() == Label::Required;
     }
 
-    pub fn is_map(&self) -> bool {
-        self.label() == Label::Map
-    }
-
     pub fn is_repeated(&self) -> bool {
         self.label() == Label::Repeated
     }
 
-    pub fn is_scalar(&self) -> bool {}
+    pub fn is_scalar(&self) -> bool {
+        match self.r#type() {
+            Type::Scalar(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl<'a, U> Clone for FieldDescriptor<'a, U> {

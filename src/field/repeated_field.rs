@@ -1,8 +1,20 @@
 use std::rc::{Rc, Weak};
+mod repeated_enum_field;
+mod repeated_message_field;
+mod repeated_scalar_field;
+pub use repeated_enum_field::*;
+pub use repeated_message_field::*;
+pub use repeated_scalar_field::*;
 
-use crate::{name::Named, proto::Syntax, util::Util, Field, FullyQualified, Message, Name};
+use crate::{
+    name::Named, proto::Syntax, util::Util, FieldDetail, FullyQualified, Message, Name,
+};
 
-use super::{descriptor::FieldDescriptor, EnumFieldDetail, MessageFieldDetail, ScalarFieldDetail};
+use super::descriptor::FieldDescriptor;
+
+pub(crate) struct RepeatedFieldDetail<'a, U> {
+    pub detail: FieldDetail<'a, U>,
+}
 
 /// Represents a field marked as `repeated`. The field can hold
 /// a scalar value, an enum, or a message.
@@ -21,14 +33,7 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Message(f) => f.name(),
         }
     }
-    pub fn field(&self) -> Field<'a, U> {
-        match self {
-            RepeatedField::Scalar(s) => s.field(),
-            RepeatedField::Enum(e) => e.field(),
-            RepeatedField::Message(m) => m.field(),
-        }
-    }
-    fn fully_qualified_name(&self) -> String {
+    fn fully_qualified_name(&self) -> &str {
         match self {
             RepeatedField::Scalar(f) => f.fully_qualified_name(),
             RepeatedField::Enum(f) => f.fully_qualified_name(),
@@ -36,15 +41,15 @@ impl<'a, U> RepeatedField<'a, U> {
         }
     }
     pub fn containing_message(&self) -> Message<'a, U> {
-        match self {
-            RepeatedField::Scalar(f) => f.containing_message(),
-            RepeatedField::Enum(f) => f.containing_message(),
-            RepeatedField::Message(f) => f.containing_message(),
-        }
+        self.container()
     }
 
     pub fn container(&self) -> Message<'a, U> {
-        self.containing_message()
+        match self {
+            RepeatedField::Scalar(f) => f.container(),
+            RepeatedField::Enum(f) => f.container(),
+            RepeatedField::Message(f) => f.container(),
+        }
     }
 
     pub fn util(&self) -> Util<U> {
@@ -93,7 +98,7 @@ impl<'a, U> Named<U> for RepeatedField<'a, U> {
     }
 }
 impl<'a, U> FullyQualified for RepeatedField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    fn fully_qualified_name(&self) -> &str {
         match self {
             RepeatedField::Scalar(f) => f.fully_qualified_name(),
             RepeatedField::Enum(f) => f.fully_qualified_name(),
@@ -101,100 +106,7 @@ impl<'a, U> FullyQualified for RepeatedField<'a, U> {
         }
     }
 }
-#[derive(Debug, Clone)]
-pub struct RepeatedEnumField<'a, U>(EnumFieldDetail<'a, U>);
 
-impl<'a, U> RepeatedEnumField<'a, U> {
-    pub fn name(&self) -> Name<U> {
-        self.detail.name()
-    }
-    pub fn fully_qualified_name(&self) -> String {
-        self.detail.fully_qualified_name()
-    }
-    pub fn field(&self) -> Field<'a, U> {
-        self.field.upgrade().unwrap()
-    }
-    pub fn repeated_field(&self) -> Rc<RepeatedField<'a, U>> {
-        self.repeated_field.upgrade().unwrap()
-    }
-}
-
-impl<'a, U> FullyQualified for RepeatedEnumField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.detail.fully_qualified_name()
-    }
-}
-
-#[derive(Debug)]
-pub struct RepeatedMessageField<'a, U>(MessageFieldDetail<'a, U>);
-
-impl<'a, U> RepeatedMessageField<'a, U> {
-    pub fn name(&self) -> Name<U> {
-        self.0.name()
-    }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.fully_qualified_name()
-    }
-    pub fn field(&self) -> Field<'a, U> {
-        self.0.field()
-    }
-    pub fn repeated_field(&self) -> Rc<RepeatedField<'a, U>> {
-        self.repeated_field.clone()
-    }
-}
-
-impl<'a, U> Clone for RepeatedMessageField<'a, U> {
-    fn clone(&self) -> Self {
-        RepeatedMessageField(self.0.clone())
-    }
-}
-
-impl<'a, U> FullyQualified for RepeatedMessageField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.detail.fully_qualified_name()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct RepeatedScalarFieldDetail<'a, U> {
-    detail: ScalarFieldDetail<'a, U>,
-}
-
-#[derive(Debug)]
-pub(crate) struct RepeatedScalarField<'a, U>(Rc<RepeatedScalarFieldDetail<'a, U>>);
-
-impl<'a, U> RepeatedScalarField<'a, U> {}
-
-impl<'a, U> RepeatedScalarField<'a, U> {
-    pub fn name(&self) -> Name<U> {
-        self.detail.name()
-    }
-    pub fn fully_qualified_name(&self) -> String {
-        self.detail.fully_qualified_name()
-    }
-    pub fn field(&self) -> Field<'a, U> {
-        self.field.clone()
-    }
-    pub fn repeated_field(&self) -> Rc<RepeatedField<'a, U>> {
-        self.repeated_field.upgrade().unwrap()
-    }
-}
-
-impl<'a, U> FullyQualified for RepeatedScalarField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.detail.fully_qualified_name()
-    }
-}
-impl<'a, U> Named<U> for RepeatedScalarField<'a, U> {
-    fn name(&self) -> Name<U> {
-        self.detail.name()
-    }
-}
-impl<'a, U> Clone for RepeatedScalarField<'a, U> {
-    fn clone(&self) -> Self {
-        RepeatedScalarField(self.0.clone())
-    }
-}
 #[derive(Debug, Clone)]
 pub(crate) enum WeakRepeatedField<'a, U> {
     Scalar(WeakRepeatedScalarField<'a, U>),
@@ -203,3 +115,5 @@ pub(crate) enum WeakRepeatedField<'a, U> {
 }
 
 pub(crate) struct WeakRepeatedScalarField<'a, U>(Weak<RepeatedScalarField<'a, U>>);
+
+pub(crate) struct WeakRepeatedEnumField<'a, U>(Weak<RepeatedScalarField<'a, U>>);

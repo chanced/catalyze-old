@@ -9,7 +9,7 @@ pub enum JsType {
     JsNumber = 2,
 }
 impl From<prost_types::field_options::JsType> for JsType {
-    fn from(js_type: prost_types::field_options::CType) -> Self {
+    fn from(js_type: prost_types::field_options::JsType) -> Self {
         match js_type {
             prost_types::field_options::JsType::JsNormal => JsType::JsNormal,
             prost_types::field_options::JsType::JsString => JsType::JsString,

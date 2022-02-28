@@ -49,8 +49,8 @@ impl<'a, U> EnumValue<'a, U> {
         self.0.r#enum.upgrade()
     }
 
-    fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
+    fn fully_qualified_name(&self) -> &str {
+        &self.0.fqn
     }
 }
 
@@ -61,8 +61,8 @@ impl<'a, U> Named<U> for EnumValue<'a, U> {
 }
 
 impl<'a, U> FullyQualified for EnumValue<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
+    fn fully_qualified_name(&self) -> &str {
+        &self.0.fqn
     }
 }
 

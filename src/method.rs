@@ -1,4 +1,4 @@
-use std::{cell::RefCell, ops::Deref, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{FullyQualified, Name, Node, NodeAtPath};
 
@@ -26,22 +26,8 @@ impl<'a, U> Clone for Method<'a, U> {
     }
 }
 
-impl<'a, U> Into<Node<'a, U>> for Method<'a, U> {
-    fn into(self) -> Node<'a, U> {
-        Node::Method(self)
-    }
-}
-
-impl<'a, U> Deref for Method<'a, U> {
-    type Target = Node<'a, U>;
-
-    fn deref(&self) -> &Self::Target {
-        &Node::Method(self.clone())
-    }
-}
-
 impl<'a, U> NodeAtPath<'a, U> for Method<'a, U> {
-    fn node_at_path(&self, path: &[i32]) -> Option<&Node<'a, U>> {
+    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         if path.is_empty() {
             Some(self)
         } else {
@@ -51,7 +37,7 @@ impl<'a, U> NodeAtPath<'a, U> for Method<'a, U> {
 }
 
 impl<'a, U> FullyQualified for Method<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.fqn.clone()
+    fn fully_qualified_name(&self) -> &str {
+        &self.fqn
     }
 }

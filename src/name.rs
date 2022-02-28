@@ -56,7 +56,7 @@ impl<'a, U> Name<U> {
     /// let n2 = n.assign("bar");
     /// assert_eq!(n2, "bar");
     /// ```
-    pub fn assign(&self, val: &str) -> Self {
+    pub fn with_value(&self, val: &str) -> Self {
         Self {
             val: val.to_owned(),
             util: self.util.clone(),
@@ -113,8 +113,6 @@ impl<'a, U> PartialEq<str> for Name<U> {
         PartialEq::ne(self.as_str(), other)
     }
 }
-
-impl<'a, U> Eq for Name<U> {}
 
 impl Default for Name<Generic> {
     fn default() -> Self {
@@ -216,6 +214,28 @@ impl ToCamelCase for str {
         AsLowerCamelCase(self).to_string()
     }
 }
+
+impl<U: ToCase> Name<U> {
+    pub fn to_camel_case(&self) -> Self {
+        self.util().borrow_mut().to_camel_case(self)
+    }
+    pub fn to_snake_case(&self) -> Self {
+        self.util().borrow_mut().to_snake_case(self)
+    }
+    pub fn to_kebab_case(&self) -> Self {
+        self.util().borrow_mut().to_kebab_case(self)
+    }
+    pub fn to_screaming_snake_case(&self) -> Self {
+        self.util().borrow_mut().to_screaming_snake_case(self)
+    }
+    pub fn to_screaming_kebab_case(&self) -> Self {
+        self.util().borrow_mut().to_screaming_kebab_case(self)
+    }
+    pub fn to_pascal_case(&self) -> Self {
+        self.util().borrow_mut().to_pascal_case(self)
+    }
+}
+
 pub trait ToCamelCase: ToOwned {
     fn to_camel_case(&self) -> Self::Owned;
 }

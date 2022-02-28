@@ -9,7 +9,7 @@ use crate::container::BuildTarget;
 use crate::field::FieldList;
 use crate::iter::{AllEnums, AllMessages, Iter, UpgradeIter};
 use crate::name::Named;
-use crate::path::DescriptorPath;
+use crate::proto::DescriptorPath;
 use crate::traits::{Downgrade, Upgrade};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
@@ -44,7 +44,7 @@ pub(crate) struct MessageDetail<'a, U> {
     enums: EnumList<'a, U>,
     fields: FieldList<'a, U>,
     oneofs: OneofList<'a, U>,
-    dependents: Rc<RefCell<Vec<Weak<Message<'a, U>>>>>,
+    dependents: Rc<RefCell<Vec<WeakMessage<'a, U>>>>,
     container: WeakContainer<'a, U>,
     maps: MessageList<'a, U>,
     preserved_messages: MessageList<'a, U>,
@@ -187,8 +187,8 @@ impl<'a, U> Downgrade for Message<'a, U> {
 }
 
 impl<'a, U> FullyQualified for Message<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
+    fn fully_qualified_name(&self) -> &str {
+        &self.0.fqn
     }
 }
 
@@ -210,21 +210,13 @@ impl<'a, U> NodeAtPath<'a, U> for Message<'a, U> {
 
         let next = path[1] as usize;
         DescriptorPath::try_from(path[0]).ok().and_then(|p| {
-            match p {
-                DescriptorPath::EnumType => msg.0.enums.borrow().get(next).cloned().map(Node::Enum),
-                DescriptorPath::Field => msg.0.fields.borrow().get(next).cloned().map(Node::Field),
-                DescriptorPath::OneofDecl => {
-                    msg.0.oneofs.borrow().get(next).cloned().map(Node::Oneof)
-                }
-                DescriptorPath::NestedType => msg
-                    .0
-                    .messages
-                    .borrow()
-                    .get(next)
-                    .cloned()
-                    .map(Node::Message),
-            }
-            .and_then(|n| n.node_at_path(&path[2..]))
+            let node: Option<Node<'a, U>> = match p {
+                DescriptorPath::EnumType => msg.0.enums.borrow().get(next),
+                DescriptorPath::Field => msg.0.fields.borrow().get(next),
+                DescriptorPath::OneofDecl => msg.0.oneofs.borrow().get(next),
+                DescriptorPath::NestedType => msg.0.messages.borrow().get(next),
+            };
+            node.and_then(|n| n.node_at_path(&path[2..]))
         })
     }
 }

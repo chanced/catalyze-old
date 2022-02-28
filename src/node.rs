@@ -1,13 +1,15 @@
 use std::rc::Rc;
 
-use crate::{Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof, Service};
+use crate::{
+    proto::Syntax, Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof, Service,
+};
 
 pub trait NodeAtPath<'a, U> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>>;
 }
 
 pub trait FullyQualified {
-    fn fully_qualified_name(&self) -> String;
+    fn fully_qualified_name(&self) -> &str;
 }
 
 #[derive(Debug)]
@@ -71,23 +73,14 @@ impl<'a, U> NodeAtPath<'a, U> for Node<'a, U> {
     }
 }
 
-pub trait IntoNode<'a, U> {
-    fn into_node(self) -> Node<'a, U>;
-}
-
 impl<'a, U> From<Field<'a, U>> for Node<'a, U> {
     fn from(field: Field<'a, U>) -> Self {
         Node::Field(field)
     }
 }
-impl<'a, U> IntoNode<'a, U> for Field<'a, U> {
-    fn into_node(self) -> Node<'a, U> {
-        Node::from(self)
-    }
-}
 
 impl<'a, U> FullyQualified for Node<'a, Node<'a, U>> {
-    fn fully_qualified_name(&self) -> String {
+    fn fully_qualified_name(&self) -> &str {
         match self {
             Node::File(f) => f.fully_qualified_name(),
             Node::Message(m) => m.fully_qualified_name(),
@@ -104,4 +97,15 @@ impl<'a, U> FullyQualified for Node<'a, Node<'a, U>> {
 
 pub(crate) fn format_fqn<'a, N: FullyQualified>(n: &N, name: &str) -> String {
     format!("{}.{}", n.fully_qualified_name(), name)
+}
+
+impl<'a, U> From<Oneof<'a, U>> for Node<'a, U> {
+    fn from(oneof: Oneof<'a, U>) -> Self {
+        Node::Oneof(oneof)
+    }
+}
+impl<'a, U> From<&Oneof<'a, U>> for Node<'a, U> {
+    fn from(oneof: &Oneof<'a, U>) -> Self {
+        Node::Oneof(oneof.clone())
+    }
 }

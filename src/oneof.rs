@@ -20,51 +20,27 @@ pub struct OneofDetail<'a, U> {
     fqn: String,
     fields: Rc<RefCell<Vec<Field<'a, U>>>>,
     container: WeakContainer<'a, U>,
+    is_real: bool,
 }
-
+#[derive(Debug, Clone)]
 pub enum Oneof<'a, U> {
-    Real(Oneof<'a, U>),
+    Real(RealOneof<'a, U>),
     Synthetic(SyntheticOneof<'a, U>),
 }
 
-pub struct RealOneof<'a, U>(Rc<OneofDetail<'a, U>>);
-
-pub struct SyntheticOneof<'a, U>(Rc<OneofDetail<'a, U>>);
-
-#[derive(Debug)]
-pub struct OneofDetail<'a, U>(Rc<OneofDetail<'a, U>>);
-impl<'a, U> Clone for Oneof<'a, U> {
-    fn clone(&self) -> Self {
-        Oneof(self.0.clone())
-    }
-}
 impl<'a, U> Oneof<'a, U> {
-    pub(crate) fn new(
-        desc: &'a prost_types::OneofDescriptorProto,
-        container: Container<'a, U>,
-        util: Rc<RefCell<U>>,
-    ) -> Self {
-        Oneof(Rc::new(OneofDetail {
-            name: Name::new(desc.name(), util),
-            fqn: format_fqn(&container, desc.name()),
-            descriptor: desc,
-            container: container.downgrade(),
-            fields: Rc::new(RefCell::new(Vec::new())),
-        }))
-    }
-    pub fn name(&self) -> Name<U> {
-        self.0.name.clone()
-    }
-
-    pub fn container(&self) -> Container<'a, U> {
-        self.0.container.upgrade()
-    }
-
     pub fn fields(&self) -> Iter<Field<'a, U>> {
-        Iter::from(&self.0.fields)
+        match self {
+            Oneof::Real(o) => o.fields(),
+            Oneof::Synthetic(o) => o.fields(),
+        }
     }
     pub(crate) fn add_field(&self, field: Field<'a, U>) {
-        self.0.fields.borrow_mut().push(field);
+        match self {
+            Oneof::Real(o) => o.add_field(field),
+            Oneof::Synthetic(o) => o.add_field(field),
+            //self.0.fields.borrow_mut().push(field);
+        }
     }
 }
 impl<'a, U> NodeAtPath<'a, U> for Oneof<'a, U> {
@@ -76,6 +52,30 @@ impl<'a, U> NodeAtPath<'a, U> for Oneof<'a, U> {
         }
     }
 }
+#[derive(Debug)]
+pub struct RealOneof<'a, U>(Rc<OneofDetail<'a, U>>);
+impl<'a, U> RealOneof<'a, U> {
+    pub fn fields(&self) -> Iter<Field<'a, U>> {
+        Iter::from(&self.0.fields)
+    }
+    pub(crate) fn add_field(&self, field: Field<'a, U>) {
+        self.0.fields.borrow_mut().push(field);
+    }
+}
+
+impl<'a, U> Clone for RealOneof<'a, U> {
+    fn clone(&self) -> Self {
+        RealOneof(self.0.clone())
+    }
+}
+
+#[derive(Debug)]
+pub struct SyntheticOneof<'a, U>(Rc<OneofDetail<'a, U>>);
+impl<'a, U> Clone for SyntheticOneof<'a, U> {
+    fn clone(&self) -> Self {
+        SyntheticOneof(self.0.clone())
+    }
+}
 
 impl<'a, U> Downgrade for Oneof<'a, U> {
     type Target = WeakOneof<'a, U>;
@@ -85,8 +85,8 @@ impl<'a, U> Downgrade for Oneof<'a, U> {
 }
 
 impl<'a, U> FullyQualified for Oneof<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
+    fn fully_qualified_name(&self) -> &str {
+        &self.0.fqn
     }
 }
 #[derive(Debug)]
@@ -98,7 +98,12 @@ impl<'a, U> Clone for WeakOneof<'a, U> {
 }
 impl<'a, U> WeakOneof<'a, U> {
     pub(crate) fn upgrade(&self) -> Oneof<'a, U> {
-        Oneof(self.0.upgrade().unwrap())
+        let detail = self.0.upgrade().unwrap();
+        if detail.is_real() {
+            Oneof::Real(RealOneof(detail))
+        } else {
+            Oneof::Synthetic(SyntheticOneof(detail))
+        }
     }
 }
 impl<'a, U> Upgrade for WeakOneof<'a, U> {
