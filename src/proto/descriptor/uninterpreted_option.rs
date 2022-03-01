@@ -23,9 +23,6 @@ impl<'a, U> Clone for UninterpretedOption<'a, U> {
 }
 impl<'a, U> UninterpretedOption<'a, U> {
     pub fn name_parts(&self) -> NameParts<'a, U> {
-        NameParts {
-            parts: self.opt.name.as_slice(),
-            util: self.util.clone(),
-        }
+        NameParts::new(&self.opt.name, self.util.clone())
     }
 }

@@ -1,11 +1,41 @@
 use std::rc::{Rc, Weak};
 
-use crate::{FullyQualified, MapFieldDetail, Message, Name, Named, WeakEnum};
+use crate::{
+    descriptor::FieldDescriptor, proto::Syntax, util::Util, FullyQualified, MapFieldDetail,
+    Message, Name, Named, WeakEnum,
+};
 
 #[derive(Debug, Clone)]
 pub struct MapEnumFieldDetail<'a, U> {
     enm: WeakEnum<'a, U>,
     detail: MapFieldDetail<'a, U>,
+}
+
+impl<'a, U> MapEnumFieldDetail<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.detail.name()
+    }
+    pub fn fully_qualified_name(&self) -> &str {
+        self.detail.fully_qualified_name()
+    }
+    pub fn is_repeated(&self) -> bool {
+        self.detail.is_repeated()
+    }
+    pub fn is_map(&self) -> bool {
+        self.detail.is_map()
+    }
+    pub fn container(&self) -> Message<'a, U> {
+        self.detail.container()
+    }
+    pub fn util(&self) -> Util<U> {
+        self.detail.util()
+    }
+    pub fn syntax(&self) -> Syntax {
+        self.detail.syntax()
+    }
+    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+        self.detail.descriptor()
+    }
 }
 
 #[derive(Debug)]

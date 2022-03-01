@@ -33,6 +33,7 @@ pub(crate) struct FieldDetail<'a, U> {
     fqn: String,
     syntax: Syntax,
     is_map: bool,
+    is_repeated: bool,
     util: Util<U>,
     descriptor: FieldDescriptor<'a, U>,
 }
@@ -44,6 +45,7 @@ impl<'a, U> Clone for FieldDetail<'a, U> {
             fqn: self.fqn.clone(),
             syntax: self.syntax.clone(),
             is_map: self.is_map,
+            is_repeated: self.is_repeated,
             util: self.util.clone(),
             descriptor: self.descriptor.clone(),
         }

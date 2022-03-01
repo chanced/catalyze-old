@@ -1,6 +1,9 @@
 use std::rc::{Rc, Weak};
 
-use crate::{Field, FullyQualified, MapField, MapFieldDetail, Name, Named, WeakMessage};
+use crate::{
+    descriptor::FieldDescriptor, proto::Syntax, util::Util, Field, FullyQualified, MapField,
+    MapFieldDetail, Message, Name, Named, WeakMessage,
+};
 
 #[derive(Debug)]
 pub struct MapMessageFieldDetail<'a, U> {
@@ -17,6 +20,24 @@ impl<'a, U> MapMessageField<'a, U> {
     }
     pub fn fully_qualified_name(&self) -> &str {
         self.0.detail.fully_qualified_name()
+    }
+    pub fn is_repeated(&self) -> bool {
+        self.0.detail.is_repeated()
+    }
+    pub fn is_map(&self) -> bool {
+        self.0.detail.is_map()
+    }
+    pub fn container(&self) -> Message<'a, U> {
+        self.0.detail.container()
+    }
+    pub fn util(&self) -> Util<U> {
+        self.0.detail.util()
+    }
+    pub fn syntax(&self) -> Syntax {
+        self.0.detail.syntax()
+    }
+    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+        self.0.detail.descriptor()
     }
 }
 

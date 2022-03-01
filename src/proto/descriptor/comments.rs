@@ -55,8 +55,8 @@ impl<'a, U> Comments<'a, U> {
 
     /// Returns each comment block or line above the
     /// entity but separated by whitespace.a
-    pub fn leading_detached_comments(&self) -> Iter<'a, &'a str> {
-        self.loc.leading_detached_comments().iter()
+    pub fn leading_detached_comments(&self) -> Iter<'a, String> {
+        self.loc.leading_detached_comments.iter()
     }
     /// Returns any comment immediately following the entity, without any
     /// whitespace between it and the comment. If the comment would be a leading

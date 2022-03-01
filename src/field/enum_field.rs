@@ -1,6 +1,9 @@
 use std::rc::{Rc, Weak};
 
-use crate::{traits::Upgrade, Enum, Field, FullyQualified, Name, Named, WeakEnum};
+use crate::{
+    proto::Syntax, traits::Upgrade, util::Util, Enum, Field, FullyQualified, Message, Name, Named,
+    WeakEnum,
+};
 
 use super::FieldDetail;
 
@@ -8,6 +11,27 @@ use super::FieldDetail;
 pub(crate) struct EnumFieldDetail<'a, U> {
     detail: FieldDetail<'a, U>,
     r#enum: WeakEnum<'a, U>,
+    is_repeated: bool,
+}
+impl<'a, U> EnumFieldDetail<'a, U> {
+    pub fn is_repeated(&self) -> bool {
+        self.detail.is_repeated()
+    }
+    pub fn is_map(&self) -> bool {
+        self.detail.is_map()
+    }
+    pub fn container(&self) -> Message<'a, U> {
+        self.detail.container()
+    }
+    pub fn util(&self) -> Util<U> {
+        self.detail.util()
+    }
+    pub fn syntax(&self) -> Syntax {
+        self.detail.syntax()
+    }
+    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+        self.detail.descriptor()
+    }
 }
 
 #[derive(Debug)]

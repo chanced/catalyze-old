@@ -6,8 +6,9 @@ use super::FieldDetail;
 
 #[derive(Debug, Clone)]
 pub(crate) struct MessageFieldDetail<'a, U> {
-    pub detail: FieldDetail<'a, U>,
-    pub message: Message<'a, U>,
+    detail: FieldDetail<'a, U>,
+    message: Message<'a, U>,
+    is_repeated: bool,
 }
 
 #[derive(Debug, Clone)]

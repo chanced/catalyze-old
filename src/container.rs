@@ -54,8 +54,8 @@ impl<'a, U> Container<'a, U> {
     }
     pub fn name(&self) -> &Name<U> {
         match self {
-            Container::File(f) => &f.name,
-            Container::Message(m) => &m.name,
+            Container::File(f) => &f.name(),
+            Container::Message(m) => &m.name(),
         }
     }
     pub fn messages(&self) -> Iter<Message<'a, U>> {

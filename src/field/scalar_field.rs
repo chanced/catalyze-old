@@ -1,12 +1,16 @@
 use std::rc::{Rc, Weak};
 
 use super::{FieldDetail, MapScalarFieldDetail, WeakField};
-use crate::{descriptor::Scalar, FullyQualified, Name, Named};
+use crate::{
+    descriptor::{FieldDescriptor, Scalar},
+    proto::Syntax,
+    util::Util,
+    FullyQualified, Message, Name, Named,
+};
 
 #[derive(Debug)]
 pub(crate) struct ScalarFieldDetail<'a, U> {
     detail: FieldDetail<'a, U>,
-    field: WeakField<'a, U>,
     scalar: Scalar,
 }
 
@@ -14,9 +18,39 @@ impl<'a, U> Clone for ScalarFieldDetail<'a, U> {
     fn clone(&self) -> Self {
         Self {
             detail: self.detail.clone(),
-            field: self.field.clone(),
             scalar: self.scalar.clone(),
+            is_repeated: self.is_repeated,
         }
+    }
+}
+
+impl<'a, U> ScalarFieldDetail<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.detail.name()
+    }
+    pub fn fully_qualified_name(&self) -> &str {
+        self.detail.fully_qualified_name()
+    }
+    pub fn scalar(&self) -> &Scalar {
+        &self.scalar
+    }
+    pub fn is_repeated(&self) -> bool {
+        self.detail.is_repeated
+    }
+    pub fn is_map(&self) -> bool {
+        self.detail.is_map
+    }
+    pub fn container(&self) -> Message<'a, U> {
+        self.detail.container()
+    }
+    pub fn util(&self) -> Util<U> {
+        self.detail.util()
+    }
+    pub fn syntax(&self) -> Syntax {
+        self.detail.syntax()
+    }
+    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+        self.detail.descriptor()
     }
 }
 

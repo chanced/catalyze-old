@@ -1,7 +1,8 @@
 use std::rc::{Rc, Weak};
 
 use crate::{
-    Field, FieldDetail, FullyQualified, MapField, MapFieldDetail, MapKey, Name, Named, ScalarField,
+    descriptor::FieldDescriptor, proto::Syntax, util::Util, FullyQualified, MapFieldDetail,
+    Message, Name, Named, ScalarField,
 };
 
 #[derive(Debug, Clone)]
@@ -24,6 +25,24 @@ impl<'a, U> MapScalarField<'a, U> {
     }
     pub fn fully_qualified_name(&self) -> &str {
         self.0.detail.fully_qualified_name()
+    }
+    pub fn is_repeated(&self) -> bool {
+        self.0.detail.is_repeated()
+    }
+    pub fn is_map(&self) -> bool {
+        self.0.detail.is_map()
+    }
+    pub fn container(&self) -> Message<'a, U> {
+        self.0.detail.container()
+    }
+    pub fn util(&self) -> Util<U> {
+        self.0.detail.util()
+    }
+    pub fn syntax(&self) -> Syntax {
+        self.0.detail.syntax()
+    }
+    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+        self.0.detail.descriptor()
     }
 }
 

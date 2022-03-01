@@ -1,5 +1,9 @@
+use std::rc::Rc;
+
+use crate::{EnumFieldDetail, FullyQualified, Name};
+
 #[derive(Debug, Clone)]
-pub struct RepeatedEnumField<'a, U>(EnumFieldDetail<'a, U>);
+pub struct RepeatedEnumField<'a, U>(Rc<EnumFieldDetail<'a, U>>);
 
 impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn name(&self) -> Name<U> {

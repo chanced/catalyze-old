@@ -6,9 +6,7 @@ pub use repeated_enum_field::*;
 pub use repeated_message_field::*;
 pub use repeated_scalar_field::*;
 
-use crate::{
-    name::Named, proto::Syntax, util::Util, FieldDetail, FullyQualified, Message, Name,
-};
+use crate::{name::Named, proto::Syntax, util::Util, FieldDetail, FullyQualified, Message, Name};
 
 use super::descriptor::FieldDescriptor;
 
@@ -68,23 +66,34 @@ impl<'a, U> RepeatedField<'a, U> {
     }
 
     pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
-        self.descriptor.clone()
+        match self {
+            RepeatedField::Scalar(f) => f.descriptor(),
+            RepeatedField::Enum(f) => f.descriptor(),
+            RepeatedField::Message(f) => f.descriptor(),
+        }
     }
 
     pub fn is_map(&self) -> bool {
-        return self.descriptor.is_map();
+        false
     }
 
     pub fn is_repeated(&self) -> bool {
-        return self.descriptor.is_repeated();
+        true
     }
 
     pub fn is_scalar(&self) -> bool {
-        return self.descriptor.is_scalar();
+        match self {
+            RepeatedField::Scalar(_) => true,
+            _ => false,
+        }
     }
 
     pub fn is_optional(&self) -> bool {
-        return self.descriptor.is_optional(self.syntax);
+        match self {
+            RepeatedField::Scalar(f) => f.is_optional(),
+            RepeatedField::Enum(f) => f.is_optional(),
+            RepeatedField::Message(f) => f.is_optional(),
+        }
     }
 }
 
@@ -113,7 +122,5 @@ pub(crate) enum WeakRepeatedField<'a, U> {
     Enum(WeakRepeatedEnumField<'a, U>),
     Message(RepeatedMessageField<'a, U>),
 }
-
-pub(crate) struct WeakRepeatedScalarField<'a, U>(Weak<RepeatedScalarField<'a, U>>);
 
 pub(crate) struct WeakRepeatedEnumField<'a, U>(Weak<RepeatedScalarField<'a, U>>);

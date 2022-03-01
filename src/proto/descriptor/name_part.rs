@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, ops::Index};
+use std::ops::Index;
 
 use crate::util::Util;
 
@@ -10,10 +10,18 @@ use crate::util::Util;
 /// ```
 /// "foo.(bar.baz).qux" => [ ("foo", false), ("bar.baz", true), ("qux", false) ]
 /// ```
-#[derive(Clone, PartialEq)]
+#[derive(Debug)]
 pub struct NamePart<'a, U> {
     part: &'a prost_types::uninterpreted_option::NamePart,
     pub util: Util<U>,
+}
+impl<'a, U> Clone for NamePart<'a, U> {
+    fn clone(&self) -> Self {
+        Self {
+            util: self.util.clone(),
+            part: self.part,
+        }
+    }
 }
 
 impl<'a, U> NamePart<'a, U> {
@@ -47,7 +55,7 @@ impl<'a, U> NamePart<'a, U> {
 impl<'a, U> ToString for NamePart<'a, U> {
     fn to_string(&self) -> String {
         if self.part.is_extension {
-            format!("({})", self.name_part)
+            format!("({})", self.name_part())
         } else {
             self.part.name_part.to_string()
         }
@@ -56,30 +64,47 @@ impl<'a, U> ToString for NamePart<'a, U> {
 
 #[derive(Debug)]
 pub struct NameParts<'a, U> {
-    parts: &'a [prost_types::uninterpreted_option::NamePart],
+    prost_parts: &'a [prost_types::uninterpreted_option::NamePart],
+    parts: Vec<NamePart<'a, U>>,
     util: Util<U>,
 }
-
+impl<'a, U> NameParts<'a, U> {
+    pub fn new(
+        prost_parts: &'a [prost_types::uninterpreted_option::NamePart],
+        util: Util<U>,
+    ) -> Self {
+        let parts = prost_parts
+            .iter()
+            .map(|part| NamePart::new(part, util.clone()))
+            .collect();
+        Self {
+            prost_parts,
+            parts,
+            util,
+        }
+    }
+}
 impl<'a, U> Clone for NameParts<'a, U> {
     fn clone(&self) -> Self {
         Self {
-            parts: self.parts,
+            parts: self.parts.clone(),
             util: self.util.clone(),
+            prost_parts: self.prost_parts,
         }
     }
 }
 
 impl<'a, U> Index<usize> for NameParts<'a, U> {
     type Output = NamePart<'a, U>;
-    fn index(&'a self, i: usize) -> &'a Self::Output {
-        &self.e[i]
+    fn index(&self, i: usize) -> &Self::Output {
+        &self.parts[i]
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct NamePartsIter<'a, U> {
     parts: &'a [prost_types::uninterpreted_option::NamePart],
-    phantom: PhantomData<U>,
+    util: Util<U>,
     i: usize,
 }
 
