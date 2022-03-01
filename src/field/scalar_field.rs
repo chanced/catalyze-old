@@ -1,10 +1,9 @@
 use std::rc::{Rc, Weak};
 
-use super::{FieldDetail, MapScalarFieldDetail, WeakField};
+use super::{FieldDetail, MapScalarFieldDetail};
 use crate::{
     descriptor::{FieldDescriptor, Scalar},
     proto::Syntax,
-    util::Util,
     FullyQualified, Message, Name, Named,
 };
 
@@ -19,7 +18,6 @@ impl<'a, U> Clone for ScalarFieldDetail<'a, U> {
         Self {
             detail: self.detail.clone(),
             scalar: self.scalar.clone(),
-            is_repeated: self.is_repeated,
         }
     }
 }
@@ -43,7 +41,7 @@ impl<'a, U> ScalarFieldDetail<'a, U> {
     pub fn container(&self) -> Message<'a, U> {
         self.detail.container()
     }
-    pub fn util(&self) -> Util<U> {
+    pub fn util(&self) -> Rc<U> {
         self.detail.util()
     }
     pub fn syntax(&self) -> Syntax {

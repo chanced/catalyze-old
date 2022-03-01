@@ -1,6 +1,6 @@
-use crate::{proto::descriptor::UninterpretedOption, util::Util};
+use crate::proto::descriptor::UninterpretedOption;
 
-use std::slice;
+use std::{rc::Rc, slice};
 
 use super::{CType, JsType};
 
@@ -8,11 +8,11 @@ use super::{CType, JsType};
 pub struct FieldOptions<'a, U> {
     opts: &'a prost_types::FieldOptions,
     uninterpreted_option: Vec<UninterpretedOption<'a, U>>,
-    pub util: Util<U>,
+    pub util: Rc<U>,
 }
 
 impl<'a, U> FieldOptions<'a, U> {
-    pub fn new(opts: &'a prost_types::FieldOptions, util: Util<U>) -> Self {
+    pub fn new(opts: &'a prost_types::FieldOptions, util: Rc<U>) -> Self {
         Self {
             opts,
             util,
@@ -99,8 +99,8 @@ impl<'a, U> FieldOptions<'a, U> {
     pub fn uninterpreted_options(&self) -> slice::Iter<UninterpretedOption<'a, U>> {
         self.uninterpreted_option.iter()
     }
-    /// Clones and returns `Rc<RefCell<U>>`
-    pub fn util(&self) -> Util<U> {
+    /// Clones and returns `Rc<U>`
+    pub fn util(&self) -> Rc<U> {
         self.util.clone()
     }
 }

@@ -31,7 +31,7 @@ pub struct Ast<'a, U> {
     pub packages: HashMap<String, Package<'a, U>>,
     pub nodes: HashMap<String, Node<'a, U>>,
     pub extensions: Vec<Extension<'a, U>>,
-    pub util: Rc<RefCell<U>>,
+    pub util: Rc<U>,
     pub file_descriptors: Vec<&'a FileDescriptorProto>,
     pub target_list: HashSet<String>,
 }
@@ -48,7 +48,7 @@ impl<'a, U> Ast<'a, U> {
 }
 
 impl<'a, U> Ast<'a, U> {
-    pub fn new(source: &'a impl Source<'a>, util: Rc<RefCell<U>>) -> Result<Self, anyhow::Error> {
+    pub fn new(source: &'a impl Source<'a>, util: Rc<U>) -> Result<Self, anyhow::Error> {
         let target_list = source
             .targets()
             .iter()

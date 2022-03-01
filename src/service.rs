@@ -30,7 +30,7 @@ impl<'a, U> Service<'a, U> {
     pub(crate) fn new(
         desc: &'a ServiceDescriptorProto,
         container: Container<'a, U>,
-        util: Rc<RefCell<U>>,
+        util: Rc<U>,
     ) -> Self {
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
         Service(Rc::new(ServiceDetail {
@@ -55,9 +55,9 @@ impl<'a, U> Clone for Service<'a, U> {
 }
 
 impl<'a, U> Downgrade for Service<'a, U> {
-    type Target = WeakService<'a, U>;
+    type Output = WeakService<'a, U>;
 
-    fn downgrade(self) -> Self::Target {
+    fn downgrade(self) -> Self::Output {
         WeakService(Rc::downgrade(&self.0))
     }
 }
@@ -103,9 +103,9 @@ impl<'a, U> Clone for WeakService<'a, U> {
 }
 
 impl<'a, U> Upgrade for WeakService<'a, U> {
-    type Target = Service<'a, U>;
+    type Output = Service<'a, U>;
 
-    fn upgrade(self) -> Self::Target {
+    fn upgrade(self) -> Self::Output {
         Service(self.0.upgrade().expect("Service was dropped"))
     }
 }

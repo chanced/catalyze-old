@@ -45,8 +45,8 @@ impl<'a, U> Named<U> for OneofMessageField<'a, U> {
 }
 
 impl<'a, U> Downgrade for OneofMessageField<'a, U> {
-    type Target = WeakOneofMessageField<'a, U>;
-    fn downgrade(self) -> Self::Target {
+    type Output = WeakOneofMessageField<'a, U>;
+    fn downgrade(self) -> Self::Output {
         WeakOneofMessageField(Rc::downgrade(&self.0))
     }
 }
@@ -60,9 +60,9 @@ impl<'a, U> Clone for WeakOneofMessageField<'a, U> {
 }
 
 impl<'a, U> Upgrade for WeakOneofMessageField<'a, U> {
-    type Target = OneofMessageField<'a, U>;
+    type Output = OneofMessageField<'a, U>;
 
-    fn upgrade(self) -> Self::Target {
+    fn upgrade(self) -> Self::Output {
         OneofMessageField(
             self.0
                 .upgrade()

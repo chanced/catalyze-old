@@ -1,4 +1,4 @@
-use std::{cell::RefCell, ops::Deref, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     format_fqn,
@@ -24,7 +24,7 @@ impl<'a, U> EnumValue<'a, U> {
     pub(crate) fn new(
         desc: &'a EnumValueDescriptorProto,
         r#enum: Enum<'a, U>,
-        util: Rc<RefCell<U>>,
+        util: Rc<U>,
     ) -> Self {
         EnumValue(Rc::new(EnumValueDetail {
             name: Name::new(desc.name(), util),

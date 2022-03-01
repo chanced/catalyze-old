@@ -29,7 +29,7 @@ impl<'a, U> Extension<'a, U> {
     pub(crate) fn new(
         desc: &'a FieldDescriptorProto,
         container: Container<'a, U>,
-        util: Rc<RefCell<U>>,
+        util: Rc<U>,
     ) -> Self {
         let ext = Self(Rc::new(ExtensionDetail {
             name: Name::new(desc.name(), util),
@@ -61,9 +61,9 @@ impl<'a, U> Clone for Extension<'a, U> {
 pub(crate) struct WeakExtension<'a, U>(Weak<ExtensionDetail<'a, U>>);
 
 impl<'a, U> Upgrade for WeakExtension<'a, U> {
-    type Target = Extension<'a, U>;
+    type Output = Extension<'a, U>;
 
-    fn upgrade(self) -> Self::Target {
+    fn upgrade(self) -> Self::Output {
         Extension(self.0.upgrade().expect("Extension was dropped"))
     }
 }

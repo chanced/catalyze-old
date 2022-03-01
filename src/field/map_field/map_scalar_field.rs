@@ -1,8 +1,8 @@
 use std::rc::{Rc, Weak};
 
 use crate::{
-    descriptor::FieldDescriptor, proto::Syntax, util::Util, FullyQualified, MapFieldDetail,
-    Message, Name, Named, ScalarField,
+    descriptor::FieldDescriptor, proto::Syntax, FullyQualified, MapFieldDetail, Message, Name,
+    Named, ScalarField,
 };
 
 #[derive(Debug, Clone)]
@@ -35,7 +35,7 @@ impl<'a, U> MapScalarField<'a, U> {
     pub fn container(&self) -> Message<'a, U> {
         self.0.detail.container()
     }
-    pub fn util(&self) -> Util<U> {
+    pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
     }
     pub fn syntax(&self) -> Syntax {

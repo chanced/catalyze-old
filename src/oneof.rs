@@ -78,8 +78,8 @@ impl<'a, U> Clone for SyntheticOneof<'a, U> {
 }
 
 impl<'a, U> Downgrade for Oneof<'a, U> {
-    type Target = WeakOneof<'a, U>;
-    fn downgrade(self) -> Self::Target {
+    type Output = WeakOneof<'a, U>;
+    fn downgrade(self) -> Self::Output {
         WeakOneof(Rc::downgrade(&self.0))
     }
 }
@@ -107,8 +107,8 @@ impl<'a, U> WeakOneof<'a, U> {
     }
 }
 impl<'a, U> Upgrade for WeakOneof<'a, U> {
-    type Target = Oneof<'a, U>;
-    fn upgrade(self) -> Self::Target {
+    type Output = Oneof<'a, U>;
+    fn upgrade(self) -> Self::Output {
         Oneof(self.0.upgrade().unwrap())
     }
 }

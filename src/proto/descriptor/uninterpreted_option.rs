@@ -1,4 +1,4 @@
-use crate::util::Util;
+use std::rc::Rc;
 
 use super::NameParts;
 
@@ -11,7 +11,7 @@ use super::NameParts;
 #[derive(Debug)]
 pub struct UninterpretedOption<'a, U> {
     opt: &'a prost_types::UninterpretedOption,
-    util: Util<U>,
+    util: Rc<U>,
 }
 impl<'a, U> Clone for UninterpretedOption<'a, U> {
     fn clone(&self) -> Self {

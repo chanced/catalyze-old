@@ -49,7 +49,7 @@ impl<'a, U> Clone for OneofScalarField<'a, U> {
     }
 }
 impl<'a, U> Downgrade for OneofScalarField<'a, U> {
-    type Target = WeakOneofScalarField<'a, U>;
+    type Output = WeakOneofScalarField<'a, U>;
     fn downgrade(self) -> WeakOneofScalarField<'a, U> {
         WeakOneofScalarField(Rc::downgrade(&self.0))
     }
@@ -63,9 +63,9 @@ impl<'a, U> Clone for WeakOneofScalarField<'a, U> {
     }
 }
 impl<'a, U> Upgrade for WeakOneofScalarField<'a, U> {
-    type Target = OneofScalarField<'a, U>;
+    type Output = OneofScalarField<'a, U>;
 
-    fn upgrade(self) -> Self::Target {
+    fn upgrade(self) -> Self::Output {
         OneofScalarField(
             self.0
                 .upgrade()

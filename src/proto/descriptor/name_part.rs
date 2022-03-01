@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use crate::util::Util;
+
 
 /// The name of the uninterpreted option.  Each string represents a segment in
 /// a dot-separated name. `is_extension` is `true` if a segment represents an
@@ -13,7 +13,7 @@ use crate::util::Util;
 #[derive(Debug)]
 pub struct NamePart<'a, U> {
     part: &'a prost_types::uninterpreted_option::NamePart,
-    pub util: Util<U>,
+    pub util: Rc<U>,
 }
 impl<'a, U> Clone for NamePart<'a, U> {
     fn clone(&self) -> Self {
@@ -25,7 +25,7 @@ impl<'a, U> Clone for NamePart<'a, U> {
 }
 
 impl<'a, U> NamePart<'a, U> {
-    pub fn new(part: &'a prost_types::uninterpreted_option::NamePart, util: Util<U>) -> Self {
+    pub fn new(part: &'a prost_types::uninterpreted_option::NamePart, util: Rc<U>) -> Self {
         Self { part, util }
     }
     /// alias for value
@@ -47,7 +47,7 @@ impl<'a, U> NamePart<'a, U> {
         self.part.is_extension
     }
 
-    pub fn util(&self) -> Util<U> {
+    pub fn util(&self) -> Rc<U> {
         return self.util.clone();
     }
 }
@@ -66,12 +66,12 @@ impl<'a, U> ToString for NamePart<'a, U> {
 pub struct NameParts<'a, U> {
     prost_parts: &'a [prost_types::uninterpreted_option::NamePart],
     parts: Vec<NamePart<'a, U>>,
-    util: Util<U>,
+    util: Rc<U>,
 }
 impl<'a, U> NameParts<'a, U> {
     pub fn new(
         prost_parts: &'a [prost_types::uninterpreted_option::NamePart],
-        util: Util<U>,
+        util: Rc<U>,
     ) -> Self {
         let parts = prost_parts
             .iter()
@@ -104,7 +104,7 @@ impl<'a, U> Index<usize> for NameParts<'a, U> {
 #[derive(Debug, Clone)]
 pub struct NamePartsIter<'a, U> {
     parts: &'a [prost_types::uninterpreted_option::NamePart],
-    util: Util<U>,
+    util: Rc<U>,
     i: usize,
 }
 

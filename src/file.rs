@@ -26,7 +26,7 @@ struct FileDetail<'a, U> {
     build_target: bool,
     pkg_info: Option<prost_types::SourceCodeInfo>,
     src_info: Option<prost_types::SourceCodeInfo>,
-    util: Rc<RefCell<U>>,
+    util: Rc<U>,
     fqn: String,
     pkg: Option<WeakPackage<'a, U>>,
     messages: MessageList<'a, U>,
@@ -56,7 +56,7 @@ impl<'a, U> File<'a, U> {
         build_target: bool,
         desc: &'a FileDescriptorProto,
         pkg: Option<Package<'a, U>>,
-        util: Rc<RefCell<U>>,
+        util: Rc<U>,
     ) -> Self {
         let name = Name::new(desc.name(), util.clone());
         let fqn = match desc.package() {
@@ -168,8 +168,8 @@ impl<'a, U> File<'a, U> {
     }
 }
 impl<'a, U> Downgrade for File<'a, U> {
-    type Target = WeakFile<'a, U>;
-    fn downgrade(self) -> Self::Target {
+    type Output = WeakFile<'a, U>;
+    fn downgrade(self) -> Self::Output {
         WeakFile(Rc::downgrade(&self.0))
     }
 }
@@ -254,8 +254,8 @@ impl<'a, U> WeakFile<'a, U> {
 }
 
 impl<'a, U> Upgrade for WeakFile<'a, U> {
-    type Target = File<'a, U>;
-    fn upgrade(self) -> Self::Target {
+    type Output = File<'a, U>;
+    fn upgrade(self) -> Self::Output {
         File(self.0.upgrade().expect("File was dropped"))
     }
 }

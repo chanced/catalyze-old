@@ -1,9 +1,9 @@
 pub(crate) trait Upgrade: Sized {
-    type Target;
-    fn upgrade(self) -> Self::Target;
+    type Output;
+    fn upgrade(self) -> Self::Output;
 }
 
 pub(crate) trait Downgrade: Sized {
-    type Target;
-    fn downgrade(self) -> Self::Target;
+    type Output;
+    fn downgrade(self) -> Self::Output;
 }

@@ -9,7 +9,7 @@ use prost_types::EnumDescriptorProto;
 use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
-    path::EnumDescriptorPath,
+    proto::EnumDescriptorPath,
     traits::{Downgrade, Upgrade},
     EnumValue, EnumValueList, FullyQualified, Message, Name, Node, NodeAtPath, Package,
 };
@@ -32,7 +32,7 @@ impl<'a, U> Enum<'a, U> {
     pub(crate) fn new(
         desc: &'a EnumDescriptorProto,
         container: Container<'a, U>,
-        util: Rc<RefCell<U>>,
+        util: Rc<U>,
     ) -> Self {
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
 
@@ -93,8 +93,8 @@ impl<'a, U> NodeAtPath<'a, U> for Enum<'a, U> {
 }
 
 impl<'a, U> Downgrade for Enum<'a, U> {
-    type Target = WeakEnum<'a, U>;
-    fn downgrade(self) -> Self::Target {
+    type Output = WeakEnum<'a, U>;
+    fn downgrade(self) -> Self::Output {
         WeakEnum(Rc::downgrade(&self.0))
     }
 }
@@ -109,8 +109,8 @@ impl<'a, U> FullyQualified for Enum<'a, U> {
 pub(crate) struct WeakEnum<'a, U>(Weak<EnumDetail<'a, U>>);
 
 impl<'a, U> Upgrade for WeakEnum<'a, U> {
-    type Target = Enum<'a, U>;
-    fn upgrade(self) -> Self::Target {
+    type Output = Enum<'a, U>;
+    fn upgrade(self) -> Self::Output {
         Enum(self.0.upgrade().expect("Enum was dropped"))
     }
 }

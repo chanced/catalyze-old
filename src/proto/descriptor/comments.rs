@@ -2,13 +2,13 @@ use std::slice::Iter;
 
 use petgraph::visit::Walker;
 
-use crate::util::Util;
+
 
 /// Comments associated to entities in the source code.
 #[derive(Debug)]
 pub struct Comments<'a, U> {
     loc: &'a prost_types::source_code_info::Location,
-    util: Util<U>,
+    util: Rc<U>,
 }
 
 impl<'a, U> Comments<'a, U> {
@@ -49,19 +49,19 @@ impl<'a, U> Comments<'a, U> {
 
     /// Returns any comment immediately preceding the node, without any
     /// whitespace between it and the comment.
-    pub fn leading_comments(&self) -> &'a str {
+    pub fn leading(&self) -> &'a str {
         self.loc.leading_comments()
     }
 
     /// Returns each comment block or line above the
     /// entity but separated by whitespace.a
-    pub fn leading_detached_comments(&self) -> Iter<'a, String> {
+    pub fn leading_detached(&self) -> Iter<'a, String> {
         self.loc.leading_detached_comments.iter()
     }
     /// Returns any comment immediately following the entity, without any
     /// whitespace between it and the comment. If the comment would be a leading
     /// comment for another entity, it won't be considered a trailing comment.
-    pub fn trailing_comments(&self) -> &'a str {
+    pub fn trailing(&self) -> &'a str {
         self.loc.trailing_comments()
     }
 }

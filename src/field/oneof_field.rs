@@ -89,8 +89,8 @@ impl<'a, U> Named<U> for OneofField<'a, U> {
 }
 
 impl<'a, U> Downgrade for OneofField<'a, U> {
-    type Target = WeakOneofField<'a, U>;
-    fn downgrade(self) -> Self::Target {
+    type Output = WeakOneofField<'a, U>;
+    fn downgrade(self) -> Self::Output {
         match self {
             OneofField::Real(f) => WeakOneofField::Real(f.downgrade()),
             OneofField::Synethic(f) => WeakOneofField::Synethic(f.downgrade()),
@@ -105,8 +105,8 @@ pub(crate) enum WeakOneofField<'a, U> {
 }
 
 impl<'a, U> Upgrade for WeakOneofField<'a, U> {
-    type Target = OneofField<'a, U>;
-    fn upgrade(self) -> Self::Target {
+    type Output = OneofField<'a, U>;
+    fn upgrade(self) -> Self::Output {
         match self {
             WeakOneofField::Real(f) => OneofField::Real(f.upgrade()),
             WeakOneofField::Synethic(f) => OneofField::Synethic(f.upgrade()),

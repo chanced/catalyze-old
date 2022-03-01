@@ -39,16 +39,16 @@ pub struct UpgradeIter<T>
 where
     T: Downgrade,
 {
-    nodes: Rc<RefCell<Vec<T::Target>>>,
+    nodes: Rc<RefCell<Vec<T::Output>>>,
     idx: usize,
     phantom: PhantomData<T>,
 }
 impl<T> UpgradeIter<T>
 where
     T: Downgrade,
-    T::Target: Upgrade<Target = T>,
+    T::Output: Upgrade<Output = T>,
 {
-    pub(crate) fn new(nodes: Rc<RefCell<Vec<T::Target>>>) -> Self {
+    pub(crate) fn new(nodes: Rc<RefCell<Vec<T::Output>>>) -> Self {
         Self {
             nodes: nodes.clone(),
             phantom: PhantomData,
@@ -60,7 +60,7 @@ where
 impl<T> Iterator for UpgradeIter<T>
 where
     T: Downgrade,
-    T::Target: Upgrade<Target = T>,
+    T::Output: Upgrade<Output = T>,
 {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {

@@ -55,9 +55,9 @@ impl<'a, U> Named<U> for SyntheticOneofField<'a, U> {
 }
 
 impl<'a, U> Downgrade for SyntheticOneofField<'a, U> {
-    type Target = WeakSyntheticOneofField<'a, U>;
+    type Output = WeakSyntheticOneofField<'a, U>;
 
-    fn downgrade(self) -> Self::Target {
+    fn downgrade(self) -> Self::Output {
         match self {
             SyntheticOneofField::Scalar(f) => WeakSyntheticOneofField::Scalar(f.downgrade()),
             SyntheticOneofField::Enum(f) => WeakSyntheticOneofField::Enum(f.downgrade()),
@@ -73,8 +73,8 @@ pub(crate) enum WeakSyntheticOneofField<'a, U> {
     Scalar(WeakOneofScalarField<'a, U>),
 }
 impl<'a, U> Upgrade for WeakSyntheticOneofField<'a, U> {
-    type Target = SyntheticOneofField<'a, U>;
-    fn upgrade(self) -> Self::Target {
+    type Output = SyntheticOneofField<'a, U>;
+    fn upgrade(self) -> Self::Output {
         match self {
             WeakSyntheticOneofField::Enum(f) => SyntheticOneofField::Enum(f.upgrade()),
             WeakSyntheticOneofField::Message(f) => SyntheticOneofField::Message(f.upgrade()),

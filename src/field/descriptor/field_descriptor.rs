@@ -1,6 +1,7 @@
+use std::rc::Rc;
+
 use crate::field::descriptor::{Label, Type};
 use crate::proto::Syntax;
-use crate::util::Util;
 
 use super::FieldOptions;
 
@@ -8,11 +9,11 @@ use super::FieldOptions;
 #[derive(Debug)]
 pub struct FieldDescriptor<'a, U> {
     desc: &'a prost_types::FieldDescriptorProto,
-    util: Util<U>,
+    util: Rc<U>,
 }
 
 impl<'a, U> FieldDescriptor<'a, U> {
-    pub fn new(desc: &'a prost_types::FieldDescriptorProto, util: Util<U>) -> Self {
+    pub fn new(desc: &'a prost_types::FieldDescriptorProto, util: Rc<U>) -> Self {
         Self { desc, util }
     }
 
@@ -109,7 +110,7 @@ impl<'a, U> FieldDescriptor<'a, U> {
     ///
     /// - `syntax` is `Syntax::Proto3` and `proto3_optional` is `true`
     /// - `syntax` is `Syntax::Proto2` and `label` is `Label::Optional`.
-    pub(crate) fn is_optional(&self, syntax: Syntax) -> bool {
+    pub(crate) fn is_marked_optional(&self, syntax: Syntax) -> bool {
         match syntax {
             Syntax::Proto2 => self.label() == Label::Optional,
             Syntax::Proto3 => self.proto3_optional(),

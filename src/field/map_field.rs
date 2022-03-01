@@ -3,14 +3,15 @@ mod map_key;
 mod map_message_field;
 mod map_scalar_field;
 
+use std::rc::Rc;
+
 pub use map_enum_field::*;
 pub use map_key::*;
 pub use map_message_field::*;
 pub use map_scalar_field::*;
 
 use crate::{
-    descriptor::FieldDescriptor, name::Named, proto::Syntax, util::Util, Field, FullyQualified,
-    Message, Name,
+    descriptor::FieldDescriptor, name::Named, proto::Syntax, Field, FullyQualified, Message, Name,
 };
 
 use super::FieldDetail;
@@ -38,7 +39,7 @@ impl<'a, U> MapFieldDetail<'a, U> {
     pub fn container(&self) -> Message<'a, U> {
         self.detail.container()
     }
-    pub fn util(&self) -> Util<U> {
+    pub fn util(&self) -> Rc<U> {
         self.detail.util()
     }
     pub fn syntax(&self) -> Syntax {

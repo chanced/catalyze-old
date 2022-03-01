@@ -43,7 +43,7 @@ impl<'a, U> Clone for OneofEnumField<'a, U> {
     }
 }
 impl<'a, U> Downgrade for OneofEnumField<'a, U> {
-    type Target = WeakOneofEnumField<'a, U>;
+    type Output = WeakOneofEnumField<'a, U>;
     fn downgrade(self) -> WeakOneofEnumField<'a, U> {
         WeakOneofEnumField(Rc::downgrade(&self.0))
     }
@@ -57,9 +57,13 @@ impl<'a, U> Clone for WeakOneofEnumField<'a, U> {
     }
 }
 impl<'a, U> Upgrade for WeakOneofEnumField<'a, U> {
-    type Target = OneofEnumField<'a, U>;
+    type Output = OneofEnumField<'a, U>;
 
-    fn upgrade(self) -> Self::Target {
-        OneofEnumField(self.0.upgrade().expect("Failed to upgrade WeakOneofEnumField"))
+    fn upgrade(self) -> Self::Output {
+        OneofEnumField(
+            self.0
+                .upgrade()
+                .expect("Failed to upgrade WeakOneofEnumField"),
+        )
     }
 }

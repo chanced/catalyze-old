@@ -18,8 +18,9 @@ use std::{cell::RefCell, rc::Rc};
 pub use well_known_type_field::*;
 
 use crate::{
-    proto::Syntax, traits::Upgrade, util::Util, FullyQualified, IntoNode, Message, Name, Node,
-    NodeAtPath, SyntheticOneof, WeakMessage, WellKnownMessage,
+    proto::{Syntax, descriptor::Comments}, traits::Upgrade,  FullyQualified,  Message, Name, Node,
+    NodeAtPath, SyntheticOneof, WeakMessage,
+
 };
 
 use self::descriptor::*;
@@ -28,19 +29,21 @@ pub(crate) type FieldList<'a, U> = Rc<RefCell<Vec<Field<'a, U>>>>;
 
 #[derive(Debug)]
 pub(crate) struct FieldDetail<'a, U> {
-    containing_msg: WeakMessage<'a, U>,
+    msg: WeakMessage<'a, U>,
     name: Name<U>,
     fqn: String,
     syntax: Syntax,
     is_map: bool,
     is_repeated: bool,
-    util: Util<U>,
+    in_oneof: bool,
+    util: Rc<U>,
     descriptor: FieldDescriptor<'a, U>,
+    comments: Comments<'a, U>,
 }
 impl<'a, U> Clone for FieldDetail<'a, U> {
     fn clone(&self) -> Self {
         Self {
-            containing_msg: self.containing_msg.clone(),
+            msg: self.msg.clone(),
             name: self.name.clone(),
             fqn: self.fqn.clone(),
             syntax: self.syntax.clone(),
@@ -48,9 +51,17 @@ impl<'a, U> Clone for FieldDetail<'a, U> {
             is_repeated: self.is_repeated,
             util: self.util.clone(),
             descriptor: self.descriptor.clone(),
+            in_oneof: self.in_oneof,
+            comments: self.comments.clone(),
         }
     }
 }
+
+fn example<T, R>(f: fn(T) -> R) -> R {
+    
+}
+
+
 impl<'a, U> FieldDetail<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.name.clone()
@@ -59,15 +70,16 @@ impl<'a, U> FieldDetail<'a, U> {
         &self.fqn
     }
     pub fn container(&self) -> Message<'a, U> {
-        self.containing_message()
+        self.msg.upgrade()
     }
     pub fn containing_message(&self) -> Message<'a, U> {
-        self.containing_message().upgrade()
+        self.container()
     }
-    pub fn util(&self) -> Util<U> {
+    pub fn util(&self) -> Rc<U> {
         self.util.clone()
     }
     pub fn syntax(&self) -> Syntax {
+        
         self.syntax
     }
     pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
@@ -82,11 +94,25 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn is_scalar(&self) -> bool {
         return self.descriptor.is_scalar();
     }
-    pub fn is_optional(&self) -> bool {
-        return self.descriptor.is_optional(self.syntax);
+    pub fn is_marked_optional(&self) -> bool {
+        return self.descriptor.is_marked_optional(self.syntax);
     }
     pub fn is_required(&self) -> bool {
         return self.descriptor.is_required(self.syntax);
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.comments.clone()
+    }
+    /// Returns `true` for all fields that have explicit presence.
+    ///
+    /// See:
+    /// - https://github.com/protocolbuffers/protobuf/blob/v3.17.0/docs/field_presence.md
+    /// - https://github.com/protocolbuffers/protobuf/blob/master/docs/implementing_proto3_presence.md
+    pub fn has_presence(&self) -> bool {
+        if self.in_oneof {
+            return true;
+        }
+        if self.is
     }
 }
 
@@ -342,8 +368,8 @@ impl<'a, U> Clone for WeakField<'a, U> {
 }
 
 impl<'a, U> Upgrade for WeakField<'a, U> {
-    type Target = Field<'a, U>;
-    fn upgrade(self) -> Self::Target {
+    type Output = Field<'a, U>;
+    fn upgrade(self) -> Self::Output {
         match self {
             WeakField::Scalar(f) => Field::Scalar(f.upgrade()),
             WeakField::Message(f) => Field::Message(f.upgrade()),

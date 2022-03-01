@@ -1,4 +1,4 @@
-use crate::util::{Generic, ToCase};
+use crate::util::{Generic, ToCase, Util};
 use crate::WELL_KNNOWN_TYPE_PACKAGE;
 pub use heck::{
     AsLowerCamelCase, ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase,
@@ -19,7 +19,7 @@ pub trait Named<U> {
 
 pub struct Name<U> {
     val: String,
-    pub util: Rc<RefCell<U>>,
+    pub util: Rc<U>,
 }
 
 impl<'a, U> Clone for Name<U> {
@@ -38,14 +38,14 @@ impl<'a, U> Hash for Name<U> {
 }
 
 impl<'a, U> Name<U> {
-    pub fn new(val: &str, util: Rc<RefCell<U>>) -> Self {
+    pub fn new(val: &str, util: Rc<U>) -> Self {
         Self {
             val: val.to_owned(),
             util,
         }
     }
     /// Assign returns a new `Name` with the contents of `val` and a cloned copy
-    /// of `Rc<RefCell<U>>`.
+    /// of `Rc<U>`.
     ///
     /// # Examples
     ///
@@ -63,7 +63,7 @@ impl<'a, U> Name<U> {
         }
     }
     /// Assign returns a new `Name` with the contents of `val` and a cloned copy
-    /// of `Rc<RefCell<U>>`.
+    /// of `Rc<U>`.
     ///
     /// # Examples
     ///
@@ -84,7 +84,7 @@ impl<'a, U> Name<U> {
     pub fn as_bytes(&self) -> &[u8] {
         &self.val.as_bytes()
     }
-    pub fn util(&self) -> Rc<RefCell<U>> {
+    pub fn util(&self) -> Rc<U> {
         self.util.clone()
     }
 }
@@ -217,22 +217,22 @@ impl ToCamelCase for str {
 
 impl<U: ToCase> Name<U> {
     pub fn to_camel_case(&self) -> Self {
-        self.util().borrow_mut().to_camel_case(self)
+        self.util().to_camel_case(self)
     }
     pub fn to_snake_case(&self) -> Self {
-        self.util().borrow_mut().to_snake_case(self)
+        self.util().to_snake_case(self)
     }
     pub fn to_kebab_case(&self) -> Self {
-        self.util().borrow_mut().to_kebab_case(self)
+        self.util().to_kebab_case(self)
     }
     pub fn to_screaming_snake_case(&self) -> Self {
-        self.util().borrow_mut().to_screaming_snake_case(self)
+        self.util().to_screaming_snake_case(self)
     }
     pub fn to_screaming_kebab_case(&self) -> Self {
-        self.util().borrow_mut().to_screaming_kebab_case(self)
+        self.util().to_screaming_kebab_case(self)
     }
     pub fn to_pascal_case(&self) -> Self {
-        self.util().borrow_mut().to_pascal_case(self)
+        self.util().to_pascal_case(self)
     }
 }
 

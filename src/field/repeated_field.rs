@@ -1,4 +1,4 @@
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 mod repeated_enum_field;
 mod repeated_message_field;
 mod repeated_scalar_field;
@@ -6,13 +6,9 @@ pub use repeated_enum_field::*;
 pub use repeated_message_field::*;
 pub use repeated_scalar_field::*;
 
-use crate::{name::Named, proto::Syntax, util::Util, FieldDetail, FullyQualified, Message, Name};
+use crate::{name::Named, proto::Syntax, FullyQualified, Message, Name};
 
 use super::descriptor::FieldDescriptor;
-
-pub(crate) struct RepeatedFieldDetail<'a, U> {
-    pub detail: FieldDetail<'a, U>,
-}
 
 /// Represents a field marked as `repeated`. The field can hold
 /// a scalar value, an enum, or a message.
@@ -50,7 +46,7 @@ impl<'a, U> RepeatedField<'a, U> {
         }
     }
 
-    pub fn util(&self) -> Util<U> {
+    pub fn util(&self) -> Rc<U> {
         match self {
             RepeatedField::Scalar(f) => f.util(),
             RepeatedField::Enum(f) => f.util(),
@@ -88,11 +84,15 @@ impl<'a, U> RepeatedField<'a, U> {
         }
     }
 
-    pub fn is_optional(&self) -> bool {
-        match self {
-            RepeatedField::Scalar(f) => f.is_optional(),
-            RepeatedField::Enum(f) => f.is_optional(),
-            RepeatedField::Message(f) => f.is_optional(),
+    pub fn is_marked_optional(&self) -> bool {
+        false
+    }
+
+    pub fn has_presence(&self) -> bool {
+        if let RepeatedField::Message(_) = self {
+            true
+        } else {
+            false
         }
     }
 }
@@ -122,5 +122,3 @@ pub(crate) enum WeakRepeatedField<'a, U> {
     Enum(WeakRepeatedEnumField<'a, U>),
     Message(RepeatedMessageField<'a, U>),
 }
-
-pub(crate) struct WeakRepeatedEnumField<'a, U>(Weak<RepeatedScalarField<'a, U>>);

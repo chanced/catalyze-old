@@ -38,8 +38,8 @@ impl<'a, U> RealOneofField<'a, U> {
     }
 }
 impl<'a, U> Downgrade for RealOneofField<'a, U> {
-    type Target = WeakRealOneofField<'a, U>;
-    fn downgrade(self) -> Self::Target {
+    type Output = WeakRealOneofField<'a, U>;
+    fn downgrade(self) -> Self::Output {
         match self {
             RealOneofField::Scalar(f) => WeakRealOneofField::Scalar(f.downgrade()),
             RealOneofField::Enum(f) => WeakRealOneofField::Enum(f.downgrade()),
@@ -75,8 +75,8 @@ pub enum WeakRealOneofField<'a, U> {
 }
 
 impl<'a, U> Upgrade for WeakRealOneofField<'a, U> {
-    type Target = RealOneofField<'a, U>;
-    fn upgrade(self) -> Self::Target {
+    type Output = RealOneofField<'a, U>;
+    fn upgrade(self) -> Self::Output {
         match self {
             WeakRealOneofField::Scalar(f) => RealOneofField::Scalar(f.upgrade()),
             WeakRealOneofField::Enum(f) => RealOneofField::Enum(f.upgrade()),

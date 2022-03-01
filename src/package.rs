@@ -9,7 +9,7 @@ use std::*;
 #[derive(Debug, Clone)]
 struct PackageDetail<'a, U> {
     name: Name<U>,
-    util: Rc<RefCell<U>>,
+    util: Rc<U>,
     files: Rc<RefCell<Vec<File<'a, U>>>>,
     comments: Rc<RefCell<Vec<String>>>,
 }
@@ -28,7 +28,7 @@ impl<'a, U> Package<'a, U> {
         pkg.map(|p| p.into())
     }
 
-    pub(crate) fn new(name: &str, util: Rc<RefCell<U>>) -> Self {
+    pub(crate) fn new(name: &str, util: Rc<U>) -> Self {
         Self(Rc::new(PackageDetail {
             name: Name::new(name, util.clone()),
             files: Rc::new(RefCell::new(vec![])),

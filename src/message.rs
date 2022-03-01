@@ -39,7 +39,7 @@ pub(crate) struct MessageDetail<'a, U> {
     descriptor: &'a DescriptorProto,
     well_known_type: Option<WellKnownType>,
     fqn: String,
-    util: Rc<RefCell<U>>,
+    util: Rc<U>,
     messages: MessageList<'a, U>,
     enums: EnumList<'a, U>,
     fields: FieldList<'a, U>,
@@ -58,7 +58,7 @@ impl<'a, U> Message<'a, U> {
     pub(crate) fn new(
         descriptor: &'a DescriptorProto,
         container: Container<'a, U>,
-        util: Rc<RefCell<U>>,
+        util: Rc<U>,
     ) -> Self {
         let fqn = format_fqn(&container, descriptor.name());
         let well_known_type = if container.package().map_or(false, |pkg| pkg.is_well_known()) {
@@ -121,7 +121,7 @@ impl<'a, U> Message<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.0.name.clone()
     }
-    pub fn util(&self) -> Rc<RefCell<U>> {
+    pub fn util(&self) -> Rc<U> {
         self.0.util.clone()
     }
     pub fn build_target(&self) -> bool {
@@ -179,9 +179,9 @@ impl<'a, U> Message<'a, U> {
 }
 
 impl<'a, U> Downgrade for Message<'a, U> {
-    type Target = WeakMessage<'a, U>;
+    type Output = WeakMessage<'a, U>;
 
-    fn downgrade(self) -> Self::Target {
+    fn downgrade(self) -> Self::Output {
         todo!()
     }
 }
@@ -241,9 +241,9 @@ impl<'a, U> Deref for Message<'a, U> {
 #[derive(Debug)]
 pub(crate) struct WeakMessage<'a, U>(Weak<MessageDetail<'a, U>>);
 impl<'a, U> Upgrade for WeakMessage<'a, U> {
-    type Target = Message<'a, U>;
+    type Output = Message<'a, U>;
 
-    fn upgrade(self) -> Self::Target {
+    fn upgrade(self) -> Self::Output {
         Message(self.0.upgrade().expect("Message was dropped"))
     }
 }

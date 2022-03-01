@@ -1,18 +1,16 @@
 use std::rc::{Rc, Weak};
 
 use crate::{
-    proto::Syntax, traits::Upgrade, util::Util, Enum, Field, FullyQualified, Message, Name, Named,
-    WeakEnum,
+    descriptor::FieldDescriptor, proto::Syntax, traits::Upgrade, Enum, Field, FieldDetail,
+    FullyQualified, Message, Name, Named, WeakEnum,
 };
-
-use super::FieldDetail;
 
 #[derive(Debug, Clone)]
 pub(crate) struct EnumFieldDetail<'a, U> {
-    detail: FieldDetail<'a, U>,
-    r#enum: WeakEnum<'a, U>,
-    is_repeated: bool,
+    pub detail: FieldDetail<'a, U>,
+    pub r#enum: WeakEnum<'a, U>,
 }
+
 impl<'a, U> EnumFieldDetail<'a, U> {
     pub fn is_repeated(&self) -> bool {
         self.detail.is_repeated()
@@ -23,7 +21,7 @@ impl<'a, U> EnumFieldDetail<'a, U> {
     pub fn container(&self) -> Message<'a, U> {
         self.detail.container()
     }
-    pub fn util(&self) -> Util<U> {
+    pub fn util(&self) -> Rc<U> {
         self.detail.util()
     }
     pub fn syntax(&self) -> Syntax {
@@ -71,9 +69,9 @@ impl<'a, U> Clone for EnumField<'a, U> {
 }
 pub(crate) struct WeakEnumField<'a, U>(Weak<EnumFieldDetail<'a, U>>);
 impl<'a, U> Upgrade for WeakEnumField<'a, U> {
-    type Target = EnumField<'a, U>;
+    type Output = EnumField<'a, U>;
 
-    fn upgrade(self) -> Self::Target {
+    fn upgrade(self) -> Self::Output {
         EnumField(self.0.upgrade().expect("EnumField upgrade failed"))
     }
 }
