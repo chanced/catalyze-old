@@ -1,14 +1,12 @@
-use std::slice::Iter;
+use std::{cell::RefCell, rc::Rc, slice::Iter};
 
 use petgraph::visit::Walker;
-
-
 
 /// Comments associated to entities in the source code.
 #[derive(Debug)]
 pub struct Comments<'a, U> {
     loc: &'a prost_types::source_code_info::Location,
-    util: Rc<U>,
+    util: RefCell<Rc<U>>,
 }
 
 impl<'a, U> Comments<'a, U> {

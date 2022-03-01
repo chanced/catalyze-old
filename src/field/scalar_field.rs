@@ -1,6 +1,6 @@
 use std::rc::{Rc, Weak};
 
-use super::{FieldDetail, MapScalarFieldDetail};
+use super::{FieldDetail, MappedScalarFieldDetail};
 use crate::{
     descriptor::{FieldDescriptor, Scalar},
     proto::Syntax,
@@ -38,9 +38,10 @@ impl<'a, U> ScalarFieldDetail<'a, U> {
     pub fn is_map(&self) -> bool {
         self.detail.is_map
     }
-    pub fn container(&self) -> Message<'a, U> {
-        self.detail.container()
+    pub fn message(&self) -> Message<'a, U> {
+        self.detail.message()
     }
+    /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
         self.detail.util()
     }
@@ -83,4 +84,4 @@ impl<'a, U> FullyQualified for ScalarField<'a, U> {
     }
 }
 #[derive(Debug, Clone)]
-pub(crate) struct WeakScalarField<'a, U>(Weak<MapScalarFieldDetail<'a, U>>);
+pub(crate) struct WeakScalarField<'a, U>(Weak<MappedScalarFieldDetail<'a, U>>);

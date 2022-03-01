@@ -31,8 +31,8 @@ impl<'a, U> OneofFieldDetail<'a, U> {
     pub fn fully_qualified_name(&self) -> &str {
         self.detail.fully_qualified_name()
     }
-    pub fn container(&self) -> Message<'a, U> {
-        self.detail.container()
+    pub fn message(&self) -> Message<'a, U> {
+        self.detail.message()
     }
 }
 impl<'a, U> Clone for OneofFieldDetail<'a, U> {
@@ -64,10 +64,10 @@ impl<'a, U> OneofField<'a, U> {
             OneofField::Synethic(f) => f.fully_qualified_name(),
         }
     }
-    pub fn containing_message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a, U> {
         match self {
-            OneofField::Real(f) => f.containing_message(),
-            OneofField::Synethic(f) => f.containing_message(),
+            OneofField::Real(f) => f.message(),
+            OneofField::Synethic(f) => f.message(),
         }
     }
 }

@@ -26,11 +26,11 @@ impl<'a, U> SyntheticOneofField<'a, U> {
             SyntheticOneofField::Message(f) => f.fully_qualified_name(),
         }
     }
-    pub fn containing_message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a, U> {
         match self {
-            SyntheticOneofField::Scalar(f) => f.containing_message(),
-            SyntheticOneofField::Enum(f) => f.containing_message(),
-            SyntheticOneofField::Message(f) => f.containing_message(),
+            SyntheticOneofField::Scalar(f) => f.message(),
+            SyntheticOneofField::Enum(f) => f.message(),
+            SyntheticOneofField::Message(f) => f.message(),
         }
     }
 }

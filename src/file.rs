@@ -26,7 +26,7 @@ struct FileDetail<'a, U> {
     build_target: bool,
     pkg_info: Option<prost_types::SourceCodeInfo>,
     src_info: Option<prost_types::SourceCodeInfo>,
-    util: Rc<U>,
+    util: RefCell<Rc<U>>,
     fqn: String,
     pkg: Option<WeakPackage<'a, U>>,
     messages: MessageList<'a, U>,
@@ -56,7 +56,7 @@ impl<'a, U> File<'a, U> {
         build_target: bool,
         desc: &'a FileDescriptorProto,
         pkg: Option<Package<'a, U>>,
-        util: Rc<U>,
+        util: RefCell<Rc<U>>,
     ) -> Self {
         let name = Name::new(desc.name(), util.clone());
         let fqn = match desc.package() {

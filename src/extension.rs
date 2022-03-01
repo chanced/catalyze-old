@@ -29,7 +29,7 @@ impl<'a, U> Extension<'a, U> {
     pub(crate) fn new(
         desc: &'a FieldDescriptorProto,
         container: Container<'a, U>,
-        util: Rc<U>,
+        util: RefCell<Rc<U>>,
     ) -> Self {
         let ext = Self(Rc::new(ExtensionDetail {
             name: Name::new(desc.name(), util),

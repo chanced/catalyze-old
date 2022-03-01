@@ -19,7 +19,7 @@ pub trait Named<U> {
 
 pub struct Name<U> {
     val: String,
-    pub util: Rc<U>,
+    pub util: RefCell<Rc<U>>,
 }
 
 impl<'a, U> Clone for Name<U> {
@@ -38,14 +38,14 @@ impl<'a, U> Hash for Name<U> {
 }
 
 impl<'a, U> Name<U> {
-    pub fn new(val: &str, util: Rc<U>) -> Self {
+    pub fn new(val: &str, util: RefCell<Rc<U>>) -> Self {
         Self {
             val: val.to_owned(),
             util,
         }
     }
     /// Assign returns a new `Name` with the contents of `val` and a cloned copy
-    /// of `Rc<U>`.
+    /// of `RefCell<Rc<U>>`.
     ///
     /// # Examples
     ///
@@ -63,7 +63,7 @@ impl<'a, U> Name<U> {
         }
     }
     /// Assign returns a new `Name` with the contents of `val` and a cloned copy
-    /// of `Rc<U>`.
+    /// of `RefCell<Rc<U>>`.
     ///
     /// # Examples
     ///
@@ -84,8 +84,9 @@ impl<'a, U> Name<U> {
     pub fn as_bytes(&self) -> &[u8] {
         &self.val.as_bytes()
     }
+    /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
-        self.util.clone()
+        self.util.borrow().clone()
     }
 }
 

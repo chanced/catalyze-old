@@ -1,6 +1,4 @@
-use std::ops::Index;
-
-
+use std::{cell::RefCell, ops::Index, rc::Rc};
 
 /// The name of the uninterpreted option.  Each string represents a segment in
 /// a dot-separated name. `is_extension` is `true` if a segment represents an
@@ -13,7 +11,7 @@ use std::ops::Index;
 #[derive(Debug)]
 pub struct NamePart<'a, U> {
     part: &'a prost_types::uninterpreted_option::NamePart,
-    pub util: Rc<U>,
+    pub util: RefCell<Rc<U>>,
 }
 impl<'a, U> Clone for NamePart<'a, U> {
     fn clone(&self) -> Self {
@@ -25,7 +23,10 @@ impl<'a, U> Clone for NamePart<'a, U> {
 }
 
 impl<'a, U> NamePart<'a, U> {
-    pub fn new(part: &'a prost_types::uninterpreted_option::NamePart, util: Rc<U>) -> Self {
+    pub fn new(
+        part: &'a prost_types::uninterpreted_option::NamePart,
+        util: RefCell<Rc<U>>,
+    ) -> Self {
         Self { part, util }
     }
     /// alias for value
@@ -47,8 +48,9 @@ impl<'a, U> NamePart<'a, U> {
         self.part.is_extension
     }
 
+    /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
-        return self.util.clone();
+        return self.util.borrow().clone();
     }
 }
 
@@ -66,12 +68,12 @@ impl<'a, U> ToString for NamePart<'a, U> {
 pub struct NameParts<'a, U> {
     prost_parts: &'a [prost_types::uninterpreted_option::NamePart],
     parts: Vec<NamePart<'a, U>>,
-    util: Rc<U>,
+    util: RefCell<Rc<U>>,
 }
 impl<'a, U> NameParts<'a, U> {
     pub fn new(
         prost_parts: &'a [prost_types::uninterpreted_option::NamePart],
-        util: Rc<U>,
+        util: RefCell<Rc<U>>,
     ) -> Self {
         let parts = prost_parts
             .iter()
@@ -104,7 +106,7 @@ impl<'a, U> Index<usize> for NameParts<'a, U> {
 #[derive(Debug, Clone)]
 pub struct NamePartsIter<'a, U> {
     parts: &'a [prost_types::uninterpreted_option::NamePart],
-    util: Rc<U>,
+    util: RefCell<Rc<U>>,
     i: usize,
 }
 

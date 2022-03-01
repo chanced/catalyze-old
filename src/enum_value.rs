@@ -24,7 +24,7 @@ impl<'a, U> EnumValue<'a, U> {
     pub(crate) fn new(
         desc: &'a EnumValueDescriptorProto,
         r#enum: Enum<'a, U>,
-        util: Rc<U>,
+        util: RefCell<Rc<U>>,
     ) -> Self {
         EnumValue(Rc::new(EnumValueDetail {
             name: Name::new(desc.name(), util),

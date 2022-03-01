@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 use super::NameParts;
 
@@ -11,7 +11,7 @@ use super::NameParts;
 #[derive(Debug)]
 pub struct UninterpretedOption<'a, U> {
     opt: &'a prost_types::UninterpretedOption,
-    util: Rc<U>,
+    util: RefCell<Rc<U>>,
 }
 impl<'a, U> Clone for UninterpretedOption<'a, U> {
     fn clone(&self) -> Self {
@@ -23,6 +23,6 @@ impl<'a, U> Clone for UninterpretedOption<'a, U> {
 }
 impl<'a, U> UninterpretedOption<'a, U> {
     pub fn name_parts(&self) -> NameParts<'a, U> {
-        NameParts::new(&self.opt.name, self.util.clone())
+        NameParts::new(&self.opt.name, self.util.borrow().clone())
     }
 }

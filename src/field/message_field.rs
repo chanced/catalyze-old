@@ -24,9 +24,10 @@ impl<'a, U> MessageFieldDetail<'a, U> {
     pub fn is_map(&self) -> bool {
         self.detail.is_map()
     }
-    pub fn container(&self) -> Message<'a, U> {
-        self.detail.container()
+    pub fn message(&self) -> Message<'a, U> {
+        self.detail.message()
     }
+    /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
         self.detail.util()
     }

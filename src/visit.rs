@@ -1,7 +1,7 @@
 #![allow(unused_variables)]
 
 use crate::field::{
-    EnumField, MapEnumField, MapField, MapMessageField, MapScalarField, MessageField,
+    EnumField, MapField, MappedEmbedField, MappedEnumField, MappedScalarField, MessageField,
     OneofEnumField, OneofField, OneofMessageField, OneofScalarField, RealOneofField,
     RepeatedEnumField, RepeatedField, RepeatedMessageField, RepeatedScalarField, ScalarField,
     SyntheticOneofField, WellKnownEnumField, WellKnownMessageField, WellKnownTypeField,
@@ -81,15 +81,15 @@ pub trait Visitor<'a, U>: Sized {
         visit_map_field(self, fld)
     }
 
-    fn visit_map_scalar_field(&mut self, fld: MapScalarField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_map_scalar_field(&mut self, fld: MappedScalarField<'a, U>) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn visit_map_enum_field(&mut self, fld: MapEnumField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_map_enum_field(&mut self, fld: MappedEnumField<'a, U>) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn visit_map_message_field(&mut self, fld: MapMessageField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_map_message_field(&mut self, fld: MappedEmbedField<'a, U>) -> Result<(), Self::Error> {
         todo!()
     }
 

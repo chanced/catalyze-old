@@ -34,18 +34,15 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Message(f) => f.fully_qualified_name(),
         }
     }
-    pub fn containing_message(&self) -> Message<'a, U> {
-        self.container()
-    }
-
-    pub fn container(&self) -> Message<'a, U> {
+    /// Returns the Message containing this RepeatedField
+    pub fn message(&self) -> Message<'a, U> {
         match self {
-            RepeatedField::Scalar(f) => f.container(),
-            RepeatedField::Enum(f) => f.container(),
-            RepeatedField::Message(f) => f.container(),
+            RepeatedField::Scalar(f) => f.message(),
+            RepeatedField::Enum(f) => f.message(),
+            RepeatedField::Message(f) => f.message(),
         }
     }
-
+    /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
         match self {
             RepeatedField::Scalar(f) => f.util(),

@@ -26,15 +26,12 @@ impl<'a, U> RealOneofField<'a, U> {
             RealOneofField::Message(f) => f.fully_qualified_name(),
         }
     }
-    pub fn container(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a, U> {
         match self {
-            RealOneofField::Scalar(f) => f.container(),
-            RealOneofField::Enum(f) => f.container(),
-            RealOneofField::Message(f) => f.container(),
+            RealOneofField::Scalar(f) => f.message(),
+            RealOneofField::Enum(f) => f.message(),
+            RealOneofField::Message(f) => f.message(),
         }
-    }
-    pub fn containing_message(&self) -> Message<'a, U> {
-        self.container()
     }
 }
 impl<'a, U> Downgrade for RealOneofField<'a, U> {

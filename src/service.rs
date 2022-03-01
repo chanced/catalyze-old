@@ -30,7 +30,7 @@ impl<'a, U> Service<'a, U> {
     pub(crate) fn new(
         desc: &'a ServiceDescriptorProto,
         container: Container<'a, U>,
-        util: Rc<U>,
+        util: RefCell<Rc<U>>,
     ) -> Self {
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
         Service(Rc::new(ServiceDetail {

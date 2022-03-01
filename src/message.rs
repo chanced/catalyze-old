@@ -39,7 +39,7 @@ pub(crate) struct MessageDetail<'a, U> {
     descriptor: &'a DescriptorProto,
     well_known_type: Option<WellKnownType>,
     fqn: String,
-    util: Rc<U>,
+    util: RefCell<Rc<U>>,
     messages: MessageList<'a, U>,
     enums: EnumList<'a, U>,
     fields: FieldList<'a, U>,
@@ -58,7 +58,7 @@ impl<'a, U> Message<'a, U> {
     pub(crate) fn new(
         descriptor: &'a DescriptorProto,
         container: Container<'a, U>,
-        util: Rc<U>,
+        util: RefCell<Rc<U>>,
     ) -> Self {
         let fqn = format_fqn(&container, descriptor.name());
         let well_known_type = if container.package().map_or(false, |pkg| pkg.is_well_known()) {
@@ -121,7 +121,8 @@ impl<'a, U> Message<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.0.name.clone()
     }
-    pub fn util(&self) -> Rc<U> {
+    /// Returns `Rc<U>`
+pub fn util(&self) -> Rc<U> {
         self.0.util.clone()
     }
     pub fn build_target(&self) -> bool {

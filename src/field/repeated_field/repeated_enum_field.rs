@@ -23,9 +23,10 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn is_map(&self) -> bool {
         self.0.detail.is_map()
     }
-    pub fn container(&self) -> Message<'a, U> {
-        self.0.detail.container()
+    pub fn message(&self) -> Message<'a, U> {
+        self.0.detail.message()
     }
+    /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
     }

@@ -23,11 +23,8 @@ impl<'a, U> OneofScalarField<'a, U> {
         self.0.detail.fully_qualified_name()
     }
 
-    pub fn container(&self) -> Message<'a, U> {
-        self.0.detail.container()
-    }
-    pub fn containing_message(&self) -> Message<'a, U> {
-        self.container()
+    pub fn message(&self) -> Message<'a, U> {
+        self.0.detail.message()
     }
 }
 

@@ -6,7 +6,7 @@ mod message_field;
 mod oneof_field;
 mod repeated_field;
 mod scalar_field;
-mod well_known_type_field;
+
 pub use enum_field::*;
 pub use map_field::*;
 pub use message_field::*;
@@ -14,14 +14,12 @@ pub use oneof_field::*;
 pub use repeated_field::*;
 pub use scalar_field::*;
 
-use std::{cell::RefCell, rc::Rc};
-pub use well_known_type_field::*;
-
 use crate::{
-    proto::{Syntax, descriptor::Comments}, traits::Upgrade,  FullyQualified,  Message, Name, Node,
-    NodeAtPath, SyntheticOneof, WeakMessage,
-
+    proto::{descriptor::Comments, Syntax},
+    traits::Upgrade,
+    FullyQualified, Message, Name, Node, NodeAtPath, SyntheticOneof, WeakMessage,
 };
+use std::{cell::RefCell, convert::From, rc::Rc};
 
 use self::descriptor::*;
 
@@ -34,10 +32,9 @@ pub(crate) struct FieldDetail<'a, U> {
     fqn: String,
     syntax: Syntax,
     is_map: bool,
-    is_repeated: bool,
     in_oneof: bool,
-    util: Rc<U>,
-    descriptor: FieldDescriptor<'a, U>,
+    util: RefCell<Rc<U>>,
+    desc: FieldDescriptor<'a, U>,
     comments: Comments<'a, U>,
 }
 impl<'a, U> Clone for FieldDetail<'a, U> {
@@ -48,19 +45,13 @@ impl<'a, U> Clone for FieldDetail<'a, U> {
             fqn: self.fqn.clone(),
             syntax: self.syntax.clone(),
             is_map: self.is_map,
-            is_repeated: self.is_repeated,
             util: self.util.clone(),
-            descriptor: self.descriptor.clone(),
+            desc: self.desc.clone(),
             in_oneof: self.in_oneof,
             comments: self.comments.clone(),
         }
     }
 }
-
-fn example<T, R>(f: fn(T) -> R) -> R {
-    
-}
-
 
 impl<'a, U> FieldDetail<'a, U> {
     pub fn name(&self) -> Name<U> {
@@ -69,37 +60,48 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn fully_qualified_name(&self) -> &str {
         &self.fqn
     }
-    pub fn container(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a, U> {
         self.msg.upgrade()
     }
-    pub fn containing_message(&self) -> Message<'a, U> {
-        self.container()
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.util.replace(util);
     }
+    /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
-        self.util.clone()
+        self.util.borrow().clone()
     }
     pub fn syntax(&self) -> Syntax {
-        
         self.syntax
     }
     pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
-        self.descriptor.clone()
+        self.desc.clone()
     }
     pub fn is_map(&self) -> bool {
-        return self.is_map;
+        self.is_map
     }
     pub fn is_repeated(&self) -> bool {
-        return self.descriptor.is_repeated();
+        self.desc.is_repeated()
     }
     pub fn is_scalar(&self) -> bool {
-        return self.descriptor.is_scalar();
+        self.desc.is_scalar()
+    }
+    pub fn is_enum(&self) -> bool {
+        self.desc.is_enum()
+    }
+    pub fn is_embed(&self) -> bool {
+        self.desc.is_embed()
     }
     pub fn is_marked_optional(&self) -> bool {
-        return self.descriptor.is_marked_optional(self.syntax);
+        self.desc.is_marked_optional(self.syntax)
     }
     pub fn is_required(&self) -> bool {
-        return self.descriptor.is_required(self.syntax);
+        self.desc.is_required(self.syntax)
     }
+
+    pub fn is_well_known_type(&self) -> bool {
+        self.desc.is_well_known_type()
+    }
+
     pub fn comments(&self) -> Comments<'a, U> {
         self.comments.clone()
     }
@@ -112,7 +114,9 @@ impl<'a, U> FieldDetail<'a, U> {
         if self.in_oneof {
             return true;
         }
-        if self.is
+        if self.desc {
+            return true;
+        }
     }
 }
 
@@ -124,7 +128,42 @@ pub enum Field<'a, U> {
     Oneof(OneofField<'a, U>),
     Repeated(RepeatedField<'a, U>),
     Scalar(ScalarField<'a, U>),
-    WellKnownType(WellKnownTypeField<'a, U>),
+}
+
+impl<'a, U> Field<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        match self {
+            Field::Enum(f) => f.name(),
+            Field::Map(f) => f.name(),
+            Field::Message(f) => f.name(),
+            Field::Oneof(f) => f.name(),
+            Field::Repeated(f) => f.name(),
+            Field::Scalar(f) => f.name(),
+        }
+    }
+}
+
+impl<'a, U> NodeAtPath<'a, U> for Field<'a, U> {
+    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+        if path.is_empty() {
+            return Some(self.into());
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, U> FullyQualified for Field<'a, U> {
+    fn fully_qualified_name(&self) -> &str {
+        match self {
+            Field::Enum(_) => todo!(),
+            Field::Map(f) => f.fully_qualified_name(),
+            Field::Message(f) => f.fully_qualified_name(),
+            Field::Oneof(f) => f.fully_qualified_name(),
+            Field::Repeated(f) => f.fully_qualified_name(),
+            Field::Scalar(f) => f.fully_qualified_name(),
+        }
+    }
 }
 
 impl<'a, U> From<ScalarField<'a, U>> for Field<'a, U> {
@@ -143,18 +182,18 @@ impl<'a, U> From<MapField<'a, U>> for Field<'a, U> {
         Field::Map(f)
     }
 }
-impl<'a, U> From<MapScalarField<'a, U>> for Field<'a, U> {
-    fn from(f: MapScalarField<'a, U>) -> Self {
+impl<'a, U> From<MappedScalarField<'a, U>> for Field<'a, U> {
+    fn from(f: MappedScalarField<'a, U>) -> Self {
         Field::Map(f.into())
     }
 }
-impl<'a, U> From<MapMessageField<'a, U>> for Field<'a, U> {
-    fn from(f: MapMessageField<'a, U>) -> Self {
+impl<'a, U> From<MappedEmbedField<'a, U>> for Field<'a, U> {
+    fn from(f: MappedEmbedField<'a, U>) -> Self {
         Field::Map(f.into())
     }
 }
-impl<'a, U> From<MapEnumField<'a, U>> for Field<'a, U> {
-    fn from(f: MapEnumField<'a, U>) -> Self {
+impl<'a, U> From<MappedEnumField<'a, U>> for Field<'a, U> {
+    fn from(f: MappedEnumField<'a, U>) -> Self {
         Field::Map(f.into())
     }
 }
@@ -200,23 +239,6 @@ impl<'a, U> From<RepeatedScalarField<'a, U>> for Field<'a, U> {
     }
 }
 
-impl<'a, U> From<WellKnownTypeField<'a, U>> for Field<'a, U> {
-    fn from(f: WellKnownTypeField<'a, U>) -> Self {
-        Field::WellKnownType(f)
-    }
-}
-impl<'a, U> From<WellKnownMessageField<'a, U>> for Field<'a, U> {
-    fn from(f: WellKnownMessageField<'a, U>) -> Self {
-        Field::WellKnownType(f.into())
-    }
-}
-
-impl<'a, U> From<WellKnownEnumField<'a, U>> for Field<'a, U> {
-    fn from(f: WellKnownEnumField<'a, U>) -> Self {
-        Field::WellKnownType(f.into())
-    }
-}
-
 impl<'a, U> From<&ScalarField<'a, U>> for Field<'a, U> {
     fn from(f: &ScalarField<'a, U>) -> Self {
         f.clone().into()
@@ -233,18 +255,18 @@ impl<'a, U> From<&MapField<'a, U>> for Field<'a, U> {
         f.clone().into()
     }
 }
-impl<'a, U> From<&MapScalarField<'a, U>> for Field<'a, U> {
-    fn from(f: &MapScalarField<'a, U>) -> Self {
+impl<'a, U> From<&MappedScalarField<'a, U>> for Field<'a, U> {
+    fn from(f: &MappedScalarField<'a, U>) -> Self {
         f.clone().into()
     }
 }
-impl<'a, U> From<&MapMessageField<'a, U>> for Field<'a, U> {
-    fn from(f: &MapMessageField<'a, U>) -> Self {
+impl<'a, U> From<&MappedEmbedField<'a, U>> for Field<'a, U> {
+    fn from(f: &MappedEmbedField<'a, U>) -> Self {
         f.clone().into()
     }
 }
-impl<'a, U> From<&MapEnumField<'a, U>> for Field<'a, U> {
-    fn from(f: &MapEnumField<'a, U>) -> Self {
+impl<'a, U> From<&MappedEnumField<'a, U>> for Field<'a, U> {
+    fn from(f: &MappedEnumField<'a, U>) -> Self {
         f.clone().into()
     }
 }
@@ -290,60 +312,6 @@ impl<'a, U> From<&RepeatedScalarField<'a, U>> for Field<'a, U> {
     }
 }
 
-impl<'a, U> From<&WellKnownTypeField<'a, U>> for Field<'a, U> {
-    fn from(f: &WellKnownTypeField<'a, U>) -> Self {
-        f.clone().into()
-    }
-}
-impl<'a, U> From<&WellKnownMessageField<'a, U>> for Field<'a, U> {
-    fn from(f: &WellKnownMessageField<'a, U>) -> Self {
-        f.clone().into()
-    }
-}
-
-impl<'a, U> From<&WellKnownEnumField<'a, U>> for Field<'a, U> {
-    fn from(f: &WellKnownEnumField<'a, U>) -> Self {
-        f.clone().into()
-    }
-}
-
-impl<'a, U> Field<'a, U> {
-    pub fn name(&self) -> Name<U> {
-        match self {
-            Field::Enum(f) => f.name(),
-            Field::Map(f) => f.name(),
-            Field::Message(f) => f.name(),
-            Field::Oneof(f) => f.name(),
-            Field::Repeated(f) => f.name(),
-            Field::Scalar(f) => f.name(),
-            Field::WellKnownType(f) => f.name(),
-        }
-    }
-}
-
-impl<'a, U> NodeAtPath<'a, U> for Field<'a, U> {
-    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
-        if path.is_empty() {
-            return Some(self.into());
-        } else {
-            None
-        }
-    }
-}
-
-impl<'a, U> FullyQualified for Field<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
-        match self {
-            Field::Enum(_) => todo!(),
-            Field::Map(f) => f.fully_qualified_name(),
-            Field::Message(f) => f.fully_qualified_name(),
-            Field::Oneof(f) => f.fully_qualified_name(),
-            Field::Repeated(f) => f.fully_qualified_name(),
-            Field::Scalar(f) => f.fully_qualified_name(),
-            Field::WellKnownType(f) => f.fully_qualified_name(),
-        }
-    }
-}
 #[derive(Debug)]
 pub(crate) enum WeakField<'a, U> {
     Scalar(WeakScalarField<'a, U>),
@@ -351,7 +319,6 @@ pub(crate) enum WeakField<'a, U> {
     Map(WeakMapField<'a, U>),
     Repeated(WeakRepeatedField<'a, U>),
     Oneof(WeakOneofField<'a, U>),
-    WellKnownType(WeakWellKnownTypeField<'a, U>),
 }
 
 impl<'a, U> Clone for WeakField<'a, U> {
@@ -362,7 +329,6 @@ impl<'a, U> Clone for WeakField<'a, U> {
             WeakField::Map(_) => todo!(),
             WeakField::Repeated(_) => todo!(),
             WeakField::Oneof(_) => todo!(),
-            WeakField::WellKnownType(_) => todo!(),
         }
     }
 }
@@ -376,7 +342,6 @@ impl<'a, U> Upgrade for WeakField<'a, U> {
             WeakField::Map(f) => Field::Map(f.upgrade()),
             WeakField::Repeated(_) => todo!(),
             WeakField::Oneof(_) => todo!(),
-            WeakField::WellKnownType(_) => todo!(),
         }
     }
 }

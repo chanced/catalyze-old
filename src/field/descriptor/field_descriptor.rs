@@ -1,19 +1,21 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::field::descriptor::{Label, Type};
 use crate::proto::Syntax;
+use crate::WellKnownType;
 
-use super::FieldOptions;
+use super::{FieldOptions, Scalar};
 
 /// Describes a field within a message.
 #[derive(Debug)]
 pub struct FieldDescriptor<'a, U> {
     desc: &'a prost_types::FieldDescriptorProto,
-    util: Rc<U>,
+    util: RefCell<Rc<U>>,
 }
 
 impl<'a, U> FieldDescriptor<'a, U> {
-    pub fn new(desc: &'a prost_types::FieldDescriptorProto, util: Rc<U>) -> Self {
+    pub fn new(desc: &'a prost_types::FieldDescriptorProto, util: RefCell<Rc<U>>) -> Self {
         Self { desc, util }
     }
 
@@ -26,11 +28,175 @@ impl<'a, U> FieldDescriptor<'a, U> {
     pub fn label(&self) -> Label {
         Label::from(self.desc.label())
     }
+
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        todo!()
+    }
+
+    pub fn is_well_known_type(&self) -> bool {
+        self.well_known_type().is_some()
+    }
+
     /// If type_name is set, this need not be set.  If both this and type_name
     /// are set, this must be one of Enum, Message or Group.
     pub fn r#type(&self) -> Type {
         Type::from(self.desc.r#type())
     }
+
+    pub fn is_embed(&self) -> bool {
+        if let Type::Message = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_enum(&self) -> bool {
+        if let Type::Enum = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_scalar(&self) -> bool {
+        if let Type::Scalar(_) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_double(&self) -> bool {
+        if let Type::Scalar(Scalar::Double) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+    pub fn is_float(&self) -> bool {
+        if let Type::Scalar(Scalar::Float) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_int64(&self) -> bool {
+        if let Type::Scalar(Scalar::Int64) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_uint64(&self) -> bool {
+        if let Type::Scalar(Scalar::Uint64) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_int32(&self) -> bool {
+        if let Type::Scalar(Scalar::Int32) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_fixed64(&self) -> bool {
+        if let Type::Scalar(Scalar::Fixed64) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_fixed32(&self) -> bool {
+        if let Type::Scalar(Scalar::Fixed32) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_bool(&self) -> bool {
+        if let Type::Scalar(Scalar::Bool) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_string(&self) -> bool {
+        if let Type::Scalar(Scalar::String) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_bytes(&self) -> bool {
+        if let Type::Scalar(Scalar::Bytes) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_uint32(&self) -> bool {
+        if let Type::Scalar(Scalar::Uint32) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_sfixed32(&self) -> bool {
+        if let Type::Scalar(Scalar::Sfixed32) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_sfixed64(&self) -> bool {
+        if let Type::Scalar(Scalar::Sfixed64) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_sint32(&self) -> bool {
+        if let Type::Scalar(Scalar::Sint32) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_sint64(&self) -> bool {
+        if let Type::Scalar(Scalar::Sint64) = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+    pub fn is_message(&self) -> bool {
+        if let Type::Message = self.r#type() {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_repeated(&self) -> bool {
+        self.label() == Label::Repeated
+    }
+
     /// alias for `r#type`
     ///
     /// If type_name is set, this need not be set.  If both this and type_name
@@ -118,17 +284,6 @@ impl<'a, U> FieldDescriptor<'a, U> {
     }
     pub(crate) fn is_required(&self, syntax: Syntax) -> bool {
         return syntax.supports_required_prefix() && self.label() == Label::Required;
-    }
-
-    pub fn is_repeated(&self) -> bool {
-        self.label() == Label::Repeated
-    }
-
-    pub fn is_scalar(&self) -> bool {
-        match self.r#type() {
-            Type::Scalar(_) => true,
-            _ => false,
-        }
     }
 }
 

@@ -2,39 +2,40 @@ use std::rc::{Rc, Weak};
 
 use crate::{
     descriptor::FieldDescriptor, proto::Syntax, FullyQualified, MapFieldDetail, Message, Name,
-    Named, ScalarField,
+    Named, WeakEnum, WellKnownEnum,
 };
 
 #[derive(Debug, Clone)]
-pub struct MapScalarFieldDetail<'a, U> {
+pub struct MappedEnumFieldDetail<'a, U> {
+    enm: WeakEnum<'a, U>,
     detail: MapFieldDetail<'a, U>,
-    scalar_field: ScalarField<'a, U>,
 }
 
 #[derive(Debug)]
-pub struct MapScalarField<'a, U>(Rc<MapScalarFieldDetail<'a, U>>);
-impl<'a, U> Clone for MapScalarField<'a, U> {
+pub struct MappedEnumField<'a, U>(Rc<MappedEnumFieldDetail<'a, U>>);
+impl<'a, U> Clone for MappedEnumField<'a, U> {
     fn clone(&self) -> Self {
-        MapScalarField(self.0.clone())
+        Self(self.0.clone())
     }
 }
-
-impl<'a, U> MapScalarField<'a, U> {
+impl<'a, U> MappedEnumField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> &str {
         self.0.detail.fully_qualified_name()
     }
+    pub fn message(&self) -> Message<'a, U> {
+        self.0.detail.message()
+    }
+
     pub fn is_repeated(&self) -> bool {
         self.0.detail.is_repeated()
     }
     pub fn is_map(&self) -> bool {
         self.0.detail.is_map()
     }
-    pub fn container(&self) -> Message<'a, U> {
-        self.0.detail.container()
-    }
+    /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
     }
@@ -44,24 +45,30 @@ impl<'a, U> MapScalarField<'a, U> {
     pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
         self.0.detail.descriptor()
     }
+
+    pub fn well_known_type(&self) -> Option<WellKnownEnum> {
+        self.0.detail.well_known_type().map(|wkt| match wkt {
+            crate::WellKnownType::Enum(wke) => wke,
+            _ => unreachable!(),
+        })
+    }
 }
 
-impl<'a, U> Named<U> for MapScalarField<'a, U> {
+impl<'a, U> FullyQualified for MappedEnumField<'a, U> {
+    fn fully_qualified_name(&self) -> &str {
+        self.0.detail.fully_qualified_name()
+    }
+}
+impl<'a, U> Named<U> for MappedEnumField<'a, U> {
     fn name(&self) -> Name<U> {
         self.0.detail.name()
     }
 }
 
-impl<'a, U> FullyQualified for MapScalarField<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
-        self.0.detail.fully_qualified_name()
-    }
-}
-
 #[derive(Debug)]
-pub(crate) struct WeakMapScalarField<'a, U>(Weak<MapScalarFieldDetail<'a, U>>);
-impl<'a, U> Clone for WeakMapScalarField<'a, U> {
+pub(crate) struct WeakMapEnumField<'a, U>(Weak<MappedEnumFieldDetail<'a, U>>);
+impl<'a, U> Clone for WeakMapEnumField<'a, U> {
     fn clone(&self) -> Self {
-        WeakMapScalarField(self.0.clone())
+        Self(self.0.clone())
     }
 }
