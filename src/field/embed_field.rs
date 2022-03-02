@@ -73,39 +73,3 @@ impl<'a, U> FullyQualified for EmbedField<'a, U> {
         self.0.detail.fqn.clone()
     }
 }
-
-// impl<'a, U> From<WeakEmbedField<'a, U>> for EmbedField<'a, U> {
-//     fn from(weak: WeakEmbedField<'a, U>) -> Self {
-//         weak.upgrade()
-//     }
-// }
-// impl<'a, U> From<&WeakEmbedField<'a, U>> for EmbedField<'a, U> {
-//     fn from(weak: &WeakEmbedField<'a, U>) -> Self {
-//         weak.upgrade()
-//     }
-// }
-
-// #[derive(Debug)]
-// pub(crate) struct WeakEmbedField<'a, U>(Weak<EmbedFieldDetail<'a, U>>);
-// impl<'a, U> Clone for WeakEmbedField<'a, U> {
-//     fn clone(&self) -> Self {
-//         Self(self.0.clone())
-//     }
-// }
-// impl<'a, U> Upgrade for WeakEmbedField<'a, U> {
-//     type Output = EmbedField<'a, U>;
-
-//     fn upgrade(&self) -> Self::Output {
-//         EmbedField(self.0.upgrade().expect("Failed to upgrade WeakEmbedField"))
-//     }
-// }
-// impl<'a, U> From<EmbedField<'a, U>> for WeakEmbedField<'a, U> {
-//     fn from(ef: EmbedField<'a, U>) -> Self {
-//         ef.downgrade()
-//     }
-// }
-// impl<'a, U> From<&EmbedField<'a, U>> for WeakEmbedField<'a, U> {
-//     fn from(ef: &EmbedField<'a, U>) -> Self {
-//         ef.downgrade()
-//     }
-// }

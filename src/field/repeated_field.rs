@@ -1,12 +1,9 @@
 use std::rc::Rc;
-mod repeated_embed_field;
-mod repeated_enum_field;
-mod repeated_scalar_field;
-pub use repeated_embed_field::*;
-pub use repeated_enum_field::*;
-pub use repeated_scalar_field::*;
 
-use crate::{proto::Syntax, FullyQualified, Message, Name};
+use crate::{
+    proto::{descriptor::Comments, Syntax},
+    EmbedFieldDetail, EnumFieldDetail, FullyQualified, Message, Name, ScalarFieldDetail,
+};
 
 use super::descriptor::FieldDescriptor;
 
@@ -27,7 +24,7 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Message(f) => f.name(),
         }
     }
-    fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> String {
         match self {
             RepeatedField::Scalar(f) => f.fully_qualified_name(),
             RepeatedField::Enum(f) => f.fully_qualified_name(),
@@ -82,10 +79,7 @@ impl<'a, U> RepeatedField<'a, U> {
     }
 
     pub fn is_scalar(&self) -> bool {
-        match self {
-            RepeatedField::Scalar(_) => true,
-            _ => false,
-        }
+        matches!(self, RepeatedField::Scalar(_))
     }
 
     pub fn is_marked_optional(&self) -> bool {
@@ -93,11 +87,7 @@ impl<'a, U> RepeatedField<'a, U> {
     }
 
     pub fn has_presence(&self) -> bool {
-        if let RepeatedField::Message(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, RepeatedField::Message(_))
     }
 }
 impl<'a, U> Clone for RepeatedField<'a, U> {
@@ -155,18 +145,146 @@ impl<'a, U> From<&RepeatedEmbedField<'a, U>> for RepeatedField<'a, U> {
     }
 }
 
-// #[derive(Debug, Clone)]
-// pub(crate) enum WeakRepeatedField<'a, U> {
-//     Scalar(WeakRepeatedScalarField<'a, U>),
-//     Enum(WeakRepeatedEnumField<'a, U>),
-//     Embed(WeakRepeatedEmbedField<'a, U>),
-// }
-// impl<'a, U> From<RepeatedField<'a, U>> for WeakRepeatedField<'a, U> {
-//     fn from(f: RepeatedField<'a, U>) -> Self {
-//         match f {
-//             RepeatedField::Scalar(f) => WeakRepeatedField::Scalar(f.downgrade()),
-//             RepeatedField::Enum(f) => WeakRepeatedField::Enum(f.downgrade()),
-//             RepeatedField::Message(f) => WeakRepeatedField::Embed(f.downgrade()),
-//         }
-//     }
-// }
+#[derive(Debug)]
+pub struct RepeatedEmbedField<'a, U>(Rc<EmbedFieldDetail<'a, U>>);
+
+impl<'a, U> RepeatedEmbedField<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.0.detail.name()
+    }
+    pub fn fully_qualified_name(&self) -> String {
+        self.0.detail.fully_qualified_name()
+    }
+    pub fn is_repeated(&self) -> bool {
+        self.0.detail.is_repeated()
+    }
+    pub fn is_map(&self) -> bool {
+        self.0.detail.is_map()
+    }
+    pub fn message(&self) -> Message<'a, U> {
+        self.0.detail.message()
+    }
+    /// Returns `Rc<U>`
+    pub fn util(&self) -> Rc<U> {
+        self.0.detail.util()
+    }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.detail.replace_util(util);
+    }
+    pub fn syntax(&self) -> Syntax {
+        self.0.detail.syntax()
+    }
+    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+        self.0.detail.descriptor()
+    }
+}
+
+impl<'a, U> Clone for RepeatedEmbedField<'a, U> {
+    fn clone(&self) -> Self {
+        RepeatedEmbedField(self.0.clone())
+    }
+}
+
+#[derive(Debug)]
+pub struct RepeatedEnumField<'a, U>(Rc<EnumFieldDetail<'a, U>>);
+
+impl<'a, U> RepeatedEnumField<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.0.detail.name()
+    }
+    pub fn fully_qualified_name(&self) -> String {
+        self.0.detail.fully_qualified_name()
+    }
+    pub fn is_repeated(&self) -> bool {
+        self.0.detail.is_repeated()
+    }
+    pub fn is_map(&self) -> bool {
+        self.0.detail.is_map()
+    }
+    pub fn message(&self) -> Message<'a, U> {
+        self.0.detail.message()
+    }
+    /// Returns `Rc<U>`
+    pub fn util(&self) -> Rc<U> {
+        self.0.detail.util()
+    }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.detail.replace_util(util);
+    }
+    pub fn syntax(&self) -> Syntax {
+        self.0.detail.syntax()
+    }
+    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+        self.0.detail.descriptor()
+    }
+    pub fn is_marked_optional(&self) -> bool {
+        self.0.detail.is_marked_optional()
+    }
+    pub fn is_required(&self) -> bool {
+        self.0.detail.is_required()
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.0.detail.comments()
+    }
+}
+impl<'a, U> Clone for RepeatedEnumField<'a, U> {
+    fn clone(&self) -> Self {
+        RepeatedEnumField(self.0.clone())
+    }
+}
+impl<'a, U> FullyQualified for RepeatedEnumField<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        self.0.detail.fully_qualified_name()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct RepeatedScalarFieldDetail<'a, U> {
+    detail: ScalarFieldDetail<'a, U>,
+}
+
+#[derive(Debug)]
+pub struct RepeatedScalarField<'a, U>(Rc<RepeatedScalarFieldDetail<'a, U>>);
+
+impl<'a, U> RepeatedScalarField<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.0.detail.name()
+    }
+    pub fn fully_qualified_name(&self) -> String {
+        self.0.detail.fully_qualified_name()
+    }
+    pub fn is_repeated(&self) -> bool {
+        self.0.detail.is_repeated()
+    }
+    pub fn is_map(&self) -> bool {
+        self.0.detail.is_map()
+    }
+    pub fn message(&self) -> Message<'a, U> {
+        self.0.detail.message()
+    }
+    /// Returns `Rc<U>`
+    pub fn util(&self) -> Rc<U> {
+        self.0.detail.util()
+    }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.detail.replace_util(util);
+    }
+    pub fn syntax(&self) -> Syntax {
+        self.0.detail.syntax()
+    }
+    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+        self.0.detail.descriptor()
+    }
+}
+
+impl<'a, U> FullyQualified for RepeatedScalarField<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        self.0.detail.fully_qualified_name()
+    }
+}
+
+impl<'a, U> Clone for RepeatedScalarField<'a, U> {
+    fn clone(&self) -> Self {
+        RepeatedScalarField(self.0.clone())
+    }
+}
