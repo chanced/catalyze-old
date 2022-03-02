@@ -73,11 +73,7 @@ impl<'a, U> FieldDescriptor<'a, U> {
     }
 
     pub fn is_fixed64(&self) -> bool {
-        if let Type::Scalar(Scalar::Fixed64) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::Fixed64))
     }
 
     pub fn is_fixed32(&self) -> bool {
@@ -89,27 +85,15 @@ impl<'a, U> FieldDescriptor<'a, U> {
     }
 
     pub fn is_string(&self) -> bool {
-        if let Type::Scalar(Scalar::String) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::String))
     }
 
     pub fn is_bytes(&self) -> bool {
-        if let Type::Scalar(Scalar::Bytes) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::Bytes))
     }
 
     pub fn is_uint32(&self) -> bool {
-        if let Type::Scalar(Scalar::Uint32) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::Uint32))
     }
 
     pub fn is_sfixed32(&self) -> bool {
