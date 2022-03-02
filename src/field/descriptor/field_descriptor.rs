@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::field::descriptor::{Label, Type};
 use crate::proto::Syntax;
 use crate::WellKnownType;
@@ -84,19 +81,11 @@ impl<'a, U> FieldDescriptor<'a, U> {
     }
 
     pub fn is_fixed32(&self) -> bool {
-        if let Type::Scalar(Scalar::Fixed32) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::Fixed32))
     }
 
     pub fn is_bool(&self) -> bool {
-        if let Type::Scalar(Scalar::Bool) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::Bool))
     }
 
     pub fn is_string(&self) -> bool {

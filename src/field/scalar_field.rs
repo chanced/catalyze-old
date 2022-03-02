@@ -1,6 +1,6 @@
-use std::rc::{Rc, Weak};
+use std::rc::{Rc};
 
-use super::{FieldDetail, MappedScalarFieldDetail};
+use super::{FieldDetail};
 use crate::{
     descriptor::{FieldDescriptor, Scalar},
     proto::Syntax,

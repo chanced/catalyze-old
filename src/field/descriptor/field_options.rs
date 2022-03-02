@@ -1,6 +1,6 @@
 use crate::proto::descriptor::UninterpretedOption;
 
-use std::{cell::RefCell, marker::PhantomData, rc::Rc, slice};
+use std::{marker::PhantomData, slice};
 
 use super::{CType, JsType};
 

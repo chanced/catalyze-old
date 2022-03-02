@@ -1,6 +1,6 @@
 use prost_types::FileDescriptorProto;
 
-use crate::container::{Container, WeakContainer};
+use crate::container::{Container};
 use crate::iter::{AllEnums, AllMessages, FileRefIter, Iter, TransitiveImports};
 use crate::package::WeakPackage;
 

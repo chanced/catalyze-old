@@ -7,7 +7,7 @@ use prost_types::FieldDescriptorProto;
 
 use crate::{
     container::{Container, WeakContainer},
-    format_fqn, FullyQualified, Name, NodeAtPath,
+    format_fqn, FullyQualified, Name,
 };
 
 pub(crate) type ExtensionList<'a, U> = Rc<RefCell<Vec<Extension<'a, U>>>>;

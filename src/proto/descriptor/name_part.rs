@@ -1,4 +1,4 @@
-use std::{cell::RefCell, marker::PhantomData, ops::Index, rc::Rc, vec};
+use std::{marker::PhantomData, ops::Index, vec};
 
 /// The name of the uninterpreted option.  Each string represents a segment in
 /// a dot-separated name. `is_extension` is `true` if a segment represents an

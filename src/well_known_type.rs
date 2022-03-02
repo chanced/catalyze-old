@@ -186,7 +186,7 @@ pub enum WellKnownMessage {
 impl std::str::FromStr for WellKnownType {
     type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> ::std::result::Result<WellKnownType, Self::Err> {
+    fn from_str(_s: &str) -> ::std::result::Result<WellKnownType, Self::Err> {
         //TODO: this has changed as I need to be able to identify nested enums
         todo!();
 

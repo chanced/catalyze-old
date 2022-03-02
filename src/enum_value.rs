@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{rc::Rc};
 
 use crate::{format_fqn, Enum, FullyQualified, Name, Node, NodeAtPath, WeakEnum};
 use prost_types::EnumValueDescriptorProto;
