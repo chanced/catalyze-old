@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    descriptor::FieldDescriptor, proto::Syntax, Enum, FullyQualified, Message, Name,
+    proto::descriptor::FieldDescriptor, proto::Syntax, Enum, FullyQualified, Message, Name,
     ScalarField, WeakEnum, WeakMessage, WellKnownEnum, WellKnownType,
 };
 

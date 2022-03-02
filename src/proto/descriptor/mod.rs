@@ -1,6 +1,18 @@
+mod c_type;
 mod comments;
+mod field_descriptor;
+mod field_options;
+mod js_type;
+mod label;
 mod name_part;
+mod r#type;
 mod uninterpreted_option;
+pub use c_type::CType;
 pub use comments::*;
+pub use field_descriptor::*;
+pub use field_options::*;
+pub use js_type::JsType;
+pub use label::*;
 pub use name_part::*;
+pub use r#type::*;
 pub use uninterpreted_option::*;

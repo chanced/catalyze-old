@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    descriptor::FieldDescriptor, proto::Syntax, FullyQualified, Message, Name, WeakMessage,
+    proto::descriptor::FieldDescriptor, proto::Syntax, FullyQualified, Message, Name, WeakMessage,
 };
 
 use super::FieldDetail;

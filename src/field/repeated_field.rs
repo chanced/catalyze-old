@@ -1,11 +1,12 @@
 use std::rc::Rc;
 
 use crate::{
-    proto::{descriptor::Comments, Syntax},
+    proto::{
+        descriptor::{Comments, FieldDescriptor},
+        Syntax,
+    },
     EmbedFieldDetail, EnumFieldDetail, FullyQualified, Message, Name, ScalarFieldDetail,
 };
-
-use super::descriptor::FieldDescriptor;
 
 /// Represents a field marked as `repeated`. The field can hold
 /// a scalar value, an enum, or a message.
