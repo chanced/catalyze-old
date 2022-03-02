@@ -2,9 +2,8 @@
 
 use crate::field::{
     EmbedField, EnumField, MapField, MappedEmbedField, MappedEnumField, MappedScalarField,
-    OneofEnumField, OneofField, OneofMessageField, OneofScalarField, RealOneofField,
-    RepeatedEmbedField, RepeatedEnumField, RepeatedField, RepeatedScalarField, ScalarField,
-    SyntheticOneofField,
+    OneofEnumField, OneofField, OneofMessageField, OneofScalarField, RepeatedEmbedField,
+    RepeatedEnumField, RepeatedField, RepeatedScalarField, ScalarField,
 };
 use crate::{
     Enum, EnumValue, Extension, Field, File, Message, Method, Node, Oneof, Package, Service,
@@ -121,7 +120,7 @@ pub trait Visitor<'a, U>: Sized {
         visit_oneof_field(self, fld)
     }
 
-    fn visit_real_oneof_field(&mut self, fld: RealOneofField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_real_oneof_field(&mut self, fld: OneofField<'a, U>) -> Result<(), Self::Error> {
         todo!()
     }
 
@@ -144,10 +143,7 @@ pub trait Visitor<'a, U>: Sized {
         todo!()
     }
 
-    fn visit_synthetic_oneof_field(
-        &mut self,
-        fld: SyntheticOneofField<'a, U>,
-    ) -> Result<(), Self::Error> {
+    fn visit_synthetic_oneof_field(&mut self, fld: OneofField<'a, U>) -> Result<(), Self::Error> {
         todo!()
     }
 
