@@ -29,7 +29,6 @@ pub use file::*;
 pub use generator::*;
 pub use message::*;
 pub use method::*;
-pub use method::*;
 pub use name::*;
 pub use node::*;
 pub use oneof::*;

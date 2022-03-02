@@ -1,12 +1,21 @@
-use std::{cell::RefCell, rc::Rc, slice::Iter};
-
-use petgraph::visit::Walker;
+mod package_comments;
+pub use package_comments::PackageComments;
+use std::{marker::PhantomData, slice::Iter};
 
 /// Comments associated to entities in the source code.
 #[derive(Debug)]
 pub struct Comments<'a, U> {
     loc: &'a prost_types::source_code_info::Location,
-    util: RefCell<Rc<U>>,
+    u: PhantomData<U>,
+}
+
+impl<'a, U> From<&'a prost_types::source_code_info::Location> for Comments<'a, U> {
+    fn from(loc: &'a prost_types::source_code_info::Location) -> Self {
+        Self {
+            loc,
+            u: PhantomData,
+        }
+    }
 }
 
 impl<'a, U> Comments<'a, U> {
@@ -68,7 +77,7 @@ impl<'a, U> Clone for Comments<'a, U> {
     fn clone(&self) -> Self {
         Comments {
             loc: self.loc,
-            util: self.util.clone(),
+            u: PhantomData {},
         }
     }
 }

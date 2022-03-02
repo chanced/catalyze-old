@@ -1,8 +1,7 @@
 use std::rc::{Rc, Weak};
 
 use crate::{
-    descriptor::FieldDescriptor, proto::Syntax, traits::Upgrade, FullyQualified, Message, Name,
-    Named, ScalarFieldDetail,
+    descriptor::FieldDescriptor, proto::Syntax, FullyQualified, Message, Name, ScalarFieldDetail,
 };
 
 #[derive(Debug, Clone)]
@@ -17,7 +16,7 @@ impl<'a, U> RepeatedScalarField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.0.detail.name()
     }
-    pub fn fully_qualified_name(&self) -> &str {
+    pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
     pub fn is_repeated(&self) -> bool {
@@ -33,6 +32,9 @@ impl<'a, U> RepeatedScalarField<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
     }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.detail.replace_util(util);
+    }
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
@@ -42,37 +44,40 @@ impl<'a, U> RepeatedScalarField<'a, U> {
 }
 
 impl<'a, U> FullyQualified for RepeatedScalarField<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
+    fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
 }
-impl<'a, U> Named<U> for RepeatedScalarField<'a, U> {
-    fn name(&self) -> Name<U> {
-        self.0.detail.name()
-    }
-}
+
 impl<'a, U> Clone for RepeatedScalarField<'a, U> {
     fn clone(&self) -> Self {
         RepeatedScalarField(self.0.clone())
     }
 }
 
-#[derive(Debug)]
-pub(crate) struct WeakRepeatedScalarField<'a, U>(Weak<RepeatedScalarFieldDetail<'a, U>>);
-impl<'a, U> Clone for WeakRepeatedScalarField<'a, U> {
-    fn clone(&self) -> Self {
-        WeakRepeatedScalarField(self.0.clone())
-    }
-}
+// impl<'a, U> Downgrade for RepeatedScalarField<'a, U> {
+//     type Output = WeakRepeatedScalarField<'a, U>;
+//     fn downgrade(&self) -> Self::Output {
+//         WeakRepeatedScalarField(Rc::downgrade(&self.0))
+//     }
+// }
 
-impl<'a, U> Upgrade for WeakRepeatedScalarField<'a, U> {
-    type Output = RepeatedScalarField<'a, U>;
+// #[derive(Debug)]
+// pub(crate) struct WeakRepeatedScalarField<'a, U>(Weak<RepeatedScalarFieldDetail<'a, U>>);
+// impl<'a, U> Clone for WeakRepeatedScalarField<'a, U> {
+//     fn clone(&self) -> Self {
+//         WeakRepeatedScalarField(self.0.clone())
+//     }
+// }
 
-    fn upgrade(self) -> Self::Output {
-        RepeatedScalarField(
-            self.0
-                .upgrade()
-                .expect("Failed to upgrade WeakRepeatedScalarField"),
-        )
-    }
-}
+// impl<'a, U> Upgrade for WeakRepeatedScalarField<'a, U> {
+//     type Output = RepeatedScalarField<'a, U>;
+
+//     fn upgrade(&self) -> Self::Output {
+//         RepeatedScalarField(
+//             self.0
+//                 .upgrade()
+//                 .expect("Failed to upgrade WeakRepeatedScalarField"),
+//         )
+//     }
+// }

@@ -4,7 +4,7 @@ use super::{FieldDetail, MappedScalarFieldDetail};
 use crate::{
     descriptor::{FieldDescriptor, Scalar},
     proto::Syntax,
-    FullyQualified, Message, Name, Named,
+    FullyQualified, Message, Name,
 };
 
 #[derive(Debug)]
@@ -26,17 +26,17 @@ impl<'a, U> ScalarFieldDetail<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.detail.name()
     }
-    pub fn fully_qualified_name(&self) -> &str {
+    pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
     pub fn scalar(&self) -> &Scalar {
         &self.scalar
     }
     pub fn is_repeated(&self) -> bool {
-        self.detail.is_repeated
+        self.detail.is_repeated()
     }
     pub fn is_map(&self) -> bool {
-        self.detail.is_map
+        self.detail.is_map()
     }
     pub fn message(&self) -> Message<'a, U> {
         self.detail.message()
@@ -44,6 +44,9 @@ impl<'a, U> ScalarFieldDetail<'a, U> {
     /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
         self.detail.util()
+    }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.detail.util.replace(util);
     }
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
@@ -69,19 +72,14 @@ impl<'a, U> ScalarField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.0.detail.name()
     }
-    pub fn fully_qualified_name(&self) -> &str {
+    pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
-    }
-}
-impl<'a, U> Named<U> for ScalarField<'a, U> {
-    fn name(&self) -> Name<U> {
-        self.0.detail.name()
     }
 }
 impl<'a, U> FullyQualified for ScalarField<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
+    fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
 }
-#[derive(Debug, Clone)]
-pub(crate) struct WeakScalarField<'a, U>(Weak<MappedScalarFieldDetail<'a, U>>);
+// #[derive(Debug, Clone)]
+// pub(crate) struct WeakScalarField<'a, U>(Weak<MappedScalarFieldDetail<'a, U>>);

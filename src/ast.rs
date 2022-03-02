@@ -48,7 +48,7 @@ impl<'a, U> Ast<'a, U> {
 }
 
 impl<'a, U> Ast<'a, U> {
-    pub fn new(source: &'a impl Source<'a>, util: RefCell<Rc<U>>) -> Result<Self, anyhow::Error> {
+    pub fn new(source: &'a impl Source<'a>, util: Rc<U>) -> Result<Self, anyhow::Error> {
         let target_list = source
             .targets()
             .iter()
@@ -56,7 +56,7 @@ impl<'a, U> Ast<'a, U> {
             .collect::<HashSet<String>>();
         let file_descriptors = source.files().iter().collect();
         let mut ast = Self {
-            util: util.clone(),
+            util: RefCell::new(util.clone()),
             targets: HashMap::with_capacity(target_list.len()),
             target_list,
             packages: HashMap::default(),
@@ -69,19 +69,13 @@ impl<'a, U> Ast<'a, U> {
         for fd in ast.file_descriptors.iter() {
             let pkg = {
                 let name = fd.package();
-                if name.is_empty() {
-                    None
-                } else {
-                    Some(
-                        ast.packages
-                            .entry(name.to_string())
-                            .or_insert_with(|| Package::new(name, util.clone()))
-                            .clone(),
-                    )
-                }
+                ast.packages
+                    .entry(name.to_string())
+                    .or_insert_with(|| Package::new(name, util.clone()))
+                    .clone()
             };
             let build_target = ast.target_list.contains(fd.name());
-            let file = File::new(build_target, fd, pkg, util.clone());
+            let file = File::new(build_target, fd, pkg);
             ast.targets.insert(fd.name().to_string(), file.clone());
             for d in fd.dependency.iter() {
                 let dep = match seen.get(d).cloned() {
@@ -96,7 +90,7 @@ impl<'a, U> Ast<'a, U> {
 
         Ok(ast)
     }
-    // fn hydrate_package(&mut self, fd: Rc<FileDescriptorProto>) -> Option<Package<'a, U>> {
+    // fn hydrate_package(&mut self, fd: Rc<FileDescriptorProto>) -> Package<'a, U> {
 
     // }
 }

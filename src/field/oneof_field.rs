@@ -11,11 +11,7 @@ pub use synthetic_oneof_field::*;
 
 use std::rc::Weak;
 
-use crate::{
-    name::Named,
-    traits::{Downgrade, Upgrade},
-    FullyQualified, Message, Name, Oneof,
-};
+use crate::{FullyQualified, Message, Name, Oneof};
 
 use super::FieldDetail;
 #[derive(Debug)]
@@ -28,7 +24,7 @@ impl<'a, U> OneofFieldDetail<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.detail.name()
     }
-    pub fn fully_qualified_name(&self) -> &str {
+    pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
     pub fn message(&self) -> Message<'a, U> {
@@ -45,7 +41,7 @@ impl<'a, U> Clone for OneofFieldDetail<'a, U> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum OneofField<'a, U> {
     Real(RealOneofField<'a, U>),
     Synethic(SyntheticOneofField<'a, U>),
@@ -58,7 +54,7 @@ impl<'a, U> OneofField<'a, U> {
             OneofField::Synethic(f) => f.name(),
         }
     }
-    pub fn fully_qualified_name(&self) -> &str {
+    pub fn fully_qualified_name(&self) -> String {
         match self {
             OneofField::Real(f) => f.fully_qualified_name(),
             OneofField::Synethic(f) => f.fully_qualified_name(),
@@ -72,44 +68,39 @@ impl<'a, U> OneofField<'a, U> {
     }
 }
 impl<'a, U> FullyQualified for OneofField<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
+    fn fully_qualified_name(&self) -> String {
         match self {
             OneofField::Real(f) => f.fully_qualified_name(),
             OneofField::Synethic(f) => f.fully_qualified_name(),
         }
     }
 }
-impl<'a, U> Named<U> for OneofField<'a, U> {
-    fn name(&self) -> Name<U> {
+impl<'a, U> Clone for OneofField<'a, U> {
+    fn clone(&self) -> Self {
         match self {
-            OneofField::Real(f) => f.name(),
-            OneofField::Synethic(f) => f.name(),
+            Self::Real(f) => Self::Real(f.clone()),
+            Self::Synethic(f) => Self::Synethic(f.clone()),
         }
     }
 }
 
-impl<'a, U> Downgrade for OneofField<'a, U> {
-    type Output = WeakOneofField<'a, U>;
-    fn downgrade(self) -> Self::Output {
-        match self {
-            OneofField::Real(f) => WeakOneofField::Real(f.downgrade()),
-            OneofField::Synethic(f) => WeakOneofField::Synethic(f.downgrade()),
-        }
+impl<'a, U> From<RealOneofField<'a, U>> for OneofField<'a, U> {
+    fn from(f: RealOneofField<'a, U>) -> Self {
+        OneofField::Real(f)
     }
 }
-
-#[derive(Debug, Clone)]
-pub(crate) enum WeakOneofField<'a, U> {
-    Real(WeakRealOneofField<'a, U>),
-    Synethic(WeakSyntheticOneofField<'a, U>),
+impl<'a, U> From<&RealOneofField<'a, U>> for OneofField<'a, U> {
+    fn from(f: &RealOneofField<'a, U>) -> Self {
+        OneofField::Real(f.clone())
+    }
 }
-
-impl<'a, U> Upgrade for WeakOneofField<'a, U> {
-    type Output = OneofField<'a, U>;
-    fn upgrade(self) -> Self::Output {
-        match self {
-            WeakOneofField::Real(f) => OneofField::Real(f.upgrade()),
-            WeakOneofField::Synethic(f) => OneofField::Synethic(f.upgrade()),
-        }
+impl<'a, U> From<SyntheticOneofField<'a, U>> for OneofField<'a, U> {
+    fn from(f: SyntheticOneofField<'a, U>) -> Self {
+        OneofField::Synethic(f)
+    }
+}
+impl<'a, U> From<&SyntheticOneofField<'a, U>> for OneofField<'a, U> {
+    fn from(f: &SyntheticOneofField<'a, U>) -> Self {
+        OneofField::Synethic(f.clone())
     }
 }

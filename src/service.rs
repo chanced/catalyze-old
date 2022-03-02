@@ -8,9 +8,8 @@ use prost_types::ServiceDescriptorProto;
 use crate::{
     container::Container,
     iter::Iter,
-    name::Named,
-    path::ServiceDescriptorPath,
-    traits::{Downgrade, Upgrade},
+    proto::ServiceDescriptorPath,
+    
     FullyQualified, Method, Name, Node, NodeAtPath,
 };
 
@@ -27,11 +26,8 @@ struct ServiceDetail<'a, U> {
 pub struct Service<'a, U>(Rc<ServiceDetail<'a, U>>);
 
 impl<'a, U> Service<'a, U> {
-    pub(crate) fn new(
-        desc: &'a ServiceDescriptorProto,
-        container: Container<'a, U>,
-        util: RefCell<Rc<U>>,
-    ) -> Self {
+    pub(crate) fn new(desc: &'a ServiceDescriptorProto, container: Container<'a, U>) -> Self {
+        let util = container.util();
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
         Service(Rc::new(ServiceDetail {
             name: Name::new(desc.name(), util.clone()),
@@ -51,14 +47,6 @@ impl<'a, U> Service<'a, U> {
 impl<'a, U> Clone for Service<'a, U> {
     fn clone(&self) -> Self {
         Service(self.0.clone())
-    }
-}
-
-impl<'a, U> Downgrade for Service<'a, U> {
-    type Output = WeakService<'a, U>;
-
-    fn downgrade(self) -> Self::Output {
-        WeakService(Rc::downgrade(&self.0))
     }
 }
 
@@ -83,13 +71,8 @@ impl<'a, U> NodeAtPath<'a, U> for Service<'a, U> {
 }
 
 impl<'a, U> FullyQualified for Service<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
-        &self.0.fqn
-    }
-}
-impl<'a, U> Named<U> for Service<'a, U> {
-    fn name(&self) -> Name<U> {
-        self.0.name.clone()
+    fn fully_qualified_name(&self) -> String {
+        self.0.fqn.clone()
     }
 }
 
@@ -99,13 +82,5 @@ pub(crate) struct WeakService<'a, U>(Weak<ServiceDetail<'a, U>>);
 impl<'a, U> Clone for WeakService<'a, U> {
     fn clone(&self) -> Self {
         WeakService(self.0.clone())
-    }
-}
-
-impl<'a, U> Upgrade for WeakService<'a, U> {
-    type Output = Service<'a, U>;
-
-    fn upgrade(self) -> Self::Output {
-        Service(self.0.upgrade().expect("Service was dropped"))
     }
 }

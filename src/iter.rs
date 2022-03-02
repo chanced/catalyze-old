@@ -5,10 +5,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{
-    traits::{Downgrade, Upgrade},
-    Enum, EnumList, File, Message, MessageList, Name, WeakFile,
-};
+use crate::{Enum, EnumList, File, Message, MessageList, Name, WeakFile};
 
 pub struct Iter<T> {
     nodes: Rc<RefCell<Vec<T>>>,
@@ -35,55 +32,18 @@ impl<T> From<&Rc<RefCell<Vec<T>>>> for Iter<T> {
     }
 }
 
-pub struct UpgradeIter<T>
-where
-    T: Downgrade,
-{
-    nodes: Rc<RefCell<Vec<T::Output>>>,
-    idx: usize,
-    phantom: PhantomData<T>,
-}
-impl<T> UpgradeIter<T>
-where
-    T: Downgrade,
-    T::Output: Upgrade<Output = T>,
-{
-    pub(crate) fn new(nodes: Rc<RefCell<Vec<T::Output>>>) -> Self {
-        Self {
-            nodes: nodes.clone(),
-            phantom: PhantomData,
-            idx: 0,
-        }
-    }
-}
-
-impl<T> Iterator for UpgradeIter<T>
-where
-    T: Downgrade,
-    T::Output: Upgrade<Output = T>,
-{
-    type Item = T;
-    fn next(&mut self) -> Option<Self::Item> {
-        let nodes = self.nodes.borrow();
-        if self.idx < nodes.len() {
-            self.idx += 1;
-            nodes.get(self.idx - 1).map(|n| n.upgrade())
-        } else {
-            None
-        }
-    }
-}
-
 pub struct TransitiveImports<'a, U> {
     queue: VecDeque<File<'a, U>>,
     processed: HashSet<Name<U>>,
+    phantom: PhantomData<&'a U>,
 }
 
 impl<'a, U> TransitiveImports<'a, U> {
     pub(crate) fn new(files: Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
         Self {
-            queue: VecDeque::from_iter(files.borrow().iter().map(|f| f.upgrade())),
+            queue: VecDeque::from_iter(files.borrow().iter().map(|f| f.into())),
             processed: HashSet::new(),
+            phantom: PhantomData,
         }
     }
 }
@@ -94,7 +54,7 @@ impl<'a, U> Iterator for TransitiveImports<'a, U> {
         while let Some(file) = self.queue.pop_front() {
             if !self.processed.contains(&file.name()) {
                 self.processed.insert(file.name());
-                for d in file.dependencies() {
+                for d in file.imports() {
                     self.queue.push_back(d);
                 }
                 return Some(file);
@@ -106,12 +66,14 @@ impl<'a, U> Iterator for TransitiveImports<'a, U> {
 
 pub struct AllMessages<'a, U> {
     q: VecDeque<Message<'a, U>>,
+    phantom: PhantomData<&'a U>,
 }
 
 impl<'a, U> AllMessages<'a, U> {
     pub(crate) fn new(msgs: MessageList<'a, U>) -> Self {
         Self {
             q: VecDeque::from_iter(msgs.borrow().iter().cloned()),
+            phantom: PhantomData,
         }
     }
 }
@@ -163,6 +125,40 @@ impl<'a, U> Iterator for AllEnums<'a, U> {
             }
             None
         }
+    }
+}
+
+/// FileRefIter is an iterator that upgrades weak references to `File`s.
+pub struct FileRefIter<'a, U> {
+    files: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
+    index: usize,
+}
+impl<'a, U> From<&Rc<RefCell<Vec<WeakFile<'a, U>>>>> for FileRefIter<'a, U> {
+    fn from(files: &Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
+        FileRefIter {
+            files: files.clone(),
+            index: 0,
+        }
+    }
+}
+impl<'a, U> From<Rc<RefCell<Vec<WeakFile<'a, U>>>>> for FileRefIter<'a, U> {
+    fn from(files: Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
+        FileRefIter {
+            files: files.clone(),
+            index: 0,
+        }
+    }
+}
+
+impl<'a, U> Iterator for FileRefIter<'a, U> {
+    type Item = File<'a, U>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let files = self.files.borrow();
+        while let Some(file) = files.get(self.index) {
+            self.index += 1;
+            return Some(file.into());
+        }
+        None
     }
 }
 

@@ -11,12 +11,13 @@ use super::{FieldOptions, Scalar};
 #[derive(Debug)]
 pub struct FieldDescriptor<'a, U> {
     desc: &'a prost_types::FieldDescriptorProto,
-    util: RefCell<Rc<U>>,
+    opts: FieldOptions<'a, U>,
 }
 
 impl<'a, U> FieldDescriptor<'a, U> {
-    pub fn new(desc: &'a prost_types::FieldDescriptorProto, util: RefCell<Rc<U>>) -> Self {
-        Self { desc, util }
+    pub fn new(desc: &'a prost_types::FieldDescriptorProto) -> Self {
+        let opts = FieldOptions::new(desc.options.as_ref().expect("Field did not have options"));
+        Self { desc, opts }
     }
 
     pub fn name(&self) -> &str {
@@ -44,66 +45,34 @@ impl<'a, U> FieldDescriptor<'a, U> {
     }
 
     pub fn is_embed(&self) -> bool {
-        if let Type::Message = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Message)
     }
 
     pub fn is_enum(&self) -> bool {
-        if let Type::Enum = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Enum)
     }
 
     pub fn is_scalar(&self) -> bool {
-        if let Type::Scalar(_) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(_))
     }
 
     pub fn is_double(&self) -> bool {
-        if let Type::Scalar(Scalar::Double) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::Double))
     }
     pub fn is_float(&self) -> bool {
-        if let Type::Scalar(Scalar::Float) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::Float))
     }
 
     pub fn is_int64(&self) -> bool {
-        if let Type::Scalar(Scalar::Int64) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::Int64))
     }
 
     pub fn is_uint64(&self) -> bool {
-        if let Type::Scalar(Scalar::Uint64) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::Uint64))
     }
 
     pub fn is_int32(&self) -> bool {
-        if let Type::Scalar(Scalar::Int32) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::Int32))
     }
 
     pub fn is_fixed64(&self) -> bool {
@@ -155,42 +124,22 @@ impl<'a, U> FieldDescriptor<'a, U> {
     }
 
     pub fn is_sfixed32(&self) -> bool {
-        if let Type::Scalar(Scalar::Sfixed32) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::Sfixed32))
     }
 
     pub fn is_sfixed64(&self) -> bool {
-        if let Type::Scalar(Scalar::Sfixed64) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::Sfixed64))
     }
 
     pub fn is_sint32(&self) -> bool {
-        if let Type::Scalar(Scalar::Sint32) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::Sint32))
     }
 
     pub fn is_sint64(&self) -> bool {
-        if let Type::Scalar(Scalar::Sint64) = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Scalar(Scalar::Sint64))
     }
     pub fn is_message(&self) -> bool {
-        if let Type::Message = self.r#type() {
-            true
-        } else {
-            false
-        }
+        matches!(self.r#type(), Type::Message)
     }
 
     pub fn is_repeated(&self) -> bool {
@@ -241,12 +190,8 @@ impl<'a, U> FieldDescriptor<'a, U> {
     pub fn json_name(&self) -> &str {
         self.desc.json_name()
     }
-    pub fn options(&self) -> Option<FieldOptions<'a, U>> {
-        self.desc
-            .options
-            .or(Some(prost_types::FieldOptions::default()))
-            .as_ref()
-            .map(|o| FieldOptions::new(o, self.util))
+    pub fn options(&self) -> FieldOptions<'a, U> {
+        self.opts.clone()
     }
     /// If true, this is a proto3 "optional". When a proto3 field is optional, it
     /// tracks presence regardless of field type.
@@ -276,13 +221,13 @@ impl<'a, U> FieldDescriptor<'a, U> {
     ///
     /// - `syntax` is `Syntax::Proto3` and `proto3_optional` is `true`
     /// - `syntax` is `Syntax::Proto2` and `label` is `Label::Optional`.
-    pub(crate) fn is_marked_optional(&self, syntax: Syntax) -> bool {
+    pub fn is_marked_optional(&self, syntax: Syntax) -> bool {
         match syntax {
             Syntax::Proto2 => self.label() == Label::Optional,
             Syntax::Proto3 => self.proto3_optional(),
         }
     }
-    pub(crate) fn is_required(&self, syntax: Syntax) -> bool {
+    pub fn is_required(&self, syntax: Syntax) -> bool {
         return syntax.supports_required_prefix() && self.label() == Label::Required;
     }
 }
@@ -291,7 +236,7 @@ impl<'a, U> Clone for FieldDescriptor<'a, U> {
     fn clone(&self) -> Self {
         FieldDescriptor {
             desc: self.desc,
-            util: self.util.clone(),
+            opts: self.opts.clone(),
         }
     }
 }

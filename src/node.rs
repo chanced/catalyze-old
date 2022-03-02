@@ -1,19 +1,18 @@
-use std::rc::Rc;
-
 use crate::{
-    proto::Syntax, Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof, Service,
+    Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof, Package, Service,
 };
 
-pub trait NodeAtPath<'a, U> {
+pub(crate) trait NodeAtPath<'a, U> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>>;
 }
 
 pub trait FullyQualified {
-    fn fully_qualified_name(&self) -> &str;
+    fn fully_qualified_name(&self) -> String;
 }
 
 #[derive(Debug)]
 pub enum Node<'a, U> {
+    Package(Package<'a, U>),
     File(File<'a, U>),
     Message(Message<'a, U>),
     Oneof(Oneof<'a, U>),
@@ -28,6 +27,7 @@ pub enum Node<'a, U> {
 impl<'a, U> Clone for Node<'a, U> {
     fn clone(&self) -> Self {
         match self {
+            Self::Package(p) => Self::Package(p.clone()),
             Self::File(n) => Self::File(n.clone()),
             Self::Message(n) => Self::Message(n.clone()),
             Self::Oneof(n) => Self::Oneof(n.clone()),
@@ -44,6 +44,7 @@ impl<'a, U> Clone for Node<'a, U> {
 impl<'a, U> Node<'a, U> {
     pub fn name(&self) -> Name<U> {
         match self {
+            Node::Package(p) => p.name(),
             Node::File(f) => f.name(),
             Node::Message(m) => m.name(),
             Node::Field(f) => f.name(),
@@ -68,19 +69,14 @@ impl<'a, U> NodeAtPath<'a, U> for Node<'a, U> {
             Node::Service(s) => s.node_at_path(path),
             Node::Method(m) => m.node_at_path(path),
             Node::Field(f) => f.node_at_path(path),
-            Node::Extension(_) => todo!(),
+            Node::Extension(_) => panic!("Can not path to an extension"), // TODO: confirm this
+            Node::Package(_) => panic!("Can not path to a package"),
         }
     }
 }
 
-impl<'a, U> From<Field<'a, U>> for Node<'a, U> {
-    fn from(field: Field<'a, U>) -> Self {
-        Node::Field(field)
-    }
-}
-
 impl<'a, U> FullyQualified for Node<'a, Node<'a, U>> {
-    fn fully_qualified_name(&self) -> &str {
+    fn fully_qualified_name(&self) -> String {
         match self {
             Node::File(f) => f.fully_qualified_name(),
             Node::Message(m) => m.fully_qualified_name(),
@@ -91,12 +87,47 @@ impl<'a, U> FullyQualified for Node<'a, Node<'a, U>> {
             Node::Method(m) => m.fully_qualified_name(),
             Node::Field(f) => f.fully_qualified_name(),
             Node::Extension(e) => e.fully_qualified_name(),
+            Node::Package(p) => p.fully_qualified_name(),
         }
     }
 }
 
 pub(crate) fn format_fqn<'a, N: FullyQualified>(n: &N, name: &str) -> String {
     format!("{}.{}", n.fully_qualified_name(), name)
+}
+impl<'a, U> From<File<'a, U>> for Node<'a, U> {
+    fn from(file: File<'a, U>) -> Self {
+        Node::File(file)
+    }
+}
+impl<'a, U> From<&File<'a, U>> for Node<'a, U> {
+    fn from(file: &File<'a, U>) -> Self {
+        Node::File(file.clone())
+    }
+}
+
+impl<'a, U> From<Package<'a, U>> for Node<'a, U> {
+    fn from(p: Package<'a, U>) -> Self {
+        Node::Package(p)
+    }
+}
+
+impl<'a, U> From<&Package<'a, U>> for Node<'a, U> {
+    fn from(p: &Package<'a, U>) -> Self {
+        Node::Package(p.clone())
+    }
+}
+
+impl<'a, U> From<Message<'a, U>> for Node<'a, U> {
+    fn from(m: Message<'a, U>) -> Self {
+        Node::Message(m)
+    }
+}
+
+impl<'a, U> From<&Message<'a, U>> for Node<'a, U> {
+    fn from(m: &Message<'a, U>) -> Self {
+        Node::Message(m.clone())
+    }
 }
 
 impl<'a, U> From<Oneof<'a, U>> for Node<'a, U> {
@@ -109,3 +140,83 @@ impl<'a, U> From<&Oneof<'a, U>> for Node<'a, U> {
         Node::Oneof(oneof.clone())
     }
 }
+impl<'a, U> From<Field<'a, U>> for Node<'a, U> {
+    fn from(field: Field<'a, U>) -> Self {
+        Node::Field(field)
+    }
+}
+impl<'a, U> From<&Field<'a, U>> for Node<'a, U> {
+    fn from(field: &Field<'a, U>) -> Self {
+        Node::Field(field.clone())
+    }
+}
+
+impl<'a, U> From<Enum<'a, U>> for Node<'a, U> {
+    fn from(e: Enum<'a, U>) -> Self {
+        Node::Enum(e)
+    }
+}
+
+impl<'a, U> From<&Enum<'a, U>> for Node<'a, U> {
+    fn from(e: &Enum<'a, U>) -> Self {
+        Node::Enum(e.clone())
+    }
+}
+
+impl<'a, U> From<EnumValue<'a, U>> for Node<'a, U> {
+    fn from(ev: EnumValue<'a, U>) -> Self {
+        Node::EnumValue(ev)
+    }
+}
+
+impl<'a, U> From<&EnumValue<'a, U>> for Node<'a, U> {
+    fn from(ev: &EnumValue<'a, U>) -> Self {
+        Node::EnumValue(ev.clone())
+    }
+}
+
+impl<'a, U> From<Service<'a, U>> for Node<'a, U> {
+    fn from(s: Service<'a, U>) -> Self {
+        Node::Service(s)
+    }
+}
+
+impl<'a, U> From<&Service<'a, U>> for Node<'a, U> {
+    fn from(s: &Service<'a, U>) -> Self {
+        Node::Service(s.clone())
+    }
+}
+
+impl<'a, U> From<Method<'a, U>> for Node<'a, U> {
+    fn from(m: Method<'a, U>) -> Self {
+        Node::Method(m)
+    }
+}
+
+impl<'a, U> From<&Method<'a, U>> for Node<'a, U> {
+    fn from(m: &Method<'a, U>) -> Self {
+        Node::Method(m.clone())
+    }
+}
+
+impl<'a, U> From<Extension<'a, U>> for Node<'a, U> {
+    fn from(e: Extension<'a, U>) -> Self {
+        Node::Extension(e)
+    }
+}
+
+impl<'a, U> From<&Extension<'a, U>> for Node<'a, U> {
+    fn from(e: &Extension<'a, U>) -> Self {
+        Node::Extension(e.clone())
+    }
+}
+
+// File(File<'a, U>),
+//     Message(Message<'a, U>),
+//     Oneof(Oneof<'a, U>),
+//     Enum(Enum<'a, U>),
+//     EnumValue(EnumValue<'a, U>),
+//     Service(Service<'a, U>),
+//     Method(Method<'a, U>),
+//     Field(Field<'a, U>),
+//     Extension(Extension<'a, U>),

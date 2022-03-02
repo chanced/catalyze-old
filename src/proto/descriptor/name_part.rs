@@ -1,4 +1,4 @@
-use std::{cell::RefCell, ops::Index, rc::Rc};
+use std::{cell::RefCell, marker::PhantomData, ops::Index, rc::Rc, vec};
 
 /// The name of the uninterpreted option.  Each string represents a segment in
 /// a dot-separated name. `is_extension` is `true` if a segment represents an
@@ -8,27 +8,30 @@ use std::{cell::RefCell, ops::Index, rc::Rc};
 /// ```
 /// "foo.(bar.baz).qux" => [ ("foo", false), ("bar.baz", true), ("qux", false) ]
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Copy)]
 pub struct NamePart<'a, U> {
     part: &'a prost_types::uninterpreted_option::NamePart,
-    pub util: RefCell<Rc<U>>,
+    u: PhantomData<U>,
 }
 impl<'a, U> Clone for NamePart<'a, U> {
     fn clone(&self) -> Self {
         Self {
-            util: self.util.clone(),
+            u: PhantomData,
             part: self.part,
         }
     }
 }
 
-impl<'a, U> NamePart<'a, U> {
-    pub fn new(
-        part: &'a prost_types::uninterpreted_option::NamePart,
-        util: RefCell<Rc<U>>,
-    ) -> Self {
-        Self { part, util }
+impl<'a, U> From<&'a prost_types::uninterpreted_option::NamePart> for NamePart<'a, U> {
+    fn from(part: &'a prost_types::uninterpreted_option::NamePart) -> Self {
+        Self {
+            u: PhantomData,
+            part,
+        }
     }
+}
+
+impl<'a, U> NamePart<'a, U> {
     /// alias for value
     /// the value of the part `NamePart`
     pub fn name_part(&self) -> &'a str {
@@ -47,11 +50,6 @@ impl<'a, U> NamePart<'a, U> {
     pub fn is_extension(&self) -> bool {
         self.part.is_extension
     }
-
-    /// Returns `Rc<U>`
-    pub fn util(&self) -> Rc<U> {
-        return self.util.borrow().clone();
-    }
 }
 
 impl<'a, U> ToString for NamePart<'a, U> {
@@ -68,30 +66,58 @@ impl<'a, U> ToString for NamePart<'a, U> {
 pub struct NameParts<'a, U> {
     prost_parts: &'a [prost_types::uninterpreted_option::NamePart],
     parts: Vec<NamePart<'a, U>>,
-    util: RefCell<Rc<U>>,
+    u: PhantomData<U>,
 }
-impl<'a, U> NameParts<'a, U> {
-    pub fn new(
-        prost_parts: &'a [prost_types::uninterpreted_option::NamePart],
-        util: RefCell<Rc<U>>,
-    ) -> Self {
+
+impl<'a, U> From<&'a [prost_types::uninterpreted_option::NamePart]> for NameParts<'a, U> {
+    fn from(prost_parts: &'a [prost_types::uninterpreted_option::NamePart]) -> Self {
         let parts = prost_parts
             .iter()
-            .map(|part| NamePart::new(part, util.clone()))
+            .map(|part| NamePart::from(part))
             .collect();
         Self {
             prost_parts,
             parts,
-            util,
+            u: PhantomData,
         }
     }
 }
+impl<'a, U> From<&'a std::vec::Vec<prost_types::uninterpreted_option::NamePart>>
+    for NameParts<'a, U>
+{
+    fn from(prost_parts: &'a std::vec::Vec<prost_types::uninterpreted_option::NamePart>) -> Self {
+        let parts = prost_parts
+            .iter()
+            .map(|part| NamePart::from(part))
+            .collect();
+        Self {
+            prost_parts,
+            parts,
+            u: PhantomData,
+        }
+    }
+}
+
+impl<'a, U> std::iter::IntoIterator for &NameParts<'a, U> {
+    type Item = NamePart<'a, U>;
+    type IntoIter = vec::IntoIter<Self::Item>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.parts.clone().into_iter()
+    }
+}
+
+impl<'a, U> NameParts<'a, U> {
+    fn iter(&self) -> std::slice::Iter<NamePart<'a, U>> {
+        self.parts.iter()
+    }
+}
+
 impl<'a, U> Clone for NameParts<'a, U> {
     fn clone(&self) -> Self {
         Self {
             parts: self.parts.clone(),
-            util: self.util.clone(),
             prost_parts: self.prost_parts,
+            u: PhantomData,
         }
     }
 }
@@ -103,25 +129,18 @@ impl<'a, U> Index<usize> for NameParts<'a, U> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct NamePartsIter<'a, U> {
-    parts: &'a [prost_types::uninterpreted_option::NamePart],
-    util: RefCell<Rc<U>>,
-    i: usize,
-}
+// #[derive(Debug, Clone)]
+// pub struct NamePartsIter<'a, U> {
+//     parts: &'a [NamePart<'a, U>],
+//     i: usize,
+// }
 
-impl<'a, U> Iterator for NamePartsIter<'a, U> {
-    type Item = NamePart<'a, U>;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.i < self.parts.len() {
-            let part = &self.parts[self.i];
-            self.i += 1;
-            Some(NamePart {
-                part,
-                util: self.util.clone(),
-            })
-        } else {
-            None
-        }
-    }
-}
+// impl<'a, U> Iterator for NamePartsIter<'a, U> {
+//     type Item = NamePart<'a, U>;
+//     fn next(&mut self) -> Option<Self::Item> {
+//         self.parts.get(self.i).map(|p| {
+//             self.i += 1;
+//             p.clone()
+//         })
+//     }
+// }

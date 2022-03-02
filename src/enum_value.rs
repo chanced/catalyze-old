@@ -1,13 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{
-    format_fqn,
-    traits::{Downgrade, Upgrade},
-    Enum, FullyQualified, Name, Named, Node, NodeAtPath, WeakEnum,
-};
+use crate::{format_fqn, Enum, FullyQualified, Name, Node, NodeAtPath, WeakEnum};
 use prost_types::EnumValueDescriptorProto;
-
-pub(crate) type EnumValueList<'a, U> = Rc<RefCell<Vec<EnumValue<'a, U>>>>;
 
 #[derive(Debug, Clone)]
 struct EnumValueDetail<'a, U> {
@@ -21,16 +15,12 @@ struct EnumValueDetail<'a, U> {
 pub struct EnumValue<'a, U>(Rc<EnumValueDetail<'a, U>>);
 
 impl<'a, U> EnumValue<'a, U> {
-    pub(crate) fn new(
-        desc: &'a EnumValueDescriptorProto,
-        r#enum: Enum<'a, U>,
-        util: RefCell<Rc<U>>,
-    ) -> Self {
+    pub(crate) fn new(desc: &'a EnumValueDescriptorProto, enumeration: Enum<'a, U>) -> Self {
         EnumValue(Rc::new(EnumValueDetail {
-            name: Name::new(desc.name(), util),
-            fqn: format_fqn(&r#enum, desc.name()),
+            name: Name::new(desc.name(), enumeration.util()),
+            fqn: format_fqn(&enumeration, desc.name()),
             descriptor: desc,
-            r#enum: r#enum.downgrade(),
+            r#enum: enumeration.into(),
         }))
     }
     pub fn name(&self) -> Name<U> {
@@ -43,38 +33,29 @@ impl<'a, U> EnumValue<'a, U> {
     pub fn container(&self) -> Enum<'a, U> {
         self.r#enum()
     }
-
+    /// alias for `r#enum`.
+    pub fn enumeration(&self) -> Enum<'a, U> {
+        self.r#enum()
+    }
     /// Returns the `Enum` that contains this value.
     pub fn r#enum(&self) -> Enum<'a, U> {
-        self.0.r#enum.upgrade()
+        self.0.r#enum.clone().into()
     }
 
-    fn fully_qualified_name(&self) -> &str {
-        &self.0.fqn
-    }
-}
-
-impl<'a, U> Named<U> for EnumValue<'a, U> {
-    fn name(&self) -> Name<U> {
-        self.0.name.clone()
+    fn fully_qualified_name(&self) -> String {
+        self.0.fqn.clone()
     }
 }
 
 impl<'a, U> FullyQualified for EnumValue<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
-        &self.0.fqn
+    fn fully_qualified_name(&self) -> String {
+        self.0.fqn.clone()
     }
 }
 
 impl<'a, U> Clone for EnumValue<'a, U> {
     fn clone(&self) -> Self {
         EnumValue(self.0.clone())
-    }
-}
-
-impl<'a, U> Into<Node<'a, U>> for EnumValue<'a, U> {
-    fn into(self) -> Node<'a, U> {
-        Node::EnumValue(self)
     }
 }
 

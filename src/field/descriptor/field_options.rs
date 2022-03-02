@@ -1,6 +1,6 @@
 use crate::proto::descriptor::UninterpretedOption;
 
-use std::{cell::RefCell, rc::Rc, slice};
+use std::{cell::RefCell, marker::PhantomData, rc::Rc, slice};
 
 use super::{CType, JsType};
 
@@ -8,18 +8,18 @@ use super::{CType, JsType};
 pub struct FieldOptions<'a, U> {
     opts: &'a prost_types::FieldOptions,
     uninterpreted_option: Vec<UninterpretedOption<'a, U>>,
-    pub util: RefCell<Rc<U>>,
+    u: PhantomData<U>,
 }
 
 impl<'a, U> FieldOptions<'a, U> {
-    pub fn new(opts: &'a prost_types::FieldOptions, util: RefCell<Rc<U>>) -> Self {
+    pub fn new(opts: &'a prost_types::FieldOptions) -> Self {
         Self {
             opts,
-            util,
+            u: PhantomData,
             uninterpreted_option: opts
                 .uninterpreted_option
                 .iter()
-                .map(|o| UninterpretedOption { opt: o, util })
+                .map(UninterpretedOption::from)
                 .collect(),
         }
     }
@@ -99,18 +99,13 @@ impl<'a, U> FieldOptions<'a, U> {
     pub fn uninterpreted_options(&self) -> slice::Iter<UninterpretedOption<'a, U>> {
         self.uninterpreted_option.iter()
     }
-    /// Clones and returns `RefCell<Rc<U>>`
-    /// Returns `Rc<U>`
-    pub fn util(&self) -> Rc<U> {
-        self.util.borrow().clone()
-    }
 }
 
 impl<'a, U> Clone for FieldOptions<'a, U> {
     fn clone(&self) -> Self {
         Self {
             opts: self.opts,
-            util: self.util.clone(),
+            u: PhantomData,
             uninterpreted_option: self.uninterpreted_option.clone(),
         }
     }

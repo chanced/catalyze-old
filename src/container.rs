@@ -2,34 +2,12 @@ use std::rc::Rc;
 
 use crate::file::WeakFile;
 use crate::iter::{AllEnums, AllMessages, Iter};
-use crate::traits::Upgrade;
 use crate::{Enum, File, FullyQualified, Message, Name, Node, Package, WeakMessage};
 
 // pub enum Entity {
 
 // }
-#[derive(Debug, Clone)]
-pub(crate) enum WeakContainer<'a, U> {
-    File(WeakFile<'a, U>),
-    Message(WeakMessage<'a, U>),
-}
 
-impl<'a, U> WeakContainer<'a, U> {
-    // TODO: should this return Option<Container<'a, U>>?
-    pub(crate) fn upgrade(&self) -> Container<'a, U> {
-        match self {
-            WeakContainer::File(f) => Container::File(f.upgrade()),
-            WeakContainer::Message(m) => Container::Message(m.upgrade()),
-        }
-    }
-
-    pub(crate) fn package(&self) -> Option<Package<'a, U>> {
-        match self {
-            WeakContainer::File(f) => self.upgrade().package(),
-            WeakContainer::Message(m) => self.upgrade().package(),
-        }
-    }
-}
 #[derive(Debug)]
 pub enum Container<'a, U> {
     File(File<'a, U>),
@@ -52,10 +30,10 @@ impl<'a, U> Container<'a, U> {
             Container::Message(m) => Node::Message(m.clone()),
         }
     }
-    pub fn name(&self) -> &Name<U> {
+    pub fn name(&self) -> Name<U> {
         match self {
-            Container::File(f) => &f.name(),
-            Container::Message(m) => &m.name(),
+            Container::File(f) => f.name(),
+            Container::Message(m) => m.name(),
         }
     }
     pub fn messages(&self) -> Iter<Message<'a, U>> {
@@ -82,43 +60,65 @@ impl<'a, U> Container<'a, U> {
             Container::Message(m) => m.enums(),
         }
     }
-    pub fn package(&self) -> Option<Package<'a, U>> {
+    pub fn package(&self) -> Package<'a, U> {
         match self {
             Container::File(f) => f.package(),
             Container::Message(m) => m.package(),
         }
     }
-    pub(crate) fn downgrade(&self) -> WeakContainer<'a, U> {
+    pub fn util(&self) -> Rc<U> {
         match self {
-            Container::File(f) => WeakContainer::File(Rc::downgrade(f)),
-            Container::Message(m) => WeakContainer::Message(Rc::downgrade(m)),
+            Container::File(f) => f.util(),
+            Container::Message(m) => m.util(),
+        }
+    }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        match self {
+            Container::File(f) => f.replace_util(util),
+            Container::Message(m) => m.replace_util(util),
         }
     }
 }
 
-pub trait BuildTarget {
-    fn build_target(&self) -> bool;
+impl<'a, U> From<File<'a, U>> for Container<'a, U> {
+    fn from(f: File<'a, U>) -> Self {
+        Container::File(f)
+    }
 }
-impl<'a, U> BuildTarget for Container<'a, U> {
-    fn build_target(&self) -> bool {
-        match self {
-            Container::File(f) => f.build_target(),
-            Container::Message(m) => m.build_target(),
+impl<'a, U> From<&File<'a, U>> for Container<'a, U> {
+    fn from(f: &File<'a, U>) -> Self {
+        Container::File(f.clone())
+    }
+}
+impl<'a, U> From<Message<'a, U>> for Container<'a, U> {
+    fn from(f: Message<'a, U>) -> Self {
+        Container::Message(f)
+    }
+}
+impl<'a, U> From<&Message<'a, U>> for Container<'a, U> {
+    fn from(f: &Message<'a, U>) -> Self {
+        Container::Message(f.clone())
+    }
+}
+impl<'a, U> From<WeakContainer<'a, U>> for Container<'a, U> {
+    fn from(f: WeakContainer<'a, U>) -> Self {
+        match f {
+            WeakContainer::File(f) => Container::File(f.into()),
+            WeakContainer::Message(m) => Container::Message(m.into()),
         }
     }
 }
-
-impl<'a, U> BuildTarget for WeakContainer<'a, U> {
-    fn build_target(&self) -> bool {
-        match self {
-            WeakContainer::File(f) => f.upgrade().unwrap().build_target(),
-            WeakContainer::Message(m) => m.upgrade().unwrap().build_target(),
+impl<'a, U> From<&WeakContainer<'a, U>> for Container<'a, U> {
+    fn from(f: &WeakContainer<'a, U>) -> Self {
+        match f {
+            WeakContainer::File(f) => Container::File(f.into()),
+            WeakContainer::Message(m) => Container::Message(m.clone().into()),
         }
     }
 }
 
 impl<'a, U> FullyQualified for Container<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
+    fn fully_qualified_name(&self) -> String {
         match self {
             Container::File(f) => f.fully_qualified_name(),
             Container::Message(m) => m.fully_qualified_name(),
@@ -126,11 +126,68 @@ impl<'a, U> FullyQualified for Container<'a, U> {
     }
 }
 
-impl<'a, U> FullyQualified for WeakContainer<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
+#[derive(Debug, Clone)]
+pub(crate) enum WeakContainer<'a, U> {
+    File(WeakFile<'a, U>),
+    Message(WeakMessage<'a, U>),
+}
+
+impl<'a, U> WeakContainer<'a, U> {
+    pub(crate) fn package(&self) -> Package<'a, U> {
         match self {
-            WeakContainer::File(f) => f.upgrade().unwrap().fully_qualified_name(),
-            WeakContainer::Message(m) => m.upgrade().unwrap().fully_qualified_name(),
+            WeakContainer::File(f) => f.package(),
+            WeakContainer::Message(m) => m.package(),
+        }
+    }
+    pub(crate) fn build_target(&self) -> bool {
+        match self {
+            WeakContainer::File(f) => f.build_target(),
+            WeakContainer::Message(m) => m.build_target(),
+        }
+    }
+}
+impl<'a, U> From<&File<'a, U>> for WeakContainer<'a, U> {
+    fn from(f: &File<'a, U>) -> Self {
+        WeakContainer::File(f.into())
+    }
+}
+impl<'a, U> From<File<'a, U>> for WeakContainer<'a, U> {
+    fn from(f: File<'a, U>) -> Self {
+        WeakContainer::File(f.into())
+    }
+}
+impl<'a, U> From<&Message<'a, U>> for WeakContainer<'a, U> {
+    fn from(m: &Message<'a, U>) -> Self {
+        WeakContainer::Message(m.into())
+    }
+}
+impl<'a, U> From<Message<'a, U>> for WeakContainer<'a, U> {
+    fn from(m: Message<'a, U>) -> Self {
+        WeakContainer::Message(m.into())
+    }
+}
+
+impl<'a, U> From<Container<'a, U>> for WeakContainer<'a, U> {
+    fn from(c: Container<'a, U>) -> Self {
+        match c {
+            Container::File(f) => f.into(),
+            Container::Message(m) => m.into(),
+        }
+    }
+}
+impl<'a, U> From<&Container<'a, U>> for WeakContainer<'a, U> {
+    fn from(c: &Container<'a, U>) -> Self {
+        match c {
+            Container::File(f) => f.into(),
+            Container::Message(m) => m.into(),
+        }
+    }
+}
+impl<'a, U> FullyQualified for WeakContainer<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        match self {
+            WeakContainer::File(f) => f.fully_qualified_name(),
+            WeakContainer::Message(m) => m.fully_qualified_name(),
         }
     }
 }

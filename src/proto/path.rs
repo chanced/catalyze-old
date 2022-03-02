@@ -78,6 +78,7 @@ impl TryFrom<i32> for EnumDescriptorPath {
 pub enum ServiceDescriptorPath {
     /// ServiceDescriptorProto.method
     Method = 2,
+    Mixin = 6,
 }
 impl TryFrom<i32> for ServiceDescriptorPath {
     type Error = ();

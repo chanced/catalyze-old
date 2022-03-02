@@ -1,4 +1,4 @@
-use crate::util::{Generic, ToCase, Util};
+use crate::util::ToCase;
 use crate::WELL_KNNOWN_TYPE_PACKAGE;
 pub use heck::{
     AsLowerCamelCase, ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase,
@@ -10,16 +10,11 @@ use std::hash::{Hash, Hasher};
 use std::ops;
 use std::rc::Rc;
 
-use std::str::FromStr;
 use std::{fmt, ops::Add};
-
-pub trait Named<U> {
-    fn name(&self) -> Name<U>;
-}
 
 pub struct Name<U> {
     val: String,
-    pub util: RefCell<Rc<U>>,
+    util: RefCell<Rc<U>>,
 }
 
 impl<'a, U> Clone for Name<U> {
@@ -36,12 +31,12 @@ impl<'a, U> Hash for Name<U> {
         self.val.hash(state);
     }
 }
-
+impl<'a, U> Eq for Name<U> {}
 impl<'a, U> Name<U> {
-    pub fn new(val: &str, util: RefCell<Rc<U>>) -> Self {
+    pub fn new(val: &str, util: Rc<U>) -> Self {
         Self {
             val: val.to_owned(),
-            util,
+            util: RefCell::new(util),
         }
     }
     /// Assign returns a new `Name` with the contents of `val` and a cloned copy
@@ -88,6 +83,9 @@ impl<'a, U> Name<U> {
     pub fn util(&self) -> Rc<U> {
         self.util.borrow().clone()
     }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.util.replace(util);
+    }
 }
 
 impl<'a, U> PartialEq for Name<U> {
@@ -112,32 +110,6 @@ impl<'a, U> PartialEq<str> for Name<U> {
     }
     fn ne(&self, other: &str) -> bool {
         PartialEq::ne(self.as_str(), other)
-    }
-}
-
-impl Default for Name<Generic> {
-    fn default() -> Self {
-        Self {
-            val: Default::default(),
-            util: Rc::new(RefCell::new(Generic)),
-        }
-    }
-}
-impl FromStr for Name<Generic> {
-    type Err = core::convert::Infallible;
-    #[inline]
-    fn from_str(s: &str) -> Result<Name<Generic>, Self::Err> {
-        Ok(Name::from(s))
-    }
-}
-
-impl From<&str> for Name<Generic> {
-    #[inline]
-    fn from(s: &str) -> Self {
-        Self {
-            val: String::from(s),
-            util: Rc::new(RefCell::new(Generic)),
-        }
     }
 }
 
@@ -175,14 +147,14 @@ impl<'a, U> Add<Self> for Name<U> {
 impl<'a, U> Add<&str> for Name<U> {
     type Output = Self;
     fn add(self, rhs: &str) -> Self::Output {
-        Name::new(&(self.val + rhs), self.util)
+        Name::new(&(self.val + rhs), self.util.borrow().clone())
     }
 }
 
 impl<'a, U> Add<String> for Name<U> {
     type Output = Self;
     fn add(self, rhs: String) -> Self::Output {
-        Name::new(&(self.val + rhs.as_str()), self.util)
+        Name::new(&(self.val + rhs.as_str()), self.util.borrow().clone())
     }
 }
 
@@ -288,7 +260,7 @@ mod tests {
     use crate::util::Rust;
     #[test]
     fn test_to_kebab() {
-        let n = Name::new("hello_world", Rc::new(RefCell::new(Rust {})));
+        let n = Name::new("hello_world", Rc::new(Rust {}));
         assert_eq!(n.to_kebab_case().to_string(), "hello-world".to_string());
     }
     #[test]

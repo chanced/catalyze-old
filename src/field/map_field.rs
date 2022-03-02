@@ -11,8 +11,8 @@ pub use mapped_enum_field::*;
 pub use mapped_scalar_field::*;
 
 use crate::{
-    descriptor::FieldDescriptor, name::Named, proto::Syntax, Enum, Field, FullyQualified, Message,
-    Name, WellKnownType,
+    descriptor::FieldDescriptor, proto::Syntax, Enum, Field, FullyQualified, Message, Name,
+    WellKnownType,
 };
 
 use super::FieldDetail;
@@ -28,7 +28,7 @@ impl<'a, U> MapFieldDetail<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.detail.name()
     }
-    pub fn fully_qualified_name(&self) -> &str {
+    pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
     pub fn is_repeated(&self) -> bool {
@@ -70,11 +70,11 @@ impl<'a, U> Clone for MapFieldDetail<'a, U> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum MapField<'a, U> {
     Scalar(MappedScalarField<'a, U>),
     Enum(MappedEnumField<'a, U>),
-    Message(MappedEmbedField<'a, U>),
+    Embed(MappedEmbedField<'a, U>),
 }
 
 impl<'a, U> MapField<'a, U> {
@@ -82,46 +82,49 @@ impl<'a, U> MapField<'a, U> {
         match self {
             MapField::Scalar(f) => f.name(),
             MapField::Enum(f) => f.name(),
-            MapField::Message(f) => f.name(),
+            MapField::Embed(f) => f.name(),
         }
     }
-    fn fully_qualified_name(&self) -> &str {
+    fn fully_qualified_name(&self) -> String {
         match self {
             MapField::Scalar(f) => f.fully_qualified_name(),
             MapField::Enum(f) => f.fully_qualified_name(),
-            MapField::Message(f) => f.fully_qualified_name(),
+            MapField::Embed(f) => f.fully_qualified_name(),
         }
     }
     pub fn embed(&self) -> Option<Message<'a, U>> {
         match self {
-            MapField::Message(m) => Some(m.clone()),
+            MapField::Embed(m) => m.embed().into(),
             _ => None,
         }
     }
+    /// alias for `r#enum`
+    pub fn enumeration(&self) -> Option<Enum<'a, U>> {
+        self.r#enum()
+    }
+
     pub fn r#enum(&self) -> Option<Enum<'a, U>> {
         match self {
-            MapField::Enum(e) => Some(e.clone()),
+            MapField::Enum(e) => e.r#enum().into(),
             _ => None,
         }
     }
 }
-
+impl<'a, U> Clone for MapField<'a, U> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Scalar(f) => Self::Scalar(f.clone()),
+            Self::Enum(f) => Self::Enum(f.clone()),
+            Self::Embed(f) => Self::Embed(f.clone()),
+        }
+    }
+}
 impl<'a, U> FullyQualified for MapField<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
+    fn fully_qualified_name(&self) -> String {
         match self {
             MapField::Scalar(f) => f.fully_qualified_name(),
             MapField::Enum(f) => f.fully_qualified_name(),
-            MapField::Message(f) => f.fully_qualified_name(),
-        }
-    }
-}
-
-impl<'a, U> Named<U> for MapField<'a, U> {
-    fn name(&self) -> Name<U> {
-        match self {
-            MapField::Scalar(f) => f.name(),
-            MapField::Enum(f) => f.name(),
-            MapField::Message(f) => f.name(),
+            MapField::Embed(f) => f.fully_qualified_name(),
         }
     }
 }
@@ -150,18 +153,18 @@ impl<'a, U> From<&MappedScalarField<'a, U>> for MapField<'a, U> {
 
 impl<'a, U> From<MappedEmbedField<'a, U>> for MapField<'a, U> {
     fn from(f: MappedEmbedField<'a, U>) -> Self {
-        MapField::Message(f)
+        MapField::Embed(f)
     }
 }
 impl<'a, U> From<&MappedEmbedField<'a, U>> for MapField<'a, U> {
     fn from(f: &MappedEmbedField<'a, U>) -> Self {
-        MapField::Message(f.clone())
+        MapField::Embed(f.clone())
     }
 }
 
-#[derive(Clone, Debug)]
-pub(crate) enum WeakMapField<'a, U> {
-    Scalar(WeakMappedScalarField<'a, U>),
-    Enum(WeakMapEnumField<'a, U>),
-    Message(WeakMappedEmbedField<'a, U>),
-}
+// #[derive(Clone, Debug)]
+// pub(crate) enum WeakMapField<'a, U> {
+//     Scalar(WeakMappedScalarField<'a, U>),
+//     Enum(WeakMappedEnumField<'a, U>),
+//     Message(WeakMappedEmbedField<'a, U>),
+// }

@@ -1,17 +1,17 @@
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 use crate::{
-    descriptor::FieldDescriptor, proto::Syntax, FullyQualified, Message, MessageFieldDetail, Name,
+    descriptor::FieldDescriptor, proto::Syntax, EmbedFieldDetail, FullyQualified, Message, Name,
 };
 
 #[derive(Debug)]
-pub struct RepeatedMessageField<'a, U>(Rc<MessageFieldDetail<'a, U>>);
+pub struct RepeatedEmbedField<'a, U>(Rc<EmbedFieldDetail<'a, U>>);
 
-impl<'a, U> RepeatedMessageField<'a, U> {
+impl<'a, U> RepeatedEmbedField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.0.detail.name()
     }
-    pub fn fully_qualified_name(&self) -> &str {
+    pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
     pub fn is_repeated(&self) -> bool {
@@ -27,6 +27,9 @@ impl<'a, U> RepeatedMessageField<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
     }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.detail.replace_util(util);
+    }
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
@@ -35,14 +38,8 @@ impl<'a, U> RepeatedMessageField<'a, U> {
     }
 }
 
-impl<'a, U> Clone for RepeatedMessageField<'a, U> {
+impl<'a, U> Clone for RepeatedEmbedField<'a, U> {
     fn clone(&self) -> Self {
-        RepeatedMessageField(self.0.clone())
-    }
-}
-
-impl<'a, U> FullyQualified for RepeatedMessageField<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
-        self.0.detail.fully_qualified_name()
+        RepeatedEmbedField(self.0.clone())
     }
 }

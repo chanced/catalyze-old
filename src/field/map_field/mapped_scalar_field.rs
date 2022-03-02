@@ -2,7 +2,7 @@ use std::rc::{Rc, Weak};
 
 use crate::{
     descriptor::FieldDescriptor, proto::Syntax, FullyQualified, MapFieldDetail, Message, Name,
-    Named, ScalarField,
+    ScalarField,
 };
 
 #[derive(Debug, Clone)]
@@ -23,7 +23,7 @@ impl<'a, U> MappedScalarField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.0.detail.name()
     }
-    pub fn fully_qualified_name(&self) -> &str {
+    pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
     pub fn is_repeated(&self) -> bool {
@@ -39,6 +39,9 @@ impl<'a, U> MappedScalarField<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
     }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.detail.replace_util(util);
+    }
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
@@ -47,22 +50,16 @@ impl<'a, U> MappedScalarField<'a, U> {
     }
 }
 
-impl<'a, U> Named<U> for MappedScalarField<'a, U> {
-    fn name(&self) -> Name<U> {
-        self.0.detail.name()
-    }
-}
-
 impl<'a, U> FullyQualified for MappedScalarField<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
+    fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
 }
 
-#[derive(Debug)]
-pub(crate) struct WeakMappedScalarField<'a, U>(Weak<MappedScalarFieldDetail<'a, U>>);
-impl<'a, U> Clone for WeakMappedScalarField<'a, U> {
-    fn clone(&self) -> Self {
-        WeakMappedScalarField(self.0.clone())
-    }
-}
+// #[derive(Debug)]
+// pub(crate) struct WeakMappedScalarField<'a, U>(Weak<MappedScalarFieldDetail<'a, U>>);
+// impl<'a, U> Clone for WeakMappedScalarField<'a, U> {
+//     fn clone(&self) -> Self {
+//         WeakMappedScalarField(self.0.clone())
+//     }
+// }

@@ -1,23 +1,22 @@
 mod enum_field;
 
 pub mod descriptor;
+mod embed_field;
 mod map_field;
-mod message_field;
 mod oneof_field;
 mod repeated_field;
 mod scalar_field;
 
+pub use embed_field::*;
 pub use enum_field::*;
 pub use map_field::*;
-pub use message_field::*;
 pub use oneof_field::*;
 pub use repeated_field::*;
 pub use scalar_field::*;
 
 use crate::{
     proto::{descriptor::Comments, Syntax},
-    traits::Upgrade,
-    FullyQualified, Message, Name, Node, NodeAtPath, SyntheticOneof, WeakMessage,
+    FullyQualified, Message, Name, Node, NodeAtPath, WeakMessage,
 };
 use std::{cell::RefCell, convert::From, rc::Rc};
 
@@ -57,19 +56,20 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.name.clone()
     }
-    pub fn fully_qualified_name(&self) -> &str {
-        &self.fqn
+    pub fn fully_qualified_name(&self) -> String {
+        self.fqn.clone()
     }
     pub fn message(&self) -> Message<'a, U> {
-        self.msg.upgrade()
-    }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.util.replace(util);
+        self.msg.clone().into()
     }
     /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
         self.util.borrow().clone()
     }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.util.replace(util);
+    }
+
     pub fn syntax(&self) -> Syntax {
         self.syntax
     }
@@ -114,31 +114,64 @@ impl<'a, U> FieldDetail<'a, U> {
         if self.in_oneof {
             return true;
         }
-        if self.desc {
+        if self.desc.is_embed() {
             return true;
+        }
+        if !self.is_repeated() && !self.is_map() {
+            if self.syntax.is_proto2() {
+                true
+            } else {
+                self.desc.is_marked_optional(self.syntax)
+            }
+        } else {
+            false
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Field<'a, U> {
+    Embed(EmbedField<'a, U>),
     Enum(EnumField<'a, U>),
     Map(MapField<'a, U>),
-    Message(MessageField<'a, U>),
     Oneof(OneofField<'a, U>),
     Repeated(RepeatedField<'a, U>),
     Scalar(ScalarField<'a, U>),
 }
 
+impl<'a, U> Clone for Field<'a, U> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Embed(f) => Self::Embed(f.clone()),
+            Self::Enum(f) => Self::Enum(f.clone()),
+            Self::Map(f) => Self::Map(f.clone()),
+            Self::Oneof(f) => Self::Oneof(f.clone()),
+            Self::Repeated(f) => Self::Repeated(f.clone()),
+            Self::Scalar(f) => Self::Scalar(f.clone()),
+        }
+    }
+}
+
 impl<'a, U> Field<'a, U> {
     pub fn name(&self) -> Name<U> {
         match self {
+            Field::Embed(f) => f.name(),
             Field::Enum(f) => f.name(),
             Field::Map(f) => f.name(),
-            Field::Message(f) => f.name(),
             Field::Oneof(f) => f.name(),
             Field::Repeated(f) => f.name(),
             Field::Scalar(f) => f.name(),
+        }
+    }
+
+    pub fn fully_qualified_name(&self) -> String {
+        match self {
+            Field::Embed(f) => f.fully_qualified_name(),
+            Field::Enum(f) => f.fully_qualified_name(),
+            Field::Map(f) => f.fully_qualified_name(),
+            Field::Oneof(f) => f.fully_qualified_name(),
+            Field::Repeated(f) => f.fully_qualified_name(),
+            Field::Scalar(f) => f.fully_qualified_name(),
         }
     }
 }
@@ -146,7 +179,7 @@ impl<'a, U> Field<'a, U> {
 impl<'a, U> NodeAtPath<'a, U> for Field<'a, U> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         if path.is_empty() {
-            return Some(self.into());
+            Some(self.into())
         } else {
             None
         }
@@ -154,11 +187,11 @@ impl<'a, U> NodeAtPath<'a, U> for Field<'a, U> {
 }
 
 impl<'a, U> FullyQualified for Field<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
+    fn fully_qualified_name(&self) -> String {
         match self {
-            Field::Enum(_) => todo!(),
+            Field::Enum(f) => f.fully_qualified_name(),
             Field::Map(f) => f.fully_qualified_name(),
-            Field::Message(f) => f.fully_qualified_name(),
+            Field::Embed(f) => f.fully_qualified_name(),
             Field::Oneof(f) => f.fully_qualified_name(),
             Field::Repeated(f) => f.fully_qualified_name(),
             Field::Scalar(f) => f.fully_qualified_name(),
@@ -182,63 +215,6 @@ impl<'a, U> From<MapField<'a, U>> for Field<'a, U> {
         Field::Map(f)
     }
 }
-impl<'a, U> From<MappedScalarField<'a, U>> for Field<'a, U> {
-    fn from(f: MappedScalarField<'a, U>) -> Self {
-        Field::Map(f.into())
-    }
-}
-impl<'a, U> From<MappedEmbedField<'a, U>> for Field<'a, U> {
-    fn from(f: MappedEmbedField<'a, U>) -> Self {
-        Field::Map(f.into())
-    }
-}
-impl<'a, U> From<MappedEnumField<'a, U>> for Field<'a, U> {
-    fn from(f: MappedEnumField<'a, U>) -> Self {
-        Field::Map(f.into())
-    }
-}
-impl<'a, U> From<MessageField<'a, U>> for Field<'a, U> {
-    fn from(f: MessageField<'a, U>) -> Self {
-        Field::Message(f)
-    }
-}
-impl<'a, U> From<OneofField<'a, U>> for Field<'a, U> {
-    fn from(f: OneofField<'a, U>) -> Self {
-        Field::Oneof(f)
-    }
-}
-impl<'a, U> From<RealOneofField<'a, U>> for Field<'a, U> {
-    fn from(f: RealOneofField<'a, U>) -> Self {
-        Field::Oneof(f.into())
-    }
-}
-impl<'a, U> From<SyntheticOneof<'a, U>> for Field<'a, U> {
-    fn from(f: SyntheticOneof<'a, U>) -> Self {
-        Field::Oneof(f.into())
-    }
-}
-impl<'a, U> From<RepeatedField<'a, U>> for Field<'a, U> {
-    fn from(f: RepeatedField<'a, U>) -> Self {
-        Field::Repeated(f)
-    }
-}
-impl<'a, U> From<RepeatedMessageField<'a, U>> for Field<'a, U> {
-    fn from(f: RepeatedMessageField<'a, U>) -> Self {
-        Field::Repeated(f.into())
-    }
-}
-impl<'a, U> From<RepeatedEnumField<'a, U>> for Field<'a, U> {
-    fn from(f: RepeatedEnumField<'a, U>) -> Self {
-        Field::Repeated(f.into())
-    }
-}
-
-impl<'a, U> From<RepeatedScalarField<'a, U>> for Field<'a, U> {
-    fn from(f: RepeatedScalarField<'a, U>) -> Self {
-        Field::Repeated(f.into())
-    }
-}
-
 impl<'a, U> From<&ScalarField<'a, U>> for Field<'a, U> {
     fn from(f: &ScalarField<'a, U>) -> Self {
         f.clone().into()
@@ -255,93 +231,92 @@ impl<'a, U> From<&MapField<'a, U>> for Field<'a, U> {
         f.clone().into()
     }
 }
-impl<'a, U> From<&MappedScalarField<'a, U>> for Field<'a, U> {
-    fn from(f: &MappedScalarField<'a, U>) -> Self {
-        f.clone().into()
-    }
-}
-impl<'a, U> From<&MappedEmbedField<'a, U>> for Field<'a, U> {
-    fn from(f: &MappedEmbedField<'a, U>) -> Self {
-        f.clone().into()
-    }
-}
-impl<'a, U> From<&MappedEnumField<'a, U>> for Field<'a, U> {
-    fn from(f: &MappedEnumField<'a, U>) -> Self {
-        f.clone().into()
-    }
-}
-impl<'a, U> From<&MessageField<'a, U>> for Field<'a, U> {
-    fn from(f: &MessageField<'a, U>) -> Self {
-        f.clone().into()
-    }
-}
-impl<'a, U> From<&OneofField<'a, U>> for Field<'a, U> {
-    fn from(f: &OneofField<'a, U>) -> Self {
-        f.clone().into()
-    }
-}
-impl<'a, U> From<&RealOneofField<'a, U>> for Field<'a, U> {
-    fn from(f: &RealOneofField<'a, U>) -> Self {
-        f.clone().into()
-    }
-}
-impl<'a, U> From<&SyntheticOneof<'a, U>> for Field<'a, U> {
-    fn from(f: &SyntheticOneof<'a, U>) -> Self {
-        f.clone().into()
-    }
-}
-impl<'a, U> From<&RepeatedField<'a, U>> for Field<'a, U> {
-    fn from(f: &RepeatedField<'a, U>) -> Self {
-        f.clone().into()
-    }
-}
-impl<'a, U> From<&RepeatedMessageField<'a, U>> for Field<'a, U> {
-    fn from(f: &RepeatedMessageField<'a, U>) -> Self {
-        f.clone().into()
-    }
-}
-impl<'a, U> From<&RepeatedEnumField<'a, U>> for Field<'a, U> {
-    fn from(f: &RepeatedEnumField<'a, U>) -> Self {
-        f.clone().into()
-    }
-}
+// impl<'a, U> From<&MappedScalarField<'a, U>> for Field<'a, U> {
+//     fn from(f: &MappedScalarField<'a, U>) -> Self {
+//         f.clone().into()
+//     }
+// }
+// impl<'a, U> From<&MappedEmbedField<'a, U>> for Field<'a, U> {
+//     fn from(f: &MappedEmbedField<'a, U>) -> Self {
+//         f.clone().into()
+//     }
+// }
+// impl<'a, U> From<&MappedEnumField<'a, U>> for Field<'a, U> {
+//     fn from(f: &MappedEnumField<'a, U>) -> Self {
+//         f.clone().into()
+//     }
+// }
+// impl<'a, U> From<&MessageField<'a, U>> for Field<'a, U> {
+//     fn from(f: &MessageField<'a, U>) -> Self {
+//         f.clone().into()
+//     }
+// }
+// impl<'a, U> From<&OneofField<'a, U>> for Field<'a, U> {
+//     fn from(f: &OneofField<'a, U>) -> Self {
+//         f.clone().into()
+//     }
+// }
+// impl<'a, U> From<&RealOneofField<'a, U>> for Field<'a, U> {
+//     fn from(f: &RealOneofField<'a, U>) -> Self {
+//         f.clone().into()
+//     }
+// }
+// impl<'a, U> From<&SyntheticOneof<'a, U>> for Field<'a, U> {
+//     fn from(f: &SyntheticOneof<'a, U>) -> Self {
+//         f.clone().into()
+//     }
+// }
+// impl<'a, U> From<&RepeatedField<'a, U>> for Field<'a, U> {
+//     fn from(f: &RepeatedField<'a, U>) -> Self {
+//         f.clone().into()
+//     }
+// }
+// impl<'a, U> From<&RepeatedMessageField<'a, U>> for Field<'a, U> {
+//     fn from(f: &RepeatedMessageField<'a, U>) -> Self {
+//         f.clone().into()
+//     }
+// }
+// impl<'a, U> From<&RepeatedEnumField<'a, U>> for Field<'a, U> {
+//     fn from(f: &RepeatedEnumField<'a, U>) -> Self {
+//         f.clone().into()
+//     }
+// }
+// impl<'a, U> From<&RepeatedScalarField<'a, U>> for Field<'a, U> {
+//     fn from(f: &RepeatedScalarField<'a, U>) -> Self {
+//         f.clone().into()
+//     }
+// }
 
-impl<'a, U> From<&RepeatedScalarField<'a, U>> for Field<'a, U> {
-    fn from(f: &RepeatedScalarField<'a, U>) -> Self {
-        f.clone().into()
-    }
-}
+// #[derive(Debug)]
+// pub(crate) enum WeakField<'a, U> {
+//     Scalar(WeakScalarField<'a, U>),
+//     Message(WeakEmbedField<'a, U>),
+//     Map(WeakMapField<'a, U>),
+//     Repeated(WeakRepeatedField<'a, U>),
+//     Oneof(WeakOneofField<'a, U>),
+// }
 
-#[derive(Debug)]
-pub(crate) enum WeakField<'a, U> {
-    Scalar(WeakScalarField<'a, U>),
-    Message(WeakMessageField<'a, U>),
-    Map(WeakMapField<'a, U>),
-    Repeated(WeakRepeatedField<'a, U>),
-    Oneof(WeakOneofField<'a, U>),
-}
+// impl<'a, U> Clone for WeakField<'a, U> {
+//     fn clone(&self) -> Self {
+//         match self {
+//             WeakField::Scalar(_) => todo!(),
+//             WeakField::Message(_) => todo!(),
+//             WeakField::Map(_) => todo!(),
+//             WeakField::Repeated(_) => todo!(),
+//             WeakField::Oneof(_) => todo!(),
+//         }
+//     }
+// }
 
-impl<'a, U> Clone for WeakField<'a, U> {
-    fn clone(&self) -> Self {
-        match self {
-            WeakField::Scalar(_) => todo!(),
-            WeakField::Message(_) => todo!(),
-            WeakField::Map(_) => todo!(),
-            WeakField::Repeated(_) => todo!(),
-            WeakField::Oneof(_) => todo!(),
-        }
-    }
-}
-
-impl<'a, U> Upgrade for WeakField<'a, U> {
-    type Output = Field<'a, U>;
-    fn upgrade(self) -> Self::Output {
-        match self {
-            WeakField::Scalar(f) => Field::Scalar(f.upgrade()),
-            WeakField::Message(f) => Field::Message(f.upgrade()),
-            WeakField::Map(f) => Field::Map(f.upgrade()),
-            WeakField::Repeated(_) => todo!(),
-            WeakField::Oneof(_) => todo!(),
-        }
-    }
-}
+// impl<'a, U> Upgrade for WeakField<'a, U> {
+//     type Output = Field<'a, U>;
+//     fn upgrade(&self) -> Self::Output {
+//         match self {
+//             WeakField::Scalar(f) => Field::Scalar(f.upgrade()),
+//             WeakField::Message(f) => Field::Embed(f.upgrade()),
+//             WeakField::Map(f) => Field::Map(f.upgrade()),
+//             WeakField::Repeated(_) => todo!(),
+//             WeakField::Oneof(_) => todo!(),
+//         }
+//     }
+// }

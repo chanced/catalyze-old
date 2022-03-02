@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::marker::PhantomData;
 
 use super::NameParts;
 
@@ -11,18 +11,27 @@ use super::NameParts;
 #[derive(Debug)]
 pub struct UninterpretedOption<'a, U> {
     opt: &'a prost_types::UninterpretedOption,
-    util: RefCell<Rc<U>>,
+    u: PhantomData<U>,
 }
 impl<'a, U> Clone for UninterpretedOption<'a, U> {
     fn clone(&self) -> Self {
         UninterpretedOption {
             opt: self.opt,
-            util: self.util.clone(),
+            u: PhantomData,
         }
     }
 }
 impl<'a, U> UninterpretedOption<'a, U> {
     pub fn name_parts(&self) -> NameParts<'a, U> {
-        NameParts::new(&self.opt.name, self.util.borrow().clone())
+        NameParts::from(&self.opt.name)
+    }
+}
+
+impl<'a, U> From<&'a prost_types::UninterpretedOption> for UninterpretedOption<'a, U> {
+    fn from(opt: &'a prost_types::UninterpretedOption) -> Self {
+        UninterpretedOption {
+            opt,
+            u: PhantomData,
+        }
     }
 }

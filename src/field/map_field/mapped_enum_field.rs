@@ -1,8 +1,8 @@
 use std::rc::{Rc, Weak};
 
 use crate::{
-    descriptor::FieldDescriptor, proto::Syntax, FullyQualified, MapFieldDetail, Message, Name,
-    Named, WeakEnum, WellKnownEnum,
+    descriptor::FieldDescriptor, proto::Syntax, Enum, FullyQualified, MapFieldDetail, Message,
+    Name, WeakEnum, WellKnownEnum,
 };
 
 #[derive(Debug, Clone)]
@@ -22,7 +22,7 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.0.detail.name()
     }
-    pub fn fully_qualified_name(&self) -> &str {
+    pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
     pub fn message(&self) -> Message<'a, U> {
@@ -39,11 +39,22 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
     }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.detail.replace_util(util);
+    }
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
     pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
         self.0.detail.descriptor()
+    }
+
+    /// Alias for `r#enum()`
+    pub fn enumeration(&self) -> Enum<'a, U> {
+        self.r#enum()
+    }
+    pub fn r#enum(&self) -> Enum<'a, U> {
+        self.0.enm.clone().into()
     }
 
     pub fn well_known_type(&self) -> Option<WellKnownEnum> {
@@ -55,20 +66,7 @@ impl<'a, U> MappedEnumField<'a, U> {
 }
 
 impl<'a, U> FullyQualified for MappedEnumField<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
+    fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
-    }
-}
-impl<'a, U> Named<U> for MappedEnumField<'a, U> {
-    fn name(&self) -> Name<U> {
-        self.0.detail.name()
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct WeakMapEnumField<'a, U>(Weak<MappedEnumFieldDetail<'a, U>>);
-impl<'a, U> Clone for WeakMapEnumField<'a, U> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
     }
 }

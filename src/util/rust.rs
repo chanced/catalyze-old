@@ -35,7 +35,7 @@ impl ToCase for Rust {
         if val == "Self" {
             val += "_";
         }
-        Name::new(&val, name.util.clone())
+        name.with_value(&val)
     }
 }
 

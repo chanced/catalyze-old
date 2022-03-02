@@ -29,7 +29,7 @@ impl<'a, U> Clone for Method<'a, U> {
 impl<'a, U> NodeAtPath<'a, U> for Method<'a, U> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         if path.is_empty() {
-            Some(self)
+            Some(self.into())
         } else {
             None
         }
@@ -37,7 +37,7 @@ impl<'a, U> NodeAtPath<'a, U> for Method<'a, U> {
 }
 
 impl<'a, U> FullyQualified for Method<'a, U> {
-    fn fully_qualified_name(&self) -> &str {
-        &self.fqn
+    fn fully_qualified_name(&self) -> String {
+        self.0.fqn.clone()
     }
 }

@@ -12,6 +12,18 @@ impl Syntax {
             Syntax::Proto3 => false,
         }
     }
+    pub fn is_proto2(&self) -> bool {
+        match self {
+            Syntax::Proto2 => true,
+            Syntax::Proto3 => false,
+        }
+    }
+    pub fn is_proto3(&self) -> bool {
+        match self {
+            Syntax::Proto2 => false,
+            Syntax::Proto3 => true,
+        }
+    }
 }
 
 impl TryFrom<String> for Syntax {
