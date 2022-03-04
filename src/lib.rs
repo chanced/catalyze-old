@@ -9,7 +9,6 @@ mod extension;
 mod field;
 mod file;
 mod generator;
-pub mod graph;
 pub mod iter;
 mod message;
 mod method;

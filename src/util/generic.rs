@@ -1,9 +1,4 @@
 use crate::util::ToCase;
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Generic;
-impl Default for Generic {
-    fn default() -> Self {
-        Self {}
-    }
-}
 impl ToCase for Generic {}
