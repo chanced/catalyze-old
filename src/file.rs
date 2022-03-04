@@ -104,12 +104,16 @@ impl<'a, U> File<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.0.pkg.clone().into()
     }
-    fn build_target(&self) -> bool {
+    pub fn build_target(&self) -> bool {
         self.0.build_target
     }
+    pub fn comments(&self) -> Comments<'a, U> {
+        *self.0.comments.borrow()
+    }
+
     /// Returns comments attached to the package in this File if any exist.
     pub fn package_comments(&self) -> Comments<'a, U> {
-        self.0.pkg_comments.borrow().clone()
+        *self.0.pkg_comments.borrow()
     }
 
     pub(crate) fn set_package_comments(&self, comments: Comments<'a, U>) {
@@ -174,7 +178,6 @@ impl<'a, U> File<'a, U> {
         WeakFile(Rc::downgrade(&self.0))
     }
 }
-
 impl<'a, U> NodeAtPath<'a, U> for File<'a, U> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         if path.is_empty() {
@@ -214,19 +217,16 @@ impl<'a, U> From<&WeakFile<'a, U>> for File<'a, U> {
         weak.upgrade()
     }
 }
-
 impl<'a, U> From<WeakFile<'a, U>> for File<'a, U> {
     fn from(weak: WeakFile<'a, U>) -> Self {
         weak.upgrade()
     }
 }
-
 impl<'a, U> Clone for File<'a, U> {
     fn clone(&self) -> Self {
         File(self.0.clone())
     }
 }
-
 impl<'a, U> FullyQualified for File<'a, U> {
     fn fully_qualified_name(&self) -> String {
         self.0.fqn.clone()
@@ -267,7 +267,6 @@ impl<'a, U> From<File<'a, U>> for WeakFile<'a, U> {
         file.downgrade()
     }
 }
-
 impl<'a, U> From<&File<'a, U>> for WeakFile<'a, U> {
     fn from(file: &File<'a, U>) -> Self {
         file.downgrade()

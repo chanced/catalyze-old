@@ -11,7 +11,7 @@ lazy_static! {
         prost_types::SourceCodeInfo::default();
 }
 
-#[derive(Copy, Debug)]
+#[derive(Debug)]
 pub struct SourceCodeInfo<'a, U> {
     pub(crate) info: &'a prost_types::SourceCodeInfo,
     phantom: PhantomData<U>,
@@ -55,6 +55,7 @@ impl<'a, U> IntoIterator for SourceCodeInfo<'a, U> {
         LocationIter::from(&self)
     }
 }
+impl<'a, U> Copy for SourceCodeInfo<'a, U> {}
 impl<'a, U> Clone for SourceCodeInfo<'a, U> {
     fn clone(&self) -> Self {
         SourceCodeInfo {
@@ -64,7 +65,7 @@ impl<'a, U> Clone for SourceCodeInfo<'a, U> {
     }
 }
 
-#[derive(Debug, Copy)]
+#[derive(Debug)]
 pub struct Comments<'a, U> {
     loc: Location<'a, U>,
 }
@@ -77,6 +78,7 @@ impl<'a, U> Default for Comments<'a, U> {
     }
 }
 
+impl<'a, U> Copy for Comments<'a, U> {}
 impl<'a, U> Clone for Comments<'a, U> {
     fn clone(&self) -> Self {
         Comments {
@@ -126,7 +128,7 @@ impl<'a, U> Default for Location<'a, U> {
 }
 
 /// Comments associated to entities in the source code.
-#[derive(Debug, Copy)]
+#[derive(Debug)]
 pub struct Location<'a, U> {
     loc: &'a prost_types::source_code_info::Location,
     u: PhantomData<U>,
@@ -207,6 +209,7 @@ impl<'a, U> Location<'a, U> {
             || self.trailing_comments().len() > 0
     }
 }
+impl<'a, U> Copy for Location<'a, U> {}
 impl<'a, U> Clone for Location<'a, U> {
     fn clone(&self) -> Self {
         Location {
