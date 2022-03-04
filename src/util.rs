@@ -1,6 +1,6 @@
 pub mod format;
 mod generic;
-pub mod graph;
+pub mod message_graph;
 mod rust;
 pub mod typescript;
 pub use format::*;
