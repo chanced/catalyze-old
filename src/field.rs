@@ -15,7 +15,7 @@ pub use scalar_field::*;
 
 use crate::{
     proto::{FieldDescriptor, Location, Syntax},
-    FullyQualified, Message, Name, Node, NodeAtPath, WeakMessage,
+    Comments, FullyQualified, Message, Name, Node, NodeAtPath, WeakMessage,
 };
 use std::{cell::RefCell, convert::From, rc::Rc};
 
@@ -31,7 +31,7 @@ pub(crate) struct FieldDetail<'a, U> {
     in_oneof: bool,
     util: RefCell<Rc<U>>,
     desc: FieldDescriptor<'a, U>,
-    comments: Location<'a, U>,
+    comments: RefCell<Comments<'a, U>>,
 }
 impl<'a, U> Clone for FieldDetail<'a, U> {
     fn clone(&self) -> Self {
@@ -98,9 +98,11 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn is_well_known_type(&self) -> bool {
         self.desc.is_well_known_type()
     }
-
-    pub fn comments(&self) -> Location<'a, U> {
-        self.comments.clone()
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.comments.replace(comments);
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        *self.comments.borrow()
     }
     /// Returns `true` for all fields that have explicit presence.
     ///
@@ -136,19 +138,6 @@ pub enum Field<'a, U> {
     Scalar(ScalarField<'a, U>),
 }
 
-impl<'a, U> Clone for Field<'a, U> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Embed(f) => Self::Embed(f.clone()),
-            Self::Enum(f) => Self::Enum(f.clone()),
-            Self::Map(f) => Self::Map(f.clone()),
-            Self::Oneof(f) => Self::Oneof(f.clone()),
-            Self::Repeated(f) => Self::Repeated(f.clone()),
-            Self::Scalar(f) => Self::Scalar(f.clone()),
-        }
-    }
-}
-
 impl<'a, U> Field<'a, U> {
     pub fn name(&self) -> Name<U> {
         match self {
@@ -169,6 +158,38 @@ impl<'a, U> Field<'a, U> {
             Field::Oneof(f) => f.fully_qualified_name(),
             Field::Repeated(f) => f.fully_qualified_name(),
             Field::Scalar(f) => f.fully_qualified_name(),
+        }
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        match self {
+            Field::Embed(f) => f.comments(),
+            Field::Enum(f) => f.comments(),
+            Field::Map(f) => f.comments(),
+            Field::Oneof(f) => f.comments(),
+            Field::Repeated(f) => f.comments(),
+            Field::Scalar(f) => f.comments(),
+        }
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        match self {
+            Field::Embed(f) => f.set_comments(comments),
+            Field::Enum(f) => f.set_comments(comments),
+            Field::Map(f) => f.set_comments(comments),
+            Field::Oneof(f) => f.set_comments(comments),
+            Field::Repeated(f) => f.set_comments(comments),
+            Field::Scalar(f) => f.set_comments(comments),
+        }
+    }
+}
+impl<'a, U> Clone for Field<'a, U> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Embed(f) => Self::Embed(f.clone()),
+            Self::Enum(f) => Self::Enum(f.clone()),
+            Self::Map(f) => Self::Map(f.clone()),
+            Self::Oneof(f) => Self::Oneof(f.clone()),
+            Self::Repeated(f) => Self::Repeated(f.clone()),
+            Self::Scalar(f) => Self::Scalar(f.clone()),
         }
     }
 }

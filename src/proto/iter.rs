@@ -372,27 +372,3 @@ impl<'a, U> Clone for LocationIter<'a, U> {
         }
     }
 }
-
-#[derive(Debug)]
-pub struct CommentsIter<'a, U> {
-    iter: std::slice::Iter<'a, prost_types::source_code_info::Location>,
-    phantom: PhantomData<U>,
-}
-
-impl<'a, U> CommentsIter<'a, U> {
-    pub fn len(&self) -> usize {
-        self.iter.len()
-    }
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-}
-
-impl<'a, U> From<SourceCodeInfo<'a, U>> for CommentsIter<'a, U> {
-    fn from(info: SourceCodeInfo<'a, U>) -> Self {
-        CommentsIter {
-            iter: info.info.location.iter(),
-            phantom: PhantomData,
-        }
-    }
-}

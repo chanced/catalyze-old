@@ -1,6 +1,8 @@
 use std::rc::Rc;
 
-use crate::{proto::FieldDescriptor, proto::Syntax, FullyQualified, Message, Name, WeakMessage};
+use crate::{
+    proto::FieldDescriptor, proto::Syntax, Comments, FullyQualified, Message, Name, WeakMessage,
+};
 
 use super::FieldDetail;
 
@@ -55,17 +57,26 @@ impl<'a, U> Clone for EmbedFieldDetail<'a, U> {
 #[derive(Debug)]
 pub struct EmbedField<'a, U>(Rc<EmbedFieldDetail<'a, U>>);
 
+impl<'a, U> EmbedField<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.0.detail.name.clone()
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.0.detail.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.detail.set_comments(comments);
+    }
+    pub fn fully_qualified_name(&self) -> String {
+        self.0.detail.fully_qualified_name()
+    }
+}
 impl<'a, U> Clone for EmbedField<'a, U> {
     fn clone(&self) -> Self {
         EmbedField(self.0.clone())
     }
 }
 
-impl<'a, U> EmbedField<'a, U> {
-    pub fn name(&self) -> Name<U> {
-        self.0.detail.name.clone()
-    }
-}
 impl<'a, U> FullyQualified for EmbedField<'a, U> {
     fn fully_qualified_name(&self) -> String {
         self.0.detail.fqn.clone()

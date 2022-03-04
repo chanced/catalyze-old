@@ -1,7 +1,8 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    format_fqn, proto::EnumValueDescriptor, Enum, FullyQualified, Name, Node, NodeAtPath, WeakEnum,
+    format_fqn, proto::EnumValueDescriptor, Comments, Enum, FullyQualified, Name, Node, NodeAtPath,
+    WeakEnum,
 };
 
 #[derive(Debug, Clone)]
@@ -10,6 +11,25 @@ struct EnumValueDetail<'a, U> {
     fqn: String,
     desc: EnumValueDescriptor<'a, U>,
     e: WeakEnum<'a, U>,
+    comments: RefCell<Comments<'a, U>>,
+}
+
+impl<'a, U> EnumValueDetail<'a, U> {
+    pub fn name(&self) -> Name<U> {
+        self.name.clone()
+    }
+    pub fn fully_qualified_name(&self) -> String {
+        self.fqn.clone()
+    }
+    pub fn descriptor(&self) -> EnumValueDescriptor<'a, U> {
+        self.desc
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        *self.comments.borrow()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.comments.replace(comments);
+    }
 }
 
 #[derive(Debug)]
@@ -22,6 +42,7 @@ impl<'a, U> EnumValue<'a, U> {
             fqn: format_fqn(&e, desc.name()),
             desc,
             e: e.into(),
+            comments: RefCell::new(Comments::default()),
         }))
     }
     pub fn name(&self) -> Name<U> {
@@ -42,6 +63,12 @@ impl<'a, U> EnumValue<'a, U> {
 
     fn fully_qualified_name(&self) -> String {
         self.0.fqn.clone()
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.0.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.set_comments(comments);
     }
 }
 

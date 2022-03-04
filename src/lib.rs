@@ -1,7 +1,8 @@
 #[macro_use]
 extern crate lazy_static;
-
 mod ast;
+pub mod codec;
+mod comments;
 pub mod container;
 mod r#enum;
 mod enum_value;
@@ -24,6 +25,7 @@ pub mod util;
 pub mod visit;
 mod well_known_type;
 pub use ast::*;
+pub use comments::*;
 pub use enum_value::*;
 pub use extension::*;
 pub use field::*;

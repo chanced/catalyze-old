@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{iter::Iter, File, Package};
+use crate::iter::CommentsIter;
 
 use super::{iter::LocationIter, FileDescriptorPath};
 
@@ -64,57 +64,9 @@ impl<'a, U> Clone for SourceCodeInfo<'a, U> {
         }
     }
 }
-
-#[derive(Debug)]
-pub struct Comments<'a, U> {
-    loc: Location<'a, U>,
-}
-
-impl<'a, U> Default for Comments<'a, U> {
-    fn default() -> Self {
-        Comments {
-            loc: Location::default(),
-        }
-    }
-}
-
-impl<'a, U> Copy for Comments<'a, U> {}
-impl<'a, U> Clone for Comments<'a, U> {
-    fn clone(&self) -> Self {
-        Comments {
-            loc: self.loc.clone(),
-        }
-    }
-}
-
-impl<'a, U> Comments<'a, U> {
-    /// Returns any comment immediately preceding the node, without any
-    /// whitespace between it and the comment.
-    pub fn leading(&self) -> &'a str {
-        self.loc.leading_comments()
-    }
-    pub fn location(&self) -> Location<'a, U> {
-        self.loc.clone()
-    }
-    pub fn is_empty(&self) -> bool {
-        !self.loc.has_comments()
-    }
-    /// Returns each comment block or line above the
-    /// entity but separated by whitespace.a
-    pub fn leading_detached(&self) -> std::slice::Iter<'a, String> {
-        self.loc.leading_detached_comments()
-    }
-    /// Returns any comment immediately following the entity, without any
-    /// whitespace between it and the comment. If the comment would be a leading
-    /// comment for another entity, it won't be considered a trailing comment.
-    pub fn trailing(&self) -> &'a str {
-        self.loc.trailing_comments()
-    }
-}
-
-impl<'a, U> From<Location<'a, U>> for Comments<'a, U> {
-    fn from(loc: Location<'a, U>) -> Self {
-        Comments { loc }
+impl<'a, U> SourceCodeInfo<'a, U> {
+    pub fn comments(&self) -> CommentsIter<'a, U> {
+        self.into()
     }
 }
 
@@ -141,6 +93,7 @@ impl<'a, U> From<&'a prost_types::source_code_info::Location> for Location<'a, U
         }
     }
 }
+
 impl<'a, U> Location<'a, U> {
     /// Identifies which part of the FileDescriptorProto was defined at this
     /// location.
@@ -177,7 +130,7 @@ impl<'a, U> Location<'a, U> {
         &self.loc.span
     }
 
-    /// Returns any comment immediately preceding the node, without any
+    /// Returns any comment immediately preceding the node, without anyElsewhere
     /// whitespace between it and the comment.
     pub fn leading_comments(&self) -> &'a str {
         self.loc.leading_comments()
@@ -195,18 +148,22 @@ impl<'a, U> Location<'a, U> {
         self.loc.trailing_comments()
     }
 
-    pub fn is_file_location(&self) -> bool {
+    pub fn is_file_syntax_location(&self) -> bool {
         self.path().len() == 1 && FileDescriptorPath::Syntax == self.path()[0]
     }
 
-    pub fn is_package_location(&self) -> bool {
+    pub fn is_file_package_location(&self) -> bool {
         self.path().len() == 1 && FileDescriptorPath::Package == self.path()[0]
     }
 
+    pub fn file_descriptor_path(&self) -> Result<FileDescriptorPath, anyhow::Error> {
+        FileDescriptorPath::try_from(self.path().get(0))
+    }
+
     pub fn has_comments(&self) -> bool {
-        self.leading_comments().len() > 0
+        !self.leading_comments().is_empty()
             || self.leading_detached_comments().count() > 0
-            || self.trailing_comments().len() > 0
+            || !self.trailing_comments().is_empty()
     }
 }
 impl<'a, U> Copy for Location<'a, U> {}
@@ -216,27 +173,5 @@ impl<'a, U> Clone for Location<'a, U> {
             loc: self.loc,
             u: PhantomData {},
         }
-    }
-}
-
-#[derive(Debug)]
-pub struct PackageComments<'a, U> {
-    files: Iter<File<'a, U>>,
-}
-impl<'a, U> PackageComments<'a, U> {
-    pub fn new(package: Package<'a, U>) -> Self {
-        Self {
-            files: package.files(),
-        }
-    }
-}
-impl<'a, U> Iterator for PackageComments<'a, U> {
-    type Item = (File<'a, U>, Comments<'a, U>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.files
-            .next()
-            .filter(|file| !file.package_comments().is_empty())
-            .map(|file| (file.clone(), file.package_comments()))
     }
 }

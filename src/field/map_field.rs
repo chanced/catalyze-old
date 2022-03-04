@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    proto::FieldDescriptor, proto::Syntax, Enum, FullyQualified, Message, Name, ScalarField,
-    WeakEnum, WeakMessage, WellKnownEnum, WellKnownType,
+    proto::FieldDescriptor, proto::Syntax, Comments, Enum, FullyQualified, Message, Name,
+    ScalarField, WeakEnum, WeakMessage, WellKnownEnum, WellKnownType,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -63,6 +63,13 @@ impl<'a, U> MapFieldDetail<'a, U> {
     fn well_known_type(&self) -> Option<WellKnownType> {
         todo!()
     }
+
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.detail.comments()
+    }
+    pub fn set_comments(&self, comments: Comments<'a, U>) {
+        self.detail.comments.replace(comments);
+    }
 }
 
 impl<'a, U> Clone for MapFieldDetail<'a, U> {
@@ -112,6 +119,21 @@ impl<'a, U> MapField<'a, U> {
         match self {
             MapField::Enum(e) => e.r#enum().into(),
             _ => None,
+        }
+    }
+
+    pub fn comments(&self) -> Comments<'a, U> {
+        match self {
+            MapField::Scalar(f) => f.comments(),
+            MapField::Enum(f) => f.comments(),
+            MapField::Embed(f) => f.comments(),
+        }
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        match self {
+            MapField::Scalar(f) => f.set_comments(comments),
+            MapField::Enum(f) => f.set_comments(comments),
+            MapField::Embed(f) => f.set_comments(comments),
         }
     }
 }
@@ -210,6 +232,12 @@ impl<'a, U> MappedScalarField<'a, U> {
     pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
         self.0.detail.descriptor()
     }
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.0.detail.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.detail.set_comments(comments);
+    }
 }
 
 impl<'a, U> FullyQualified for MappedScalarField<'a, U> {
@@ -272,6 +300,12 @@ impl<'a, U> MappedEmbedField<'a, U> {
 
     pub fn has_presence(&self) -> bool {
         true
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.0.detail.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.detail.set_comments(comments);
     }
 }
 
@@ -338,7 +372,12 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn r#enum(&self) -> Enum<'a, U> {
         self.0.enm.clone().into()
     }
-
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.0.detail.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.detail.set_comments(comments);
+    }
     pub fn well_known_type(&self) -> Option<WellKnownEnum> {
         self.0.detail.well_known_type().map(|wkt| match wkt {
             crate::WellKnownType::Enum(wke) => wke,

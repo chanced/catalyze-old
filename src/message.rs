@@ -7,8 +7,8 @@ use crate::iter::{AllEnums, AllMessages, Iter};
 use crate::proto::{DescriptorPath, MessageDescriptor};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
-    format_fqn, Enum, EnumList, Extension, Field, FullyQualified, Node, NodeAtPath, Oneof,
-    OneofList,
+    format_fqn, Comments, Enum, EnumList, Extension, Field, FullyQualified, Node, NodeAtPath,
+    Oneof, OneofList,
 };
 use crate::{Package, WellKnownType};
 
@@ -46,6 +46,8 @@ pub(crate) struct MessageDetail<'a, U> {
     defined_extensions: Rc<RefCell<Vec<Extension<'a, U>>>>,
     /// `Extension`s applied to this `Message`
     applied_extensions: Rc<RefCell<Vec<WeakExtension<'a, U>>>>,
+
+    comments: RefCell<Comments<'a, U>>,
 }
 
 impl<'a, U> Message<'a, U> {
@@ -84,6 +86,7 @@ impl<'a, U> Message<'a, U> {
             dependents: Rc::new(RefCell::new(Vec::new())),
             applied_extensions: Rc::new(RefCell::new(Vec::new())),
             defined_extensions: Rc::new(RefCell::new(Vec::with_capacity(desc.extensions().len()))),
+            comments: RefCell::new(Comments::default()),
         }));
 
         let container = Container::Message(msg.clone());
@@ -179,6 +182,10 @@ impl<'a, U> Message<'a, U> {
 
     pub(crate) fn add_dependent(&self, dependent: Message<'a, U>) {
         self.0.dependents.borrow_mut().push(dependent.into());
+    }
+
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.comments.replace(comments);
     }
 }
 

@@ -5,7 +5,9 @@ use std::{
     rc::Rc,
 };
 
-use crate::{Enum, EnumList, File, Message, MessageList, Name, WeakFile};
+use crate::{
+    proto::SourceCodeInfo, Comments, Enum, EnumList, File, Message, MessageList, Name, WeakFile,
+};
 
 #[derive(Debug)]
 pub struct Iter<T> {
@@ -154,6 +156,44 @@ impl<'a, U> Iterator for FileRefIter<'a, U> {
             return Some(file.into());
         }
         None
+    }
+}
+
+#[derive(Debug)]
+pub struct CommentsIter<'a, U> {
+    iter: std::slice::Iter<'a, prost_types::source_code_info::Location>,
+    phantom: PhantomData<U>,
+}
+
+impl<'a, U> CommentsIter<'a, U> {
+    pub fn len(&self) -> usize {
+        self.iter.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+impl<'a, U> Iterator for CommentsIter<'a, U> {
+    type Item = Comments<'a, U>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(Into::into)
+    }
+}
+impl<'a, U> From<SourceCodeInfo<'a, U>> for CommentsIter<'a, U> {
+    fn from(info: SourceCodeInfo<'a, U>) -> Self {
+        CommentsIter {
+            iter: info.info.location.iter(),
+            phantom: PhantomData,
+        }
+    }
+}
+impl<'a, U> From<&SourceCodeInfo<'a, U>> for CommentsIter<'a, U> {
+    fn from(info: &SourceCodeInfo<'a, U>) -> Self {
+        CommentsIter {
+            iter: info.info.location.iter(),
+            phantom: PhantomData,
+        }
     }
 }
 

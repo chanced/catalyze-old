@@ -7,7 +7,7 @@ use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
     proto::OneofDescriptor,
-    Field, FullyQualified, Name, Node, NodeAtPath,
+    Comments, Field, FullyQualified, Name, Node, NodeAtPath,
 };
 pub(crate) type OneofList<'a, U> = Rc<RefCell<Vec<Oneof<'a, U>>>>;
 
@@ -19,6 +19,7 @@ pub(crate) struct OneofDetail<'a, U> {
     fields: Rc<RefCell<Vec<Field<'a, U>>>>,
     container: WeakContainer<'a, U>,
     is_real: bool,
+    comments: RefCell<Comments<'a, U>>,
 }
 
 #[derive(Debug)]
@@ -52,6 +53,9 @@ impl<'a, U> Oneof<'a, U> {
     }
     fn downgrade(&self) -> WeakOneof<'a, U> {
         WeakOneof(Rc::downgrade(&self.0))
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.comments.replace(comments);
     }
 }
 impl<'a, U> NodeAtPath<'a, U> for Oneof<'a, U> {

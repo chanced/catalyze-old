@@ -1,11 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    proto::{
-        FieldDescriptor, Location,
-        Syntax,
-    },
-    EmbedFieldDetail, EnumFieldDetail, FullyQualified, Message, Name, ScalarFieldDetail,
+    proto::{FieldDescriptor, Syntax},
+    Comments, EmbedFieldDetail, EnumFieldDetail, FullyQualified, Message, Name, ScalarFieldDetail,
 };
 
 /// Represents a field marked as `repeated`. The field can hold
@@ -70,7 +67,20 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Message(f) => f.descriptor(),
         }
     }
-
+    pub fn comments(&self) -> Comments<'a, U> {
+        match self {
+            RepeatedField::Scalar(f) => f.comments(),
+            RepeatedField::Enum(f) => f.comments(),
+            RepeatedField::Message(f) => f.comments(),
+        }
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        match self {
+            RepeatedField::Scalar(f) => f.set_comments(comments),
+            RepeatedField::Enum(f) => f.set_comments(comments),
+            RepeatedField::Message(f) => f.set_comments(comments),
+        }
+    }
     pub fn is_map(&self) -> bool {
         false
     }
@@ -178,6 +188,12 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
     pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
         self.0.detail.descriptor()
     }
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.0.detail.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.detail.set_comments(comments);
+    }
 }
 
 impl<'a, U> Clone for RepeatedEmbedField<'a, U> {
@@ -224,8 +240,11 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn is_required(&self) -> bool {
         self.0.detail.is_required()
     }
-    pub fn comments(&self) -> Location<'a, U> {
+    pub fn comments(&self) -> Comments<'a, U> {
         self.0.detail.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.detail.set_comments(comments);
     }
 }
 impl<'a, U> Clone for RepeatedEnumField<'a, U> {
@@ -275,6 +294,12 @@ impl<'a, U> RepeatedScalarField<'a, U> {
     }
     pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
         self.0.detail.descriptor()
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.0.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.detail.set_comments(comments);
     }
 }
 

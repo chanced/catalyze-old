@@ -1,28 +1,80 @@
+use anyhow::bail;
+
 /// Paths for nodes in a FileDescriptorProto
 #[derive(Clone, PartialEq, Eq, Copy)]
+
+/// TODO: This could/should be turned into a tree of nested enums, where leaves end in something like Node(i32)
+
+#[repr(i32)]
 pub enum FileDescriptorPath {
+    /// file name, relative to root of source tree
+    Name = 1,
     /// FileDescriptorProto.package
     Package = 2,
-    /// FileDescriptorProto.message_type
+    /// Names of files imported by this file.
+    Dependency = 3,
+
+    /// Indexes of the public imported files in the dependency list above.
+    PublicDependency = 10,
+
+    /// Indexes of the weak imported files in the dependency list.
+    /// For Google-internal migration only. Do not use.
+    WeakDependency = 11,
+
+    // All top-level definitions in this file.
     MessageType = 4,
     /// FileDescriptorProto.enum_type
     EnumType = 5,
     /// FileDescriptorProto.service
     Service = 6,
+    /// FileDescriptorProto.extension
+    Extension = 7,
+
+    Options = 8,
+    /// This field contains optional information about the original source code.
+    /// You may safely remove this entire field without harming runtime
+    /// functionality of the descriptors -- the information is needed only by
+    /// development tools.
+    SourceCodeInfo = 9,
+
     /// FileDescriptorProto.syntax
     Syntax = 12,
 }
+
+impl TryFrom<Option<&i32>> for FileDescriptorPath {
+    type Error = anyhow::Error;
+    fn try_from(v: Option<&i32>) -> Result<Self, Self::Error> {
+        match v {
+            Some(v) => Self::try_from(*v),
+            None => bail!("value is empty and can not be converted to FileDescriptorPath"),
+        }
+    }
+}
+
 impl TryFrom<i32> for FileDescriptorPath {
-    type Error = ();
+    type Error = anyhow::Error;
 
     fn try_from(v: i32) -> Result<Self, Self::Error> {
         match v {
+            x if x == FileDescriptorPath::Name as i32 => Ok(FileDescriptorPath::Name),
             x if x == FileDescriptorPath::Package as i32 => Ok(FileDescriptorPath::Package),
+            x if x == FileDescriptorPath::Dependency as i32 => Ok(FileDescriptorPath::Dependency),
+            x if x == FileDescriptorPath::PublicDependency as i32 => {
+                Ok(FileDescriptorPath::PublicDependency)
+            }
+            x if x == FileDescriptorPath::WeakDependency as i32 => {
+                Ok(FileDescriptorPath::WeakDependency)
+            }
             x if x == FileDescriptorPath::MessageType as i32 => Ok(FileDescriptorPath::MessageType),
             x if x == FileDescriptorPath::EnumType as i32 => Ok(FileDescriptorPath::EnumType),
             x if x == FileDescriptorPath::Service as i32 => Ok(FileDescriptorPath::Service),
+            x if x == FileDescriptorPath::Extension as i32 => Ok(FileDescriptorPath::Extension),
+            x if x == FileDescriptorPath::Options as i32 => Ok(FileDescriptorPath::Options),
+            x if x == FileDescriptorPath::SourceCodeInfo as i32 => {
+                Ok(FileDescriptorPath::SourceCodeInfo)
+            }
             x if x == FileDescriptorPath::Syntax as i32 => Ok(FileDescriptorPath::Syntax),
-            _ => Err(()),
+            _ => bail!("invalid FileDescriptorPath: {}", v),
         }
     }
 }

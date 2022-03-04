@@ -7,7 +7,7 @@ use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
     proto::{EnumDescriptor, EnumDescriptorPath},
-    EnumValue, FullyQualified, Name, Node, NodeAtPath, Package, WeakMessage,
+    Comments, EnumValue, FullyQualified, Name, Node, NodeAtPath, Package, WeakMessage,
 };
 
 pub(crate) type EnumList<'a, U> = Rc<RefCell<Vec<Enum<'a, U>>>>;
@@ -16,11 +16,21 @@ pub(crate) type EnumList<'a, U> = Rc<RefCell<Vec<Enum<'a, U>>>>;
 struct EnumDetail<'a, U> {
     name: Name<U>,
     fqn: String,
+    comments: RefCell<Comments<'a, U>>,
     values: Rc<RefCell<Vec<EnumValue<'a, U>>>>,
     container: WeakContainer<'a, U>,
     dependents: Rc<RefCell<Vec<WeakMessage<'a, U>>>>,
     util: RefCell<Rc<U>>,
     descriptor: EnumDescriptor<'a, U>,
+}
+
+impl<'a, U> EnumDetail<'a, U> {
+    pub fn comments(&self) -> Comments<'a, U> {
+        *self.comments.borrow()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.comments.replace(comments);
+    }
 }
 
 #[derive(Debug)]
@@ -39,6 +49,7 @@ impl<'a, U> Enum<'a, U> {
             fqn: fully_qualified_name,
             util: RefCell::new(util),
             descriptor: desc.clone(),
+            comments: RefCell::new(Comments::default()),
         }));
 
         {
@@ -68,6 +79,12 @@ impl<'a, U> Enum<'a, U> {
     }
     fn downgrade(&self) -> WeakEnum<'a, U> {
         WeakEnum(Rc::downgrade(&self.0))
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.0.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.set_comments(comments);
     }
 }
 

@@ -1,6 +1,8 @@
 use std::rc::{Rc, Weak};
 
-use crate::{proto::Scalar, FullyQualified, Message, Name, Oneof, ScalarField, WeakMessage};
+use crate::{
+    proto::Scalar, Comments, FullyQualified, Message, Name, Oneof, ScalarField, WeakMessage,
+};
 
 use super::FieldDetail;
 #[derive(Debug)]
@@ -18,6 +20,12 @@ impl<'a, U> OneofFieldDetail<'a, U> {
     }
     pub fn message(&self) -> Message<'a, U> {
         self.detail.message()
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.detail.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.detail.set_comments(comments);
     }
 }
 impl<'a, U> Clone for OneofFieldDetail<'a, U> {
@@ -67,6 +75,20 @@ impl<'a, U> OneofField<'a, U> {
             OneofField::Message(f) => f.message(),
         }
     }
+    pub fn comments(&self) -> Comments<'a, U> {
+        match self {
+            OneofField::Scalar(f) => f.comments(),
+            OneofField::Enum(f) => f.comments(),
+            OneofField::Message(f) => f.comments(),
+        }
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        match self {
+            OneofField::Scalar(f) => f.set_comments(comments),
+            OneofField::Enum(f) => f.set_comments(comments),
+            OneofField::Message(f) => f.set_comments(comments),
+        }
+    }
 }
 
 impl<'a, U> FullyQualified for OneofField<'a, U> {
@@ -96,6 +118,12 @@ impl<'a, U> OneofEnumField<'a, U> {
     }
     pub fn message(&self) -> Message<'a, U> {
         self.0.detail.message()
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.0.detail.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.detail.set_comments(comments);
     }
 }
 impl<'a, U> FullyQualified for OneofEnumField<'a, U> {
@@ -128,6 +156,13 @@ impl<'a, U> OneofScalarField<'a, U> {
 
     pub fn message(&self) -> Message<'a, U> {
         self.0.detail.message()
+    }
+
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.0.detail.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.detail.set_comments(comments);
     }
 }
 
@@ -165,6 +200,12 @@ impl<'a, U> OneofMessageField<'a, U> {
     }
     pub fn message(&self) -> Message<'a, U> {
         self.0.detail.message()
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.0.detail.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.detail.set_comments(comments);
     }
 }
 

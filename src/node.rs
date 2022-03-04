@@ -1,5 +1,6 @@
 use crate::{
-    Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof, Package, Service,
+    Comments, Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof, Package,
+    Service,
 };
 
 pub(crate) trait NodeAtPath<'a, U> {
@@ -24,23 +25,6 @@ pub enum Node<'a, U> {
     Extension(Extension<'a, U>),
 }
 
-impl<'a, U> Clone for Node<'a, U> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Package(p) => Self::Package(p.clone()),
-            Self::File(n) => Self::File(n.clone()),
-            Self::Message(n) => Self::Message(n.clone()),
-            Self::Oneof(n) => Self::Oneof(n.clone()),
-            Self::Enum(n) => Self::Enum(n.clone()),
-            Self::EnumValue(n) => Self::EnumValue(n.clone()),
-            Self::Service(n) => Self::Service(n.clone()),
-            Self::Method(n) => Self::Method(n.clone()),
-            Self::Field(n) => Self::Field(n.clone()),
-            Self::Extension(n) => Self::Extension(n.clone()),
-        }
-    }
-}
-
 impl<'a, U> Node<'a, U> {
     pub fn name(&self) -> Name<U> {
         match self {
@@ -54,6 +38,37 @@ impl<'a, U> Node<'a, U> {
             Node::Service(s) => s.name(),
             Node::Method(m) => m.name(),
             Node::Extension(e) => e.name(),
+        }
+    }
+    pub fn fully_qualified_name(&self) -> String {
+        match self {
+            Node::Package(p) => p.fully_qualified_name(),
+            Node::File(f) => f.fully_qualified_name(),
+            Node::Message(m) => m.fully_qualified_name(),
+            Node::Field(f) => f.fully_qualified_name(),
+            Node::Oneof(o) => o.fully_qualified_name(),
+            Node::Enum(e) => e.fully_qualified_name(),
+            Node::EnumValue(ev) => ev.fully_qualified_name(),
+            Node::Service(s) => s.fully_qualified_name(),
+            Node::Method(m) => m.fully_qualified_name(),
+            Node::Extension(e) => e.fully_qualified_name(),
+        }
+    }
+
+    pub(crate) fn set_comments(&self, c: Comments<'a, U>) {
+        let x: prost_types::EnumDescriptorProto;
+
+        match self {
+            Node::Message(m) => m.set_comments(c),
+            Node::Field(f) => f.set_comments(c),
+            Node::Oneof(o) => o.set_comments(c),
+            Node::Enum(e) => e.set_comments(c),
+            Node::EnumValue(ev) => ev.set_comments(c),
+            Node::Service(s) => s.set_comments(c),
+            Node::Method(m) => m.set_comments(c),
+            Node::Extension(e) => e.set_comments(c),
+
+            Node::Package(_) | Node::File(_) => unreachable!(),
         }
     }
 }
@@ -88,6 +103,22 @@ impl<'a, U> FullyQualified for Node<'a, Node<'a, U>> {
             Node::Field(f) => f.fully_qualified_name(),
             Node::Extension(e) => e.fully_qualified_name(),
             Node::Package(p) => p.fully_qualified_name(),
+        }
+    }
+}
+impl<'a, U> Clone for Node<'a, U> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Package(p) => Self::Package(p.clone()),
+            Self::File(n) => Self::File(n.clone()),
+            Self::Message(n) => Self::Message(n.clone()),
+            Self::Oneof(n) => Self::Oneof(n.clone()),
+            Self::Enum(n) => Self::Enum(n.clone()),
+            Self::EnumValue(n) => Self::EnumValue(n.clone()),
+            Self::Service(n) => Self::Service(n.clone()),
+            Self::Method(n) => Self::Method(n.clone()),
+            Self::Field(n) => Self::Field(n.clone()),
+            Self::Extension(n) => Self::Extension(n.clone()),
         }
     }
 }

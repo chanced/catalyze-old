@@ -2,9 +2,9 @@ use std::{marker::PhantomData, slice};
 
 use lazy_static::lazy_static;
 
-use crate::{iter::CommentsIter, WellKnownType};
+use catalyze::{iter::CommentsIter, WellKnownType};
 
-use super::{iter::*, *};
+// use super::{iter::*, *};
 
 lazy_static! {
     static ref DEFAULT_FILE_OPTIONS: prost_types::FileOptions = prost_types::FileOptions::default();

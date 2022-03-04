@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    proto::FieldDescriptor, proto::Syntax, Enum, FieldDetail, FullyQualified, Message, Name,
-    WeakEnum,
+    proto::FieldDescriptor, proto::Syntax, Comments, Enum, FieldDetail, FullyQualified, Message,
+    Name, WeakEnum,
 };
 
 #[derive(Debug, Clone)]
@@ -55,6 +55,12 @@ impl<'a, U> EnumField<'a, U> {
     /// Returns the `Enum` of this `EnumField`.
     pub fn enumeration(&self) -> Enum<'a, U> {
         self.r#enum()
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.0.detail.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.detail.set_comments(comments);
     }
 }
 

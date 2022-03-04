@@ -2,10 +2,10 @@ use crate::container::Container;
 use crate::iter::{AllEnums, AllMessages, FileRefIter, Iter, TransitiveImports};
 use crate::package::WeakPackage;
 
-use crate::proto::{Comments, FileDescriptor, FileDescriptorPath, Location};
+use crate::proto::{FileDescriptor, FileDescriptorPath};
 use crate::{
-    Enum, EnumList, Extension, ExtensionList, FullyQualified, Message, MessageList, Name, Node,
-    NodeAtPath, Package, Service, ServiceList,
+    Comments, Enum, EnumList, Extension, ExtensionList, FullyQualified, Message, MessageList, Name,
+    Node, NodeAtPath, Package, Service, ServiceList,
 };
 use std::cell::RefCell;
 
@@ -71,6 +71,9 @@ impl<'a, U> File<'a, U> {
             let mut msgs = file.0.messages.borrow_mut();
             for md in desc.messages() {
                 let msg = Message::new(md, container.clone());
+
+                // TODO: handle map & oneof sitautions
+                todo!();
                 msgs.push(msg);
             }
         }
@@ -93,6 +96,20 @@ impl<'a, U> File<'a, U> {
             for ed in desc.extensions() {
                 let ext = Extension::new(ed, container.clone());
                 exts.push(ext);
+            }
+        }
+        {
+            for loc in desc.source_code_info() {
+                match loc.file_descriptor_path() {
+                    Ok(p) => match p {
+                        FileDescriptorPath::Package => file.set_package_comments(loc.into()),
+                        FileDescriptorPath::Syntax => file.set_comments(loc.into()),
+                        _ => file
+                            .node_at_path(loc.path())
+                            .map(|node| node.set_comments(loc.into())),
+                    },
+                    Err(_) => continue,
+                }
             }
         }
 
