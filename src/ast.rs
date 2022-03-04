@@ -1,3 +1,4 @@
+use crate::proto::FileDescriptor;
 use crate::Enum;
 use crate::Extension;
 use crate::Node;
@@ -32,7 +33,7 @@ pub struct Ast<'a, U> {
     pub nodes: HashMap<String, Node<'a, U>>,
     pub extensions: Vec<Extension<'a, U>>,
     pub util: RefCell<Rc<U>>,
-    pub file_descriptors: Vec<&'a FileDescriptorProto>,
+    pub file_descriptors: Vec<FileDescriptor<'a, U>>,
     pub target_list: HashSet<String>,
 }
 
@@ -54,7 +55,7 @@ impl<'a, U> Ast<'a, U> {
             .iter()
             .cloned()
             .collect::<HashSet<String>>();
-        let file_descriptors = source.files().iter().collect();
+
         let mut ast = Self {
             util: RefCell::new(util.clone()),
             targets: HashMap::with_capacity(target_list.len()),
@@ -62,7 +63,7 @@ impl<'a, U> Ast<'a, U> {
             packages: HashMap::default(),
             nodes: HashMap::default(),
             extensions: Vec::default(),
-            file_descriptors,
+            file_descriptors: source.files().iter().map(Into::into).collect(),
         };
         let mut seen: HashMap<String, File<'a, U>> = HashMap::default();
 
@@ -75,9 +76,10 @@ impl<'a, U> Ast<'a, U> {
                     .clone()
             };
             let build_target = ast.target_list.contains(fd.name());
-            let file = File::new(build_target, fd, pkg);
+            let file = File::new(build_target, fd.to_owned(), pkg);
             ast.targets.insert(fd.name().to_string(), file.clone());
-            for d in fd.dependency.iter() {
+
+            for d in fd.dependencies() {
                 let dep = match seen.get(d).cloned() {
                     Some(f) => f,
                     None => bail!("dependency {} has not been hydrated", d),

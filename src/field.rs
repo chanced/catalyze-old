@@ -1,6 +1,5 @@
 mod enum_field;
 
-pub mod descriptor;
 mod embed_field;
 mod map_field;
 mod oneof_field;
@@ -15,12 +14,10 @@ pub use repeated_field::*;
 pub use scalar_field::*;
 
 use crate::{
-    proto::{descriptor::Comments, Syntax},
+    proto::{FieldDescriptor, Location, Syntax},
     FullyQualified, Message, Name, Node, NodeAtPath, WeakMessage,
 };
 use std::{cell::RefCell, convert::From, rc::Rc};
-
-use self::descriptor::*;
 
 pub(crate) type FieldList<'a, U> = Rc<RefCell<Vec<Field<'a, U>>>>;
 
@@ -34,7 +31,7 @@ pub(crate) struct FieldDetail<'a, U> {
     in_oneof: bool,
     util: RefCell<Rc<U>>,
     desc: FieldDescriptor<'a, U>,
-    comments: Comments<'a, U>,
+    comments: Location<'a, U>,
 }
 impl<'a, U> Clone for FieldDetail<'a, U> {
     fn clone(&self) -> Self {
@@ -74,7 +71,7 @@ impl<'a, U> FieldDetail<'a, U> {
         self.syntax
     }
     pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
-        self.desc.clone()
+        self.desc
     }
     pub fn is_map(&self) -> bool {
         self.is_map
@@ -102,7 +99,7 @@ impl<'a, U> FieldDetail<'a, U> {
         self.desc.is_well_known_type()
     }
 
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Location<'a, U> {
         self.comments.clone()
     }
     /// Returns `true` for all fields that have explicit presence.

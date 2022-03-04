@@ -1,8 +1,6 @@
 use std::rc::{Rc, Weak};
 
-use crate::{
-    proto::descriptor::Scalar, FullyQualified, Message, Name, Oneof, ScalarField, WeakMessage,
-};
+use crate::{proto::Scalar, FullyQualified, Message, Name, Oneof, ScalarField, WeakMessage};
 
 use super::FieldDetail;
 #[derive(Debug)]

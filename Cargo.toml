@@ -8,6 +8,8 @@ prost-types = "0.9"
 heck = "0.4"
 anyhow = "1.0.53"
 petgraph = "0.6.0"
+lazy_static = "1.4.0"
+
 
 [build-dependencies]
 which = { version = "4.2" }

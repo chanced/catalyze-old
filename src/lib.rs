@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate lazy_static;
+
 mod ast;
 pub mod container;
 mod r#enum;

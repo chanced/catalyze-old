@@ -1,11 +1,10 @@
-use prost_types::DescriptorProto;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
 use crate::extension::WeakExtension;
 use crate::field::FieldList;
 use crate::iter::{AllEnums, AllMessages, Iter};
-use crate::proto::DescriptorPath;
+use crate::proto::{DescriptorPath, MessageDescriptor};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
     format_fqn, Enum, EnumList, Extension, Field, FullyQualified, Node, NodeAtPath, Oneof,
@@ -31,7 +30,7 @@ impl<'a, U> Clone for Message<'a, U> {
 pub(crate) struct MessageDetail<'a, U> {
     name: Name<U>,
     is_map_entry: bool,
-    descriptor: &'a DescriptorProto,
+    descriptor: MessageDescriptor<'a, U>,
     well_known_type: Option<WellKnownType>,
     fqn: String,
     util: RefCell<Rc<U>>,
@@ -50,9 +49,9 @@ pub(crate) struct MessageDetail<'a, U> {
 }
 
 impl<'a, U> Message<'a, U> {
-    pub(crate) fn new(descriptor: &'a DescriptorProto, container: Container<'a, U>) -> Self {
+    pub(crate) fn new(desc: MessageDescriptor<'a, U>, container: Container<'a, U>) -> Self {
         let util = container.util();
-        let fqn = format_fqn(&container, descriptor.name());
+        let fqn = format_fqn(&container, desc.name());
         // let well_known_type = if container.package().is_well_known() {
         //     match WellKnownType::from_str(&fqn) {
         //         Ok(wkt) => Some(wkt),
@@ -66,55 +65,52 @@ impl<'a, U> Message<'a, U> {
         let well_known_type = None;
 
         let msg = Message(Rc::new(MessageDetail {
-            name: Name::new(descriptor.name(), util.clone()),
+            name: Name::new(desc.name(), util.clone()),
             container: container.into(),
             fqn,
             well_known_type,
-            descriptor,
+            descriptor: desc,
             util: RefCell::new(util.clone()),
-            is_map_entry: descriptor.options.as_ref().map_or(false, |o| o.map_entry()),
-            enums: Rc::new(RefCell::new(Vec::with_capacity(descriptor.enum_type.len()))),
-            fields: Rc::new(RefCell::new(Vec::with_capacity(descriptor.field.len()))),
-            oneofs: Rc::new(RefCell::new(Vec::with_capacity(
-                descriptor.oneof_decl.len(),
-            ))),
+
+            is_map_entry: desc.options().map_entry(),
+            enums: Rc::new(RefCell::new(Vec::with_capacity(desc.enums().len()))),
+            fields: Rc::new(RefCell::new(Vec::with_capacity(desc.fields().len()))),
+            oneofs: Rc::new(RefCell::new(Vec::with_capacity(desc.oneofs().len()))),
             preserved_messages: Rc::new(RefCell::new(Vec::with_capacity(
-                descriptor.nested_type.len(),
+                desc.nested_messages().len(),
             ))),
             messages: Rc::new(RefCell::new(Vec::new())),
             maps: Rc::new(RefCell::new(Vec::new())),
             dependents: Rc::new(RefCell::new(Vec::new())),
             applied_extensions: Rc::new(RefCell::new(Vec::new())),
-            defined_extensions: Rc::new(RefCell::new(Vec::with_capacity(
-                descriptor.extension.len(),
-            ))),
+            defined_extensions: Rc::new(RefCell::new(Vec::with_capacity(desc.extensions().len()))),
         }));
 
         let container = Container::Message(msg.clone());
         {
             let mut msgs = msg.0.messages.borrow_mut();
-            for md in msg.0.descriptor.nested_type.iter() {
+            for md in desc.nested_messages() {
                 let msg = Message::new(md, container.clone());
                 msgs.push(msg);
             }
         }
         {
             let mut enums = msg.0.enums.borrow_mut();
-            for ed in descriptor.enum_type.iter() {
+            for ed in desc.enums() {
                 let e = Enum::new(ed, container.clone());
                 enums.push(e);
             }
         }
         {
             let mut oneofs = msg.0.oneofs.borrow_mut();
-            for od in msg.0.descriptor.oneof_decl.iter() {
+            for od in desc.oneofs() {
                 let o = Oneof::new(od, container.clone());
                 oneofs.push(o);
             }
         }
         {
             let mut def_exts = msg.0.defined_extensions.borrow_mut();
-            for xd in descriptor.extension.iter() {
+            for xd in desc.extensions() {
                 let ext = Extension::new(xd, container.clone());
                 def_exts.push(ext);
             }

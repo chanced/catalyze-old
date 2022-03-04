@@ -7,11 +7,11 @@ use std::{
 
 use crate::{Enum, EnumList, File, Message, MessageList, Name, WeakFile};
 
+#[derive(Debug)]
 pub struct Iter<T> {
     nodes: Rc<RefCell<Vec<T>>>,
     idx: usize,
 }
-
 impl<T> Iterator for Iter<T>
 where
     T: Clone,
@@ -22,7 +22,6 @@ where
         self.nodes.borrow().get(self.idx - 1).cloned()
     }
 }
-
 impl<T> From<&Rc<RefCell<Vec<T>>>> for Iter<T> {
     fn from(nodes: &Rc<RefCell<Vec<T>>>) -> Self {
         Iter {
@@ -32,12 +31,12 @@ impl<T> From<&Rc<RefCell<Vec<T>>>> for Iter<T> {
     }
 }
 
+#[derive(Debug)]
 pub struct TransitiveImports<'a, U> {
     queue: VecDeque<File<'a, U>>,
     processed: HashSet<Name<U>>,
     phantom: PhantomData<&'a U>,
 }
-
 impl<'a, U> TransitiveImports<'a, U> {
     pub(crate) fn new(files: Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
         Self {
@@ -47,7 +46,6 @@ impl<'a, U> TransitiveImports<'a, U> {
         }
     }
 }
-
 impl<'a, U> Iterator for TransitiveImports<'a, U> {
     type Item = File<'a, U>;
     fn next(&mut self) -> Option<Self::Item> {
@@ -64,11 +62,11 @@ impl<'a, U> Iterator for TransitiveImports<'a, U> {
     }
 }
 
+#[derive(Debug)]
 pub struct AllMessages<'a, U> {
     q: VecDeque<Message<'a, U>>,
     phantom: PhantomData<&'a U>,
 }
-
 impl<'a, U> AllMessages<'a, U> {
     pub(crate) fn new(msgs: MessageList<'a, U>) -> Self {
         Self {
@@ -77,7 +75,6 @@ impl<'a, U> AllMessages<'a, U> {
         }
     }
 }
-
 impl<'a, U> Iterator for AllMessages<'a, U> {
     type Item = Message<'a, U>;
     fn next(&mut self) -> Option<Self::Item> {
@@ -96,7 +93,6 @@ pub struct AllEnums<'a, U> {
     msgs: VecDeque<Message<'a, U>>,
     enums: VecDeque<Enum<'a, U>>,
 }
-
 impl<'a, U> AllEnums<'a, U> {
     pub(crate) fn new(enums: EnumList<'a, U>, msgs: MessageList<'a, U>) -> Self {
         Self {
@@ -105,7 +101,6 @@ impl<'a, U> AllEnums<'a, U> {
         }
     }
 }
-
 impl<'a, U> Iterator for AllEnums<'a, U> {
     type Item = Enum<'a, U>;
     fn next(&mut self) -> Option<Self::Item> {
@@ -154,7 +149,7 @@ impl<'a, U> Iterator for FileRefIter<'a, U> {
     type Item = File<'a, U>;
     fn next(&mut self) -> Option<Self::Item> {
         let files = self.files.borrow();
-        while let Some(file) = files.get(self.index) {
+        if let Some(file) = files.get(self.index) {
             self.index += 1;
             return Some(file.into());
         }

@@ -1,11 +1,8 @@
-use prost_types::FileDescriptorProto;
-
-use crate::container::{Container};
+use crate::container::Container;
 use crate::iter::{AllEnums, AllMessages, FileRefIter, Iter, TransitiveImports};
 use crate::package::WeakPackage;
 
-use crate::proto::descriptor::Comments;
-use crate::proto::FileDescriptorPath;
+use crate::proto::{Comments, FileDescriptor, FileDescriptorPath, Location};
 use crate::{
     Enum, EnumList, Extension, ExtensionList, FullyQualified, Message, MessageList, Name, Node,
     NodeAtPath, Package, Service, ServiceList,
@@ -18,12 +15,12 @@ use std::rc::{Rc, Weak};
 
 #[derive(Debug, Clone)]
 struct FileDetail<'a, U> {
-    desc: &'a FileDescriptorProto,
+    desc: FileDescriptor<'a, U>,
     name: Name<U>,
     file_path: PathBuf,
     build_target: bool,
-    pkg_comments: RefCell<Option<Comments<'a, U>>>,
-    comments: RefCell<Option<Comments<'a, U>>>,
+    pkg_comments: RefCell<Comments<'a, U>>,
+    comments: RefCell<Comments<'a, U>>,
     util: RefCell<Rc<U>>,
     fqn: String,
     pkg: WeakPackage<'a, U>,
@@ -41,7 +38,7 @@ pub struct File<'a, U>(Rc<FileDetail<'a, U>>);
 impl<'a, U> File<'a, U> {
     pub(crate) fn new(
         build_target: bool,
-        desc: &'a FileDescriptorProto,
+        desc: FileDescriptor<'a, U>,
         pkg: Package<'a, U>,
     ) -> Self {
         let util = pkg.util();
@@ -60,40 +57,40 @@ impl<'a, U> File<'a, U> {
             fqn,
             file_path: PathBuf::from(desc.name()),
             dependents: Rc::new(RefCell::new(Vec::new())),
-            dependencies: Rc::new(RefCell::new(Vec::with_capacity(desc.dependency.len()))),
-            defined_extensions: Rc::new(RefCell::new(Vec::with_capacity(desc.extension.len()))),
-            messages: Rc::new(RefCell::new(Vec::with_capacity(desc.message_type.len()))),
-            enums: Rc::new(RefCell::new(Vec::with_capacity(desc.enum_type.len()))),
-            services: Rc::new(RefCell::new(Vec::with_capacity(desc.service.len()))),
-            pkg_comments: RefCell::new(None),
-            comments: RefCell::new(None),
+            dependencies: Rc::new(RefCell::new(Vec::with_capacity(desc.dependencies().len()))),
+            defined_extensions: Rc::new(RefCell::new(Vec::with_capacity(desc.extensions().len()))),
+            messages: Rc::new(RefCell::new(Vec::with_capacity(desc.messages().len()))),
+            enums: Rc::new(RefCell::new(Vec::with_capacity(desc.enums().len()))),
+            services: Rc::new(RefCell::new(Vec::with_capacity(desc.services().len()))),
+            pkg_comments: RefCell::new(Comments::default()),
+            comments: RefCell::new(Comments::default()),
         }));
 
         let container: Container<'a, U> = file.clone().into();
         {
             let mut msgs = file.0.messages.borrow_mut();
-            for md in desc.message_type.iter() {
+            for md in desc.messages() {
                 let msg = Message::new(md, container.clone());
                 msgs.push(msg);
             }
         }
         {
             let mut enums = file.0.enums.borrow_mut();
-            for ed in desc.enum_type.iter() {
+            for ed in desc.enums() {
                 let e = Enum::new(ed, container.clone());
                 enums.push(e);
             }
         }
         {
             let mut services = file.0.services.borrow_mut();
-            for sd in desc.service.iter() {
+            for sd in desc.services() {
                 let svc = Service::new(sd, container.clone());
                 services.push(svc);
             }
         }
         {
             let mut exts = file.0.defined_extensions.borrow_mut();
-            for ed in desc.extension.iter() {
+            for ed in desc.extensions() {
                 let ext = Extension::new(ed, container.clone());
                 exts.push(ext);
             }
@@ -111,15 +108,15 @@ impl<'a, U> File<'a, U> {
         self.0.build_target
     }
     /// Returns comments attached to the package in this File if any exist.
-    pub fn package_comments(&self) -> Option<Comments<'a, U>> {
+    pub fn package_comments(&self) -> Comments<'a, U> {
         self.0.pkg_comments.borrow().clone()
     }
 
     pub(crate) fn set_package_comments(&self, comments: Comments<'a, U>) {
-        self.0.pkg_comments.borrow_mut().replace(comments);
+        *self.0.pkg_comments.borrow_mut() = comments;
     }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
-        self.0.comments.borrow_mut().replace(comments);
+        *self.0.comments.borrow_mut() = comments;
     }
     pub fn util(&self) -> Rc<U> {
         self.0.util.borrow().clone()

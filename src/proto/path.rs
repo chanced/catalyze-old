@@ -1,5 +1,5 @@
 /// Paths for nodes in a FileDescriptorProto
-#[derive(Clone, Copy)]
+#[derive(Clone, PartialEq, Eq, Copy)]
 pub enum FileDescriptorPath {
     /// FileDescriptorProto.package
     Package = 2,
@@ -27,8 +27,18 @@ impl TryFrom<i32> for FileDescriptorPath {
     }
 }
 
+impl PartialEq<i32> for FileDescriptorPath {
+    fn eq(&self, other: &i32) -> bool {
+        *other == *self as i32
+    }
+}
+impl PartialEq<FileDescriptorPath> for i32 {
+    fn eq(&self, other: &FileDescriptorPath) -> bool {
+        *other == *self as i32
+    }
+}
 /// Paths for nodes in a DescriptorProto
-#[derive(Clone, Copy)]
+#[derive(Clone, PartialEq, Eq, Copy)]
 pub enum DescriptorPath {
     /// DescriptorProto.field
     Field = 2,
@@ -54,12 +64,33 @@ impl TryFrom<i32> for DescriptorPath {
     }
 }
 
+impl PartialEq<i32> for DescriptorPath {
+    fn eq(&self, other: &i32) -> bool {
+        *other as i32 == *self
+    }
+}
+impl PartialEq<DescriptorPath> for i32 {
+    fn eq(&self, other: &DescriptorPath) -> bool {
+        *other == *self as i32
+    }
+}
+
 /// Paths for nodes in an EnumDescriptorProto
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum EnumDescriptorPath {
     /// EnumDescriptorProto.Value
     Value = 2,
+}
+impl PartialEq<i32> for EnumDescriptorPath {
+    fn eq(&self, other: &i32) -> bool {
+        *other == *self as i32
+    }
+}
+impl PartialEq<EnumDescriptorPath> for i32 {
+    fn eq(&self, other: &EnumDescriptorPath) -> bool {
+        *other == *self as i32
+    }
 }
 
 impl TryFrom<i32> for EnumDescriptorPath {
@@ -74,7 +105,7 @@ impl TryFrom<i32> for EnumDescriptorPath {
 }
 
 // Paths for nodes in an ServiceDescriptorProto
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ServiceDescriptorPath {
     /// ServiceDescriptorProto.method
     Method = 2,
@@ -88,5 +119,15 @@ impl TryFrom<i32> for ServiceDescriptorPath {
             x if x == EnumDescriptorPath::Value as i32 => Ok(ServiceDescriptorPath::Method),
             _ => Err(()),
         }
+    }
+}
+impl PartialEq<i32> for ServiceDescriptorPath {
+    fn eq(&self, other: &i32) -> bool {
+        *other == *self as i32
+    }
+}
+impl PartialEq<ServiceDescriptorPath> for i32 {
+    fn eq(&self, other: &ServiceDescriptorPath) -> bool {
+        *other as i32 == *self
     }
 }

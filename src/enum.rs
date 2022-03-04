@@ -3,12 +3,10 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use prost_types::EnumDescriptorProto;
-
 use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
-    proto::EnumDescriptorPath,
+    proto::{EnumDescriptor, EnumDescriptorPath},
     EnumValue, FullyQualified, Name, Node, NodeAtPath, Package, WeakMessage,
 };
 
@@ -22,30 +20,34 @@ struct EnumDetail<'a, U> {
     container: WeakContainer<'a, U>,
     dependents: Rc<RefCell<Vec<WeakMessage<'a, U>>>>,
     util: RefCell<Rc<U>>,
+    descriptor: EnumDescriptor<'a, U>,
 }
 
 #[derive(Debug)]
 pub struct Enum<'a, U>(Rc<EnumDetail<'a, U>>);
 
 impl<'a, U> Enum<'a, U> {
-    pub(crate) fn new(desc: &'a EnumDescriptorProto, container: Container<'a, U>) -> Self {
+    pub(crate) fn new(desc: EnumDescriptor<'a, U>, container: Container<'a, U>) -> Self {
         let util = container.util();
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
 
         let e = Enum(Rc::new(EnumDetail {
             name: Name::new(desc.name(), util.clone()),
-            values: Rc::new(RefCell::new(Vec::with_capacity(desc.value.len()))),
+            values: Rc::new(RefCell::new(Vec::with_capacity(desc.values().len()))),
             container: container.into(),
             dependents: Rc::new(RefCell::new(Vec::default())),
             fqn: fully_qualified_name,
             util: RefCell::new(util),
+            descriptor: desc.clone(),
         }));
+
         {
             let mut values = e.0.values.borrow_mut();
-            for v in &desc.value {
+            for v in desc.values() {
                 values.push(EnumValue::new(v, e.clone()));
             }
         }
+
         e
     }
 

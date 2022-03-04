@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    proto::descriptor::FieldDescriptor, proto::Syntax, Enum, FieldDetail, FullyQualified, Message,
-    Name, WeakEnum,
+    proto::FieldDescriptor, proto::Syntax, Enum, FieldDetail, FullyQualified, Message, Name,
+    WeakEnum,
 };
 
 #[derive(Debug, Clone)]

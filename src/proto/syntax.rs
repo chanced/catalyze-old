@@ -48,9 +48,26 @@ impl ToString for Syntax {
         .to_string()
     }
 }
-
+impl From<&str> for Syntax {
+    fn from(v: &str) -> Self {
+        match v.to_lowercase().as_str() {
+            "proto2" => Syntax::Proto2,
+            "proto3" => Syntax::Proto3,
+            _ => Syntax::Proto2,
+        }
+    }
+}
 impl From<prost_types::Syntax> for Syntax {
     fn from(syntax: prost_types::Syntax) -> Self {
+        match syntax {
+            prost_types::Syntax::Proto2 => Syntax::Proto2,
+            prost_types::Syntax::Proto3 => Syntax::Proto3,
+        }
+    }
+}
+
+impl From<&prost_types::Syntax> for Syntax {
+    fn from(syntax: &prost_types::Syntax) -> Self {
         match syntax {
             prost_types::Syntax::Proto2 => Syntax::Proto2,
             prost_types::Syntax::Proto3 => Syntax::Proto3,

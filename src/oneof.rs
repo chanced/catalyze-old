@@ -6,6 +6,7 @@ use std::{
 use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
+    proto::OneofDescriptor,
     Field, FullyQualified, Name, Node, NodeAtPath,
 };
 pub(crate) type OneofList<'a, U> = Rc<RefCell<Vec<Oneof<'a, U>>>>;
@@ -13,7 +14,7 @@ pub(crate) type OneofList<'a, U> = Rc<RefCell<Vec<Oneof<'a, U>>>>;
 #[derive(Debug, Clone)]
 pub(crate) struct OneofDetail<'a, U> {
     pub name: Name<U>,
-    pub descriptor: &'a prost_types::OneofDescriptorProto,
+    pub desc: OneofDescriptor<'a, U>,
     fqn: String,
     fields: Rc<RefCell<Vec<Field<'a, U>>>>,
     container: WeakContainer<'a, U>,
@@ -24,18 +25,19 @@ pub(crate) struct OneofDetail<'a, U> {
 pub struct Oneof<'a, U>(Rc<OneofDetail<'a, U>>);
 
 impl<'a, U> Oneof<'a, U> {
-    pub fn new(desc: &'a prost_types::OneofDescriptorProto, container: Container<'a, U>) -> Self {
+    pub fn new(desc: OneofDescriptor<'a, U>, container: Container<'a, U>) -> Self {
         let util = container.util();
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
 
         let o = Oneof(Rc::new(OneofDetail {
             name: Name::new(desc.name(), util.clone()),
-            descriptor: desc,
+            desc,
             fqn: fully_qualified_name,
             fields: Rc::new(RefCell::new(Vec::default())),
             container: container.into(),
             is_real: true,
         }));
+
         o
     }
 

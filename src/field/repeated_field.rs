@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     proto::{
-        descriptor::{Comments, FieldDescriptor},
+        FieldDescriptor, Location,
         Syntax,
     },
     EmbedFieldDetail, EnumFieldDetail, FullyQualified, Message, Name, ScalarFieldDetail,
@@ -224,7 +224,7 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn is_required(&self) -> bool {
         self.0.detail.is_required()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Location<'a, U> {
         self.0.detail.comments()
     }
 }

@@ -1,5 +1,5 @@
 use crate::iter::Iter;
-use crate::proto::descriptor::PackageComments;
+use crate::proto::PackageComments;
 pub use crate::File;
 use crate::{FullyQualified, Name};
 

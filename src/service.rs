@@ -3,13 +3,10 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use prost_types::ServiceDescriptorProto;
-
 use crate::{
     container::Container,
     iter::Iter,
-    proto::ServiceDescriptorPath,
-    
+    proto::{ServiceDescriptor, ServiceDescriptorPath},
     FullyQualified, Method, Name, Node, NodeAtPath,
 };
 
@@ -26,13 +23,13 @@ struct ServiceDetail<'a, U> {
 pub struct Service<'a, U>(Rc<ServiceDetail<'a, U>>);
 
 impl<'a, U> Service<'a, U> {
-    pub(crate) fn new(desc: &'a ServiceDescriptorProto, container: Container<'a, U>) -> Self {
+    pub(crate) fn new(desc: ServiceDescriptor<'a, U>, container: Container<'a, U>) -> Self {
         let util = container.util();
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
         Service(Rc::new(ServiceDetail {
             name: Name::new(desc.name(), util.clone()),
             fqn: fully_qualified_name,
-            methods: Rc::new(RefCell::new(Vec::with_capacity(desc.method.len()))),
+            methods: Rc::new(RefCell::new(Vec::with_capacity(desc.methods().len()))),
         }))
     }
 

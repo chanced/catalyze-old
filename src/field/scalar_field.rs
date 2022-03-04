@@ -2,8 +2,8 @@ use std::rc::Rc;
 
 use super::FieldDetail;
 use crate::{
-    proto::descriptor::{FieldDescriptor, Scalar},
     proto::Syntax,
+    proto::{FieldDescriptor, Scalar},
     FullyQualified, Message, Name,
 };
 
