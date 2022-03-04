@@ -1,0 +1,18 @@
+[package]
+name = "catalyze"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+prost-types = "0.9"
+anyhow = "1.0.53"
+lazy_static = "1.4.0"
+prost = "0.9"
+catalyze-types = { path = "../catalyze-types" }
+catalyze-prost = { path = "../catalyze-prost", optional = true }
+[build-dependencies]
+which = { version = "4.2" }
+
+[features]
+default = ["prost"]
+prost = ["catalyze-prost"]
