@@ -1,5 +1,4 @@
 // sourced from prost_build
-
 use std::collections::HashMap;
 
 use petgraph::algo::has_path_connecting;

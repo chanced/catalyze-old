@@ -9,7 +9,7 @@ use crate::{
 struct EnumValueDetail<'a, U> {
     name: Name<U>,
     fqn: String,
-    desc: EnumValueDescriptor<'a, U>,
+    desc: dyn EnumValueDescriptor<'a, U>,
     e: WeakEnum<'a, U>,
     comments: RefCell<Comments<'a, U>>,
 }
@@ -21,7 +21,7 @@ impl<'a, U> EnumValueDetail<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.fqn.clone()
     }
-    pub fn descriptor(&self) -> EnumValueDescriptor<'a, U> {
+    pub fn descriptor(&self) -> dyn EnumValueDescriptor<'a, U> {
         self.desc
     }
     pub fn comments(&self) -> Comments<'a, U> {
@@ -36,7 +36,7 @@ impl<'a, U> EnumValueDetail<'a, U> {
 pub struct EnumValue<'a, U>(Rc<EnumValueDetail<'a, U>>);
 
 impl<'a, U> EnumValue<'a, U> {
-    pub(crate) fn new(desc: EnumValueDescriptor<'a, U>, e: Enum<'a, U>) -> Self {
+    pub(crate) fn new(desc: dyn EnumValueDescriptor<'a, U>, e: Enum<'a, U>) -> Self {
         EnumValue(Rc::new(EnumValueDetail {
             name: Name::new(desc.name(), e.util()),
             fqn: format_fqn(&e, desc.name()),

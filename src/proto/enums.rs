@@ -8,8 +8,6 @@ pub enum Type {
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Scalar {
-    /// 0 is reserved for errors.
-    /// Order is weird for historical reasons.
     Double = 1,
     Float = 2,
     /// Not ZigZag encoded.  Negative numbers take 10 bytes.  Use TYPE_SINT64 if
@@ -34,30 +32,11 @@ pub enum Scalar {
     /// Uses ZigZag encoding.
     Sint64 = 18,
 }
-impl From<prost_types::field_descriptor_proto::Type> for Type {
-    fn from(typ: prost_types::field_descriptor_proto::Type) -> Self {
-        match typ {
-            prost_types::field_descriptor_proto::Type::Double => Type::Scalar(Scalar::Double),
-            prost_types::field_descriptor_proto::Type::Float => Type::Scalar(Scalar::Float),
-            prost_types::field_descriptor_proto::Type::Int64 => Type::Scalar(Scalar::Int64),
-            prost_types::field_descriptor_proto::Type::Uint64 => Type::Scalar(Scalar::Uint64),
-            prost_types::field_descriptor_proto::Type::Int32 => Type::Scalar(Scalar::Int32),
-            prost_types::field_descriptor_proto::Type::Fixed64 => Type::Scalar(Scalar::Fixed64),
-            prost_types::field_descriptor_proto::Type::Fixed32 => Type::Scalar(Scalar::Fixed32),
-            prost_types::field_descriptor_proto::Type::Bool => Type::Scalar(Scalar::Bool),
-            prost_types::field_descriptor_proto::Type::String => Type::Scalar(Scalar::String),
-            prost_types::field_descriptor_proto::Type::Bytes => Type::Scalar(Scalar::Bytes),
-            prost_types::field_descriptor_proto::Type::Uint32 => Type::Scalar(Scalar::Uint32),
-            prost_types::field_descriptor_proto::Type::Enum => Type::Enum,
-            prost_types::field_descriptor_proto::Type::Sfixed32 => Type::Scalar(Scalar::Sfixed32),
-            prost_types::field_descriptor_proto::Type::Sfixed64 => Type::Scalar(Scalar::Sfixed64),
-            prost_types::field_descriptor_proto::Type::Sint32 => Type::Scalar(Scalar::Sint32),
-            prost_types::field_descriptor_proto::Type::Sint64 => Type::Scalar(Scalar::Sint64),
-            prost_types::field_descriptor_proto::Type::Group => Type::Group,
-            prost_types::field_descriptor_proto::Type::Message => Type::Message,
-        }
-    }
-}
+
+impl TryFrom<Option<i32>> for Type {}
+
+impl TryFrom<i32> for Type {}
+impl<T: Into<i32>> TryFrom<T> for Type {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(i32)]
@@ -68,15 +47,10 @@ pub enum CType {
     StringPiece = 2,
 }
 
-impl From<prost_types::field_options::CType> for CType {
-    fn from(c_type: prost_types::field_options::CType) -> Self {
-        match c_type {
-            prost_types::field_options::CType::String => CType::String,
-            prost_types::field_options::CType::Cord => CType::Cord,
-            prost_types::field_options::CType::StringPiece => CType::StringPiece,
-        }
-    }
-}
+impl TryFrom<Option<i32>> for CType {}
+impl TryFrom<i32> for CType {}
+impl<T: Into<i32>> TryFrom<T> for CType {}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum JsType {
     /// Use the default type.
@@ -86,15 +60,9 @@ pub enum JsType {
     /// Use JavaScript numbers.
     JsNumber = 2,
 }
-impl From<prost_types::field_options::JsType> for JsType {
-    fn from(js_type: prost_types::field_options::JsType) -> Self {
-        match js_type {
-            prost_types::field_options::JsType::JsNormal => JsType::JsNormal,
-            prost_types::field_options::JsType::JsString => JsType::JsString,
-            prost_types::field_options::JsType::JsNumber => JsType::JsNumber,
-        }
-    }
-}
+impl TryFrom<Option<i32>> for CType {}
+impl TryFrom<i32> for CType {}
+impl<T: Into<i32>> TryFrom<T> for CType {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(i32)]
@@ -103,15 +71,9 @@ pub enum Label {
     Optional = 2,
     Repeated = 3,
 }
-impl From<prost_types::field_descriptor_proto::Label> for Label {
-    fn from(label: prost_types::field_descriptor_proto::Label) -> Self {
-        match label {
-            prost_types::field_descriptor_proto::Label::Optional => todo!(),
-            prost_types::field_descriptor_proto::Label::Required => todo!(),
-            prost_types::field_descriptor_proto::Label::Repeated => todo!(),
-        }
-    }
-}
+impl TryFrom<Option<i32>> for Label {}
+impl TryFrom<i32> for Label {}
+impl<T: Into<i32>> TryFrom<T> for Label {}
 
 /// Generated classes can be optimized for speed or code size.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -126,15 +88,9 @@ pub enum OptimizeMode {
     /// Generate code using MessageLite and the lite runtime.
     LiteRuntime = 3,
 }
-impl From<prost_types::file_options::OptimizeMode> for OptimizeMode {
-    fn from(optimize_mode: prost_types::file_options::OptimizeMode) -> Self {
-        match optimize_mode {
-            prost_types::file_options::OptimizeMode::Speed => OptimizeMode::Speed,
-            prost_types::file_options::OptimizeMode::CodeSize => OptimizeMode::CodeSize,
-            prost_types::file_options::OptimizeMode::LiteRuntime => OptimizeMode::LiteRuntime,
-        }
-    }
-}
+impl TryFrom<Option<i32>> for OptimizeMode {}
+impl TryFrom<i32> for OptimizeMode {}
+impl<T: Into<i32>> TryFrom<T> for OptimizeMode {}
 
 /// Is this method side-effect-free (or safe in HTTP parlance), or idempotent,
 /// or neither? HTTP based RPC implementation may choose GET verb for safe
@@ -149,18 +105,6 @@ pub enum IdempotencyLevel {
     Idempotent = 2,
 }
 
-impl From<prost_types::method_options::IdempotencyLevel> for IdempotencyLevel {
-    fn from(idempotency_level: prost_types::method_options::IdempotencyLevel) -> Self {
-        match idempotency_level {
-            prost_types::method_options::IdempotencyLevel::IdempotencyUnknown => {
-                IdempotencyLevel::IdempotencyUnknown
-            }
-            prost_types::method_options::IdempotencyLevel::NoSideEffects => {
-                IdempotencyLevel::NoSideEffects
-            }
-            prost_types::method_options::IdempotencyLevel::Idempotent => {
-                IdempotencyLevel::Idempotent
-            }
-        }
-    }
-}
+impl TryFrom<Option<i32>> for IdempotencyLevel {}
+impl TryFrom<i32> for IdempotencyLevel {}
+impl<T: Into<i32>> TryFrom<T> for IdempotencyLevel {}

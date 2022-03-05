@@ -11,7 +11,6 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use anyhow::bail;
-use prost_types::FileDescriptorProto;
 
 // protoc
 // --include_imports
@@ -33,7 +32,7 @@ pub struct Ast<'a, U> {
     pub nodes: HashMap<String, Node<'a, U>>,
     pub extensions: Vec<Extension<'a, U>>,
     pub util: RefCell<Rc<U>>,
-    pub file_descriptors: Vec<FileDescriptor<'a, U>>,
+    pub file_descriptors: Vec<dyn FileDescriptor<'a, U>>,
     pub target_list: HashSet<String>,
 }
 

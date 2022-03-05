@@ -21,7 +21,7 @@ struct EnumDetail<'a, U> {
     container: WeakContainer<'a, U>,
     dependents: Rc<RefCell<Vec<WeakMessage<'a, U>>>>,
     util: RefCell<Rc<U>>,
-    descriptor: EnumDescriptor<'a, U>,
+    descriptor: dyn EnumDescriptor<'a, U>,
 }
 
 impl<'a, U> EnumDetail<'a, U> {
@@ -37,7 +37,7 @@ impl<'a, U> EnumDetail<'a, U> {
 pub struct Enum<'a, U>(Rc<EnumDetail<'a, U>>);
 
 impl<'a, U> Enum<'a, U> {
-    pub(crate) fn new(desc: EnumDescriptor<'a, U>, container: Container<'a, U>) -> Self {
+    pub(crate) fn new(desc: dyn EnumDescriptor<'a, U>, container: Container<'a, U>) -> Self {
         let util = container.util();
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
 

@@ -4,12 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-prost-types = "0.9"
 heck = "0.4"
 anyhow = "1.0.53"
-petgraph = "0.6.0"
-lazy_static = "1.4.0"
-prost = "0.9"
+petgraph = { version = "0.6.0", optional = true }
 
 [build-dependencies]
 which = { version = "4.2" }
@@ -17,3 +14,7 @@ which = { version = "4.2" }
 
 [workspace]
 members = ["./catalyze-build", "./catalyze-prost"]
+
+[features]
+# Enables the `MessageGraph` util sourced from prost to determine dependency cycles.
+message-graph = ["petgraph"]

@@ -15,7 +15,7 @@ pub(crate) type ExtensionList<'a, U> = Rc<RefCell<Vec<Extension<'a, U>>>>;
 #[derive(Debug, Clone)]
 struct ExtensionDetail<'a, U> {
     name: Name<U>,
-    desc: FieldDescriptor<'a, U>,
+    desc: dyn FieldDescriptor<'a, U>,
     fqn: String,
     container: WeakContainer<'a, U>,
 }
@@ -24,7 +24,7 @@ struct ExtensionDetail<'a, U> {
 pub struct Extension<'a, U>(Rc<ExtensionDetail<'a, U>>);
 
 impl<'a, U> Extension<'a, U> {
-    pub(crate) fn new(desc: FieldDescriptor<'a, U>, container: Container<'a, U>) -> Self {
+    pub(crate) fn new(desc: dyn FieldDescriptor<'a, U>, container: Container<'a, U>) -> Self {
         let util = container.util();
         let fqn = format_fqn(&container, desc.name());
         let ext = Self(Rc::new(ExtensionDetail {
