@@ -1,12 +1,10 @@
 use super::*;
 use crate::WellKnownType;
 use core::fmt::Debug;
-use std::slice;
+use std::{fmt::Display, ops::Deref, slice};
 
 /// Describes a complete .proto file.
-pub trait FileDescriptor<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait FileDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// file name, relative to root of source tree
     fn name(&self) -> &'a str;
     /// e.g. "foo", "foo.bar", etc.
@@ -16,69 +14,61 @@ pub trait FileDescriptor<'a>: Clone + Copy + Debug {
     /// Indexes of the public imported files in the dependency list.
     fn public_dependencies(&self) -> slice::Iter<i32>;
     /// All top-level `Message` definitions in this file.
-    fn messages(&self) -> Self::Impl::MessageDescriptorIter;
+    fn messages(&self) -> I::MessageDescriptorIter;
     /// All top-level `Enum` definitions in this file.
-    fn enums(&self) -> Self::Impl::EnumDescriptorIter;
+    fn enums(&self) -> I::EnumDescriptorIter;
     /// All top-level `Service` definitions in this file.
-    fn services(&self) -> Self::Impl::ServiceDescriptorIter;
-    fn options(&self) -> Self::Impl::FileOptions;
-    fn source_code_info(&self) -> Self::Impl::SourceCodeInfo;
+    fn services(&self) -> I::ServiceDescriptorIter;
+    fn options(&self) -> I::FileOptions;
+    fn source_code_info(&self) -> I::SourceCodeInfo;
     /// Syntax of this file
     fn syntax(&self) -> Syntax;
 }
 
 /// Describes a message type.
 
-pub trait MessageDescriptor<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait MessageDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// The name of this message type.
     fn name(&self) -> &'a str;
     /// The `Message`'s `Field`s.
-    fn fields(&self) -> Self::Impl::FieldDescriptorIter;
+    fn fields(&self) -> I::FieldDescriptorIter;
     /// `Extension`s defined in this `Message`.
-    fn extensions(&self) -> Self::Impl::FieldDescriptorIter;
+    fn extensions(&self) -> I::FieldDescriptorIter;
     /// Nested `Message`s defined in this `Message`.
-    fn nested_messages(&self) -> Self::Impl::MessageDescriptor;
+    fn nested_messages(&self) -> I::MessageDescriptor;
     /// Nested `Enum`s defined in this `Message`.
-    fn enums(&self) -> Self::Impl::EnumDescriptor;
+    fn enums(&self) -> I::EnumDescriptor;
     /// Exntension set aside for this `Message`.
-    fn extension_ranges(&self) -> Self::Impl::ExtensionRangeIter;
+    fn extension_ranges(&self) -> I::ExtensionRangeIter;
     /// `Oneof`s defined in this `Message`.
-    fn oneofs(&self) -> Self::Impl::OneofDescriptor;
-    fn options(&self) -> Self::Impl::MessageOptions;
-    fn reserved_ranges(&self) -> Self::Impl::ReservedRanges;
+    fn oneofs(&self) -> I::OneofDescriptor;
+    fn options(&self) -> I::MessageOptions;
+    fn reserved_ranges(&self) -> I::ReservedRanges;
     fn reserved_names(&self) -> slice::Iter<String>;
 }
 
 // #[cfg_attr(test, automock)]
-pub trait EnumDescriptor<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait EnumDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn name(&self) -> &'a str;
-    fn values(&self) -> Self::Impl::EnumValueDescriptorIter;
-    fn options(&self) -> Self::Impl::EnumOptions<'a>;
+    fn values(&self) -> I::EnumValueDescriptorIter;
+    fn options(&self) -> I::EnumOptions;
     /// Range of reserved numeric values. Reserved numeric values may not be used
     /// by enum values in the same enum declaration. Reserved ranges may not
     /// overlap.   
-    fn reserved_ranges(&self) -> Self::Impl::EnumReservedRanges;
+    fn reserved_ranges(&self) -> I::EnumReservedRanges;
     fn reserved_names(&self) -> slice::Iter<String>;
 }
 
 // #[cfg_attr(test, automock)]
-pub trait EnumValueDescriptor<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait EnumValueDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn name(&self) -> String;
     fn number(&self) -> i32;
-    fn options(&self) -> Self::Impl::EnumValueOptions;
+    fn options(&self) -> I::EnumValueOptions;
 }
 
 /// Describes a field within a message.
 // #[cfg_attr(test, automock)]
-pub trait FieldDescriptor<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait FieldDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn name(&self) -> String;
     fn number(&self) -> i32;
     fn label(&self) -> Label;
@@ -104,7 +94,7 @@ pub trait FieldDescriptor<'a>: Clone + Copy + Debug {
     /// will be used. Otherwise, it's deduced from the field's name by converting
     /// it to camelCase.
     fn json_name(&self) -> String;
-    fn options(&self) -> Self::Impl::FieldOptions<'a>;
+    fn options(&self) -> I::FieldOptions;
     /// If true, this is a proto3 "optional". When a proto3 field is optional, it
     /// tracks presence regardless of field type.
     ///
@@ -232,18 +222,14 @@ pub trait FieldDescriptor<'a>: Clone + Copy + Debug {
 }
 
 /// Describes a service.
-pub trait ServiceDescriptor<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait ServiceDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn name(&self) -> &'a str;
-    fn options(&self) -> Self::Impl::ServiceOptions;
-    fn methods(&self) -> Self::Impl::MethodDescriptorIter;
+    fn options(&self) -> I::ServiceOptions;
+    fn methods(&self) -> I::MethodDescriptorIter;
 }
 
 /// Describes a method.
-pub trait MethodDescriptor<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait MethodDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn name(&self) -> &'a str;
     /// Input type name.
     ///
@@ -259,15 +245,14 @@ pub trait MethodDescriptor<'a>: Clone + Copy + Debug {
     fn client_streaming(&self) -> bool;
     /// Identifies if server streams multiple server messages
     fn server_streaming(&self) -> bool;
-    fn options(&self) -> Self::Impl::MethodOptions;
+    fn options(&self) -> I::MethodOptions;
 }
 
 /// Describes a oneof.
 // #[cfg_attr(test, automock)]
-pub trait OneofDescriptor<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
+pub trait OneofDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn name(&self) -> String;
-    fn options(&self) -> Self::Impl::OneofOptions;
+    fn options(&self) -> I::OneofOptions;
 }
 
 // ===================================================================
@@ -303,9 +288,7 @@ pub trait OneofDescriptor<'a>: Clone + Copy + Debug {
 //   to automatically assign option numbers.
 
 // #[cfg_attr(test, automock)]
-pub trait FileOptions<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait FileOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Java package where classes generated from this .proto will be
     /// placed.  By default, the proto package is used, but this is often
     /// inappropriate because proto packages do not normally start with backwards
@@ -399,13 +382,11 @@ pub trait FileOptions<'a>: Clone + Copy + Debug {
     fn ruby_package(&self) -> String;
     /// The parser stores options it doesn't recognize here.
     /// See the documentation for the "Options" section above.
-    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionIter;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionIter;
 }
 
 // #[cfg_attr(test, automock)]
-pub trait EnumValueOptions<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait EnumValueOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Is this enum value deprecated?
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for the enum value, or it will be completely ignored; in the very least,
@@ -413,13 +394,11 @@ pub trait EnumValueOptions<'a>: Clone + Copy + Debug {
     fn deprecated(&self) -> bool;
     fn is_deprecated(&self) -> bool;
     /// Options not recognized by the parser.
-    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionIter;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionIter;
 }
 
 // #[cfg_attr(test, automock)]
-pub trait MessageOptions<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait MessageOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Set true to use the old proto1 MessageSet wire format for extensions.
     /// This is provided for backwards-compatibility with the MessageSet wire
     /// format.  You should not use this for any other reason:  It's less
@@ -468,13 +447,11 @@ pub trait MessageOptions<'a>: Clone + Copy + Debug {
     fn is_deprecated(&self) -> bool;
     fn no_standard_descriptor_accessor(&self) -> bool;
     /// The parser stores options it doesn't recognize here. See above.
-    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionsIter;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
 }
 
 // #[cfg_attr(test, automock)]
-pub trait FieldOptions<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait FieldOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// The ctype option instructs the C++ code generator to use a different
     /// representation of the field than it normally would.  See the specific
     /// options below.  This option is not yet implemented in the open source
@@ -538,13 +515,11 @@ pub trait FieldOptions<'a>: Clone + Copy + Debug {
     fn is_weak(&self) -> bool;
 
     /// Options the parser does not recognize.
-    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionsIter;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
 }
 
 // #[cfg_attr(test, automock)]
-pub trait EnumOptions<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait EnumOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Is this enum deprecated?
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for the enum, or it will be completely ignored; in the very least, this
@@ -552,7 +527,7 @@ pub trait EnumOptions<'a>: Clone + Copy + Debug {
     fn deprecated(&self) -> bool;
     fn is_deprecated(&self) -> bool;
     /// Options not recognized by the parser.
-    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionsIter;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
     /// Allows mapping different tag names to the same value.
     fn allow_alias(&self) -> bool;
 }
@@ -562,9 +537,7 @@ pub trait EnumOptions<'a>: Clone + Copy + Debug {
 /// Note: Field numbers 1 through 32 are reserved for Google's internal RPC
 /// framework.
 // #[cfg_attr(test, automock)]
-pub trait ServiceOptions<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait ServiceOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Is this service deprecated?
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for the service, or it will be completely ignored; in the very least,
@@ -572,7 +545,7 @@ pub trait ServiceOptions<'a>: Clone + Copy + Debug {
     fn deprecated(&self) -> bool;
     fn is_deprecated(&self) -> bool;
     /// The parser stores options it doesn't recognize here. See above.
-    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionsIter;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
 }
 
 /// Options for a Method.
@@ -580,9 +553,7 @@ pub trait ServiceOptions<'a>: Clone + Copy + Debug {
 /// Note:  Field numbers 1 through 32 are reserved for Google's internal RPC
 /// framework.
 // #[cfg_attr(test, automock)]
-pub trait MethodOptions<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait MethodOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     // Note:  Field numbers 1 through 32 are reserved for Google's internal RPC
     //   framework.  We apologize for hoarding these numbers to ourselves, but
     //   we were already using them long before we decided to release Protocol
@@ -595,7 +566,7 @@ pub trait MethodOptions<'a>: Clone + Copy + Debug {
     fn deprecated(&self) -> bool;
     fn is_deprecated(&self) -> bool;
     /// The parser stores options it doesn't recognize here. See above.
-    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionsIter;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
 
     /// Is this method side-effect-free (or safe in HTTP parlance), or idempotent,
     /// or neither? HTTP based RPC implementation may choose GET verb for safe
@@ -603,18 +574,16 @@ pub trait MethodOptions<'a>: Clone + Copy + Debug {
     fn idempotency_level(&self) -> IdempotencyLevel;
 }
 // #[cfg_attr(test, automock)]
-pub trait OneofOptions<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
+pub trait OneofOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// The parser stores options it doesn't recognize here. See above.
-    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionsIter;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
 }
 
 /// Range of reserved tag numbers. Reserved tag numbers may not be used by
 /// fields or extension ranges in the same message. Reserved ranges may
 /// not overlap.
 // #[cfg_attr(test, automock)]
-pub trait ReservedRange<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
+pub trait ReservedRange<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Inclusive.
     fn start(&self) -> i32;
 
@@ -626,27 +595,22 @@ pub trait ReservedRange<'a>: Clone + Copy + Debug {
     }
 }
 
-impl<'a, T: ReservedRange<'a>> PartialEq for T {
+impl<'a, I: Impl<'a>, T: ReservedRange<'a, I>> PartialEq for T {
     fn eq(&self, other: &Self) -> bool {
         self.start() == other.start() && self.end() == other.end()
     }
 }
 
-pub trait ReservedRanges<'a>:
-    Clone
-    + Copy
-    + Debug
-    + IntoIterator<Item = Self::Impl::ReservedRange, IntoIter = Self::Impl::ReservedRangeIter>
+pub trait ReservedRanges<'a, I: Impl<'a>>:
+    Clone + Copy + Debug + IntoIterator<Item = I::ReservedRange, IntoIter = I::ReservedRangeIter>
 {
-    type Impl: crate::Impl<'a>;
-
     fn len(&self) -> usize {
         self.into_iter().len()
     }
     fn is_empty(&self) -> bool {
         self.into_iter().is_empty()
     }
-    fn get(&self, index: usize) -> Option<Self::Impl::ReservedRange<'a>> {
+    fn get(&self, index: usize) -> Option<I::ReservedRange> {
         self.into_iter().nth(index)
     }
     fn is_in_reserved_range(&self, num: i32) -> bool {
@@ -654,7 +618,7 @@ pub trait ReservedRanges<'a>:
     }
 }
 
-pub trait ExtensionRange<'a>: Clone + Copy + Debug {
+pub trait ExtensionRange<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Inclusive.
     fn start(&self) -> i32;
     /// Exclusive.
@@ -663,7 +627,7 @@ pub trait ExtensionRange<'a>: Clone + Copy + Debug {
         self.start() <= val && val < self.end()
     }
 }
-impl<'a, T: ExtensionRange<'a, I>> PartialEq for T {
+impl<'a, I: Impl<'a>, T: ExtensionRange<'a, I>> PartialEq for T {
     fn eq(&self, other: &Self) -> bool {
         self.range.start() == other.start() && self.end() == other.end()
     }
@@ -676,9 +640,7 @@ impl<'a, T: ExtensionRange<'a, I>> PartialEq for T {
 /// is inclusive such that it can appropriately represent the entire int32
 /// domain.
 // #[cfg_attr(test, automock)]
-pub trait EnumReservedRange<'a>: Clone + Copy + Debug {
-    type Impl: crate::Impl<'a>;
-
+pub trait EnumReservedRange<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Inclusive
     fn start(&self) -> i32;
     /// Inclusive
@@ -686,12 +648,10 @@ pub trait EnumReservedRange<'a>: Clone + Copy + Debug {
 }
 
 // #[cfg_attr(test, automock)]
-pub trait EnumReservedRanges<'a>:
-    IntoIterator<Item = Self::Impl::EnumReservedRange, IntoIter = Self::Impl::EnumReservedRangeIter>
+pub trait EnumReservedRanges<'a, I: Impl<'a>>:
+    IntoIterator<Item = I::EnumReservedRange, IntoIter = I::EnumReservedRangeIter>
 {
-    type Impl: crate::Impl<'a>;
-
-    fn iter(&self) -> self::Impl::EnumReservedRangeIter<'a> {
+    fn iter(&self) -> I::EnumReservedRangeIter {
         self.ranges.into()
     }
     fn len(&self) -> usize {
@@ -700,7 +660,7 @@ pub trait EnumReservedRanges<'a>:
     fn is_empty(&self) -> bool {
         self.ranges.is_empty()
     }
-    fn get(&self, index: usize) -> Option<self::Impl::EnumReservedRange<'a>> {
+    fn get(&self, index: usize) -> Option<I::EnumReservedRange> {
         self.ranges.get(index).map(|r| r.into())
     }
     fn is_range_reserved(&self, min: i32, max: i32) -> bool {
@@ -708,5 +668,227 @@ pub trait EnumReservedRanges<'a>:
     }
     fn is_in_reserved_range(&self, num: i32) -> bool {
         self.iter().any(|r| r.start() <= num && r.end() >= num)
+    }
+}
+
+/// A message representing a option the parser does not recognize. This only
+/// appears in options protos created by the compiler::Parser class.
+/// DescriptorPool resolves these when building Descriptor objects. Therefore,
+/// options protos in descriptor objects (e.g. returned by Descriptor::options(),
+/// or produced by Descriptor::CopyTo()) will never have UninterpretedOptions
+/// in them.
+pub trait UninterpretedOption<'a, I: Impl<'a>>:
+    core::fmt::Debug + Copy + Clone + IntoIterator<Item = I::NamePart, IntoIter = I::NamePartIter>
+{
+    type Impl: crate::Impl<'a>;
+    fn name_parts(&self) -> I::NameParts;
+    fn identifier_value(&self) -> &'a str;
+    fn positive_int_value(&self) -> u64;
+    fn negative_int_value(&self) -> i64;
+    fn double_value(&self) -> f64;
+    fn string_value(&self) -> &'a [u8];
+    fn aggregate_value(&self) -> &'a str;
+}
+
+/// The name of the uninterpreted option.  Each string represents a segment in
+/// a dot-separated name. `is_extension` is `true` if a segment represents an
+/// extension (denoted with parentheses in options specs in .proto files).
+///
+/// E.g.,
+/// ```norun
+/// "foo.(bar.baz).qux" => [ ("foo", false), ("bar.baz", true), ("qux", false) ]
+/// ```
+pub trait NameParts<'a, I: Impl<'a>>:
+    Copy + Clone + IntoIterator<Item = I::NamePart, IntoIter = I::NamePartIter>
+{
+    type Impl: crate::Impl<'a>;
+
+    fn len(&self) -> usize {
+        self.into_iter().len()
+    }
+    fn is_empty(&self) -> bool {
+        self.into_iter().is_empty()
+    }
+    fn formatted_value(&self) -> String {
+        self.into_iter()
+            .map(|x| x.formatted_value())
+            .collect::<Vec<String>>()
+            .join(".")
+    }
+}
+impl<'a, I: Impl<'a>, T: NameParts<'a, I>> ToString for T {
+    fn to_string(&self) -> String {
+        self.value()
+    }
+}
+impl<'a, I: Impl<'a>, T: NameParts<'a, I>> Display for T {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", self.formatted_value())
+    }
+}
+impl<'a, I: Impl<'a>, T: NameParts<'a, I>> Debug for T {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", self.formatted_value())
+    }
+}
+
+pub trait NamePart<'a, I: Impl<'a>> {
+    /// the value of the part
+    /// E.g. `"foo"`, `"bar.baz"`, or `"qux"` of:
+    /// ```no_run
+    /// "foo.(bar.baz).qux" => [ ("foo", false), ("bar.baz", true), ("qux", false) ]
+    /// ```
+    fn value(&self) -> &'a str;
+    fn is_extension(&self) -> bool;
+    fn as_str(&self) -> &'a str {
+        self.value()
+    }
+    fn formatted_value(&self) -> String {
+        if self.is_extension() {
+            format!("({})", self.value())
+        } else {
+            self.value().to_string()
+        }
+    }
+}
+
+impl<'a, I: Impl<'a>, T: NamePart<'a, I>> core::fmt::Debug for T {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", self.value())
+    }
+}
+impl<'a, I: Impl<'a>, T: NamePart<'a, I>> ToString for T {
+    fn to_string(&self) -> String {
+        self.value().to_string()
+    }
+}
+impl<'a, I: Impl<'a>, T: NamePart<'a, I>> Display for T {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        if self.part.is_extension {
+            write!(f, "({})", self.value())
+        } else {
+            write!(f, "{}", self.value())
+        }
+    }
+}
+
+impl<'a, I: Impl<'a>, T: NamePart<'a, I>> Eq for T {}
+
+impl<'a, I: Impl<'a>, T: NamePart<'a, I>> PartialEq<T> for T {
+    fn eq(&self, other: &Self) -> bool {
+        self.part == other.part
+    }
+}
+
+impl<'a, I: Impl<'a>, T: NamePart<'a, I>> Debug for T {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_struct("NamePart")
+            .field("value", &self.value())
+            .field("is_extension", &self.is_extension())
+            .finish()
+    }
+}
+
+impl<'a, I: Impl<'a>, T: NamePart<'a, I>> PartialEq<String> for T {
+    fn eq(&self, other: &String) -> bool {
+        self.as_str() == other
+    }
+}
+impl<'a, I: Impl<'a>, T: NamePart<'a, I>> PartialEq<&str> for T {
+    fn eq(&self, other: &&str) -> bool {
+        self.as_str() == *other
+    }
+}
+impl<'a, I: Impl<'a>, T: NamePart<'a, I>> PartialEq<T> for str {
+    fn eq(&self, other: I::NamePart) -> bool {
+        self.as_str() == *other
+    }
+}
+
+impl<'a, I: Impl<'a>, T: NamePart<'a, I>> Deref for T {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.value()
+    }
+}
+
+pub trait SourceCodeInfo<'a, I: Impl<'a>>:
+    IntoIterator<Item = I::Location, IntoIter = I::LocationIter>
+{
+    type Impl: crate::Impl<'a>;
+    fn iter(&self) -> I::LocationIter {
+        self.into_iter()
+    }
+    fn len(&self) -> usize {
+        self.into_iter().len()
+    }
+    fn is_empty(&self) -> bool {
+        self.into_iter().len() == 0
+    }
+}
+
+/// Comments associated to entities in the source code.
+pub trait Location<'a, I: Impl<'a>> {
+    /// Identifies which part of the FileDescriptorProto was defined at this
+    /// location.
+    ///
+    /// Each element is a field number or an index.  They form a path from
+    /// the root FileDescriptorProto to the place where the definition.  For
+    /// example, this path:
+    ///   [ 4, 3, 2, 7, 1 ]
+    /// refers to:
+    ///   file.message_type(3)  // 4, 3
+    ///       .field(7)         // 2, 7
+    ///       .name()           // 1
+    /// This is because FileDescriptorProto.message_type has field number 4:
+    ///   repeated DescriptorProto message_type = 4;
+    /// and DescriptorProto.field has field number 2:
+    ///   repeated FieldDescriptorProto field = 2;
+    /// and FieldDescriptorProto.name has field number 1:
+    ///   optional string name = 1;
+    ///
+    /// Thus, the above path gives the location of a field name.  If we removed
+    /// the last element:
+    ///   [ 4, 3, 2, 7 ]
+    /// this path refers to the whole field declaration (from the beginning
+    /// of the label to the terminating semicolon).
+    fn path(&self) -> &'a [i32];
+
+    /// Always has exactly three or four elements: start line, start column,
+    /// end line (optional, otherwise assumed same as start line), end column.
+    /// These are packed into a single field for efficiency.  Note that line
+    /// and column numbers are zero-based -- typically you will want to add
+    /// 1 to each before displaying to a user
+    fn span(&self) -> &'a [i32];
+
+    /// Returns any comment immediately preceding the node, without anyElsewhere
+    /// whitespace between it and the comment.
+    fn leading_comments(&self) -> &'a str;
+
+    /// Returns each comment block or line above the
+    /// entity but separated by whitespace.a
+    fn leading_detached_comments(&self) -> std::slice::Iter<'a, String>;
+    /// Returns any comment immediately following the entity, without any
+    /// whitespace between it and the comment. If the comment would be a leading
+    /// comment for another entity, it won't be considered a trailing comment.
+    fn trailing_comments(&self) -> &'a str;
+
+    fn is_file_syntax_location(&self) -> bool {
+        self.path().len() == 1 && FileDescriptorPath::Syntax == self.path()[0]
+    }
+
+    fn is_file_package_location(&self) -> bool {
+        self.path().len() == 1 && FileDescriptorPath::Package == self.path()[0]
+    }
+
+    fn file_descriptor_path(&self) -> Result<FileDescriptorPath, anyhow::Error> {
+        FileDescriptorPath::try_from(self.path().get(0))
+    }
+
+    fn has_comments(&self) -> bool {
+        !self.leading_comments().is_empty()
+            || self.leading_detached_comments().count() > 0
+            || !self.trailing_comments().is_empty()
     }
 }
