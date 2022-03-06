@@ -10,10 +10,14 @@ use std::{
 /// options protos in descriptor objects (e.g. returned by Descriptor::options(),
 /// or produced by Descriptor::CopyTo()) will never have UninterpretedOptions
 /// in them.
-pub trait UninterpretedOption<'a, I: Impl<'a>>:
-    core::fmt::Debug + Copy + Clone + IntoIterator<Item = I::NamePart<'a>, IntoIter = I::NamePartIter>
+pub trait UninterpretedOption<'a>:
+    core::fmt::Debug
+    + Copy
+    + Clone
+    + IntoIterator<Item = Self::Impl::NamePart<'a>, IntoIter = Self::Impl::NamePartIter>
 {
-    fn name_parts(&self) -> dyn NameParts<'a>;
+    type Impl: crate::Impl<'a>;
+    fn name_parts(&self) -> self::Impl::NameParts<'a>;
     fn identifier_value(&self) -> &'a str;
     fn positive_int_value(&self) -> u64;
     fn negative_int_value(&self) -> i64;
@@ -30,10 +34,16 @@ pub trait UninterpretedOption<'a, I: Impl<'a>>:
 /// ```norun
 /// "foo.(bar.baz).qux" => [ ("foo", false), ("bar.baz", true), ("qux", false) ]
 /// ```
-pub trait NameParts<'a>: Copy
+pub trait NameParts<'a>:
+    Copy
     + Clone
-    + IntoIterator<Item = dyn NamePart<'a>, IntoIter = dyn ExactSizeIterator<Item = dyn NamePart<'a>>>
+    + IntoIterator<
+        Item = Self::Impl::NamePart<'a>,
+        IntoIter = Self::Impl::ExactSizeIterator<Item = Self::Impl::NamePart<'a>>,
+    >
 {
+    type Impl: crate::Impl<'a>;
+
     fn len(&self) -> usize {
         self.into_iter().len()
     }
@@ -63,7 +73,8 @@ impl<'a, T: NameParts<'a>> Debug for T {
     }
 }
 
-pub trait NamePart<'a, I: Impl<'a>> {
+pub trait NamePart<'a> {
+    type Impl: crate::Impl<'a>;
     /// the value of the part
     /// E.g. `"foo"`, `"bar.baz"`, or `"qux"` of:
     /// ```no_run

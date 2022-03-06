@@ -4,7 +4,9 @@ use core::fmt::Debug;
 use std::slice;
 
 /// Describes a complete .proto file.
-pub trait FileDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
+pub trait FileDescriptor<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
     /// file name, relative to root of source tree
     fn name(&self) -> &'a str;
     /// e.g. "foo", "foo.bar", etc.
@@ -14,62 +16,70 @@ pub trait FileDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Indexes of the public imported files in the dependency list.
     fn public_dependencies(&self) -> slice::Iter<i32>;
     /// All top-level `Message` definitions in this file.
-    fn messages(&self) -> I::MessageDescriptorIter;
+    fn messages(&self) -> Self::Impl::MessageDescriptorIter;
     /// All top-level `Enum` definitions in this file.
-    fn enums(&self) -> I::EnumDescriptorIter;
+    fn enums(&self) -> Self::Impl::EnumDescriptorIter;
     /// All top-level `Service` definitions in this file.
-    fn services(&self) -> I::ServiceDescriptorIter;
-    fn options(&self) -> I::FileOptions;
-    fn source_code_info(&self) -> I::SourceCodeInfo<'a, I>;
+    fn services(&self) -> Self::Impl::ServiceDescriptorIter;
+    fn options(&self) -> Self::Impl::FileOptions;
+    fn source_code_info(&self) -> Self::Impl::SourceCodeInfo;
     /// Syntax of this file
     fn syntax(&self) -> Syntax;
 }
 
 /// Describes a message type.
 
-pub trait MessageDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
+pub trait MessageDescriptor<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
     /// The name of this message type.
     fn name(&self) -> &'a str;
     /// The `Message`'s `Field`s.
-    fn fields(&self) -> I::FieldDescriptorIter;
+    fn fields(&self) -> Self::Impl::FieldDescriptorIter;
     /// `Extension`s defined in this `Message`.
-    fn extensions(&self) -> I::FieldDescriptorIter;
+    fn extensions(&self) -> Self::Impl::FieldDescriptorIter;
     /// Nested `Message`s defined in this `Message`.
-    fn nested_messages(&self) -> I::MessageDescriptor;
+    fn nested_messages(&self) -> Self::Impl::MessageDescriptor;
     /// Nested `Enum`s defined in this `Message`.
-    fn enums(&self) -> I::EnumDescriptor;
+    fn enums(&self) -> Self::Impl::EnumDescriptor;
     /// Exntension set aside for this `Message`.
-    fn extension_ranges(&self) -> I::ExtensionRangeIter;
+    fn extension_ranges(&self) -> Self::Impl::ExtensionRangeIter;
     /// `Oneof`s defined in this `Message`.
-    fn oneofs(&self) -> I::OneofDescriptor;
-    fn options(&self) -> I::MessageOptions;
-    fn reserved_ranges(&self) -> I::ReservedRanges;
+    fn oneofs(&self) -> Self::Impl::OneofDescriptor;
+    fn options(&self) -> Self::Impl::MessageOptions;
+    fn reserved_ranges(&self) -> Self::Impl::ReservedRanges;
     fn reserved_names(&self) -> slice::Iter<String>;
 }
 
-#[cfg_attr(test, automock)]
-pub trait EnumDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
+// #[cfg_attr(test, automock)]
+pub trait EnumDescriptor<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
     fn name(&self) -> &'a str;
-    fn values(&self) -> I::EnumValueDescriptorIter;
-    fn options(&self) -> I::EnumOptions<'a>;
+    fn values(&self) -> Self::Impl::EnumValueDescriptorIter;
+    fn options(&self) -> Self::Impl::EnumOptions<'a>;
     /// Range of reserved numeric values. Reserved numeric values may not be used
     /// by enum values in the same enum declaration. Reserved ranges may not
     /// overlap.   
-    fn reserved_ranges(&self) -> I::EnumReservedRanges;
+    fn reserved_ranges(&self) -> Self::Impl::EnumReservedRanges;
     fn reserved_names(&self) -> slice::Iter<String>;
 }
 
-#[cfg_attr(test, automock)]
-pub trait EnumValueDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
-    fn name(&self) -> &'a str;
+// #[cfg_attr(test, automock)]
+pub trait EnumValueDescriptor<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
+    fn name(&self) -> String;
     fn number(&self) -> i32;
-    fn options(&self) -> I::EnumValueOptions;
+    fn options(&self) -> Self::Impl::EnumValueOptions;
 }
 
 /// Describes a field within a message.
-#[cfg_attr(test, automock)]
-pub trait FieldDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
-    fn name(&self) -> &str;
+// #[cfg_attr(test, automock)]
+pub trait FieldDescriptor<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
+    fn name(&self) -> String;
     fn number(&self) -> i32;
     fn label(&self) -> Label;
     fn well_known_type(&self) -> Option<WellKnownType>;
@@ -83,18 +93,18 @@ pub trait FieldDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// rules are used to find the type (i.e. first the nested types within this
     /// message are searched, then within the parent, on up to the root
     /// namespace).
-    fn type_name(&self) -> &str;
+    fn type_name(&self) -> String;
 
     /// For extensions, this is the name of the type being extended.  It is
     /// resolved in the same manner as `proto_type_name`.
-    fn extendee(&self) -> &str;
+    fn extendee(&self) -> String;
 
     /// JSON name of this field. The value is set by protocol compiler. If the
     /// user has set a "json_name" option on this field, that option's value
     /// will be used. Otherwise, it's deduced from the field's name by converting
     /// it to camelCase.
-    fn json_name(&self) -> &str;
-    fn options(&self) -> I::FieldOptions<'a>;
+    fn json_name(&self) -> String;
+    fn options(&self) -> Self::Impl::FieldOptions<'a>;
     /// If true, this is a proto3 "optional". When a proto3 field is optional, it
     /// tracks presence regardless of field type.
     ///
@@ -222,14 +232,18 @@ pub trait FieldDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
 }
 
 /// Describes a service.
-pub trait ServiceDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
+pub trait ServiceDescriptor<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
     fn name(&self) -> &'a str;
-    fn options(&self) -> I::ServiceOptions;
-    fn methods(&self) -> I::MethodDescriptorIter;
+    fn options(&self) -> Self::Impl::ServiceOptions;
+    fn methods(&self) -> Self::Impl::MethodDescriptorIter;
 }
 
 /// Describes a method.
-pub trait MethodDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
+pub trait MethodDescriptor<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
     fn name(&self) -> &'a str;
     /// Input type name.
     ///
@@ -245,14 +259,15 @@ pub trait MethodDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn client_streaming(&self) -> bool;
     /// Identifies if server streams multiple server messages
     fn server_streaming(&self) -> bool;
-    fn options(&self) -> I::MethodOptions;
+    fn options(&self) -> Self::Impl::MethodOptions;
 }
 
 /// Describes a oneof.
-#[cfg_attr(test, automock)]
-pub trait OneofDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
-    fn name(&self) -> &'a str;
-    fn options(&self) -> I::OneofOptions;
+// #[cfg_attr(test, automock)]
+pub trait OneofDescriptor<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+    fn name(&self) -> String;
+    fn options(&self) -> Self::Impl::OneofOptions;
 }
 
 // ===================================================================
@@ -287,19 +302,21 @@ pub trait OneofDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
 //   If this turns out to be popular, a web service will be set up
 //   to automatically assign option numbers.
 
-#[cfg_attr(test, automock)]
-pub trait FileOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
+// #[cfg_attr(test, automock)]
+pub trait FileOptions<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
     /// Java package where classes generated from this .proto will be
     /// placed.  By default, the proto package is used, but this is often
     /// inappropriate because proto packages do not normally start with backwards
     /// domain names.
-    fn java_package(&self) -> &str;
+    fn java_package(&self) -> String;
     /// If set, all the classes from the .proto file are wrapped in a single
     /// outer class with the given name.  This applies to both Proto1
     /// (equivalent to the old "--one_java_file" option) and Proto2 (where
     /// a .proto always translates to a single class, but you may want to
     /// explicitly choose the class name).
-    fn java_outer_classname(&self) -> &str;
+    fn java_outer_classname(&self) -> String;
 
     /// If set true, then the Java code generator will generate a separate .java
     /// file for each top-level message, enum, and service defined in the .proto
@@ -323,7 +340,7 @@ pub trait FileOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     ///   - The basename of the package import path, if provided.
     ///   - Otherwise, the package statement in the .proto file, if present.
     ///   - Otherwise, the basename of the .proto file, without extension.
-    fn go_package(&self) -> &str;
+    fn go_package(&self) -> String;
     /// Should generic services be generated in each language?  "Generic" services
     /// are not specific to any particular RPC system.  They are generated by the
     /// main code generators in each language (without additional plugins).
@@ -353,40 +370,42 @@ pub trait FileOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn cc_enable_arenas(&self) -> bool;
     /// Sets the objective c class prefix which is prepended to all objective c
     /// generated classes from this .proto. There is no default.
-    fn objc_class_prefix(&self) -> &str;
+    fn objc_class_prefix(&self) -> String;
 
     /// Namespace for generated classes; defaults to the package.    
-    fn csharp_namespace(&self) -> &str;
+    fn csharp_namespace(&self) -> String;
     /// By default Swift generators will take the proto package and CamelCase it
     /// replacing '.' with underscore and use that to prefix the types/symbols
     /// defined. When this options is provided, they will use this value instead
     /// to prefix the types/symbols defined.
-    fn swift_prefix(&self) -> &str;
+    fn swift_prefix(&self) -> String;
 
     /// Sets the php class prefix which is prepended to all php generated classes
     /// from this .proto. Default is empty.
-    fn php_class_prefix(&self) -> &str;
+    fn php_class_prefix(&self) -> String;
 
     /// Use this option to change the namespace of php generated classes. Default
     /// is empty. When this option is empty, the package name will be used for
     /// determining the namespace.
-    fn php_namespace(&self) -> &str;
+    fn php_namespace(&self) -> String;
 
     /// Use this option to change the namespace of php generated metadata classes.
     /// Default is empty. When this option is empty, the proto file name will be
     /// used for determining the namespace.
-    fn php_metadata_namespace(&self) -> &str;
+    fn php_metadata_namespace(&self) -> String;
     /// Use this option to change the package of ruby generated classes. Default
     /// is empty. When this option is not set, the package name will be used for
     /// determining the ruby package.
-    fn ruby_package(&self) -> &str;
+    fn ruby_package(&self) -> String;
     /// The parser stores options it doesn't recognize here.
     /// See the documentation for the "Options" section above.
-    fn uninterpreted_options(&self) -> I::UninterpretedOptionIter;
+    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionIter;
 }
 
-#[cfg_attr(test, automock)]
-pub trait EnumValueOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
+// #[cfg_attr(test, automock)]
+pub trait EnumValueOptions<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
     /// Is this enum value deprecated?
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for the enum value, or it will be completely ignored; in the very least,
@@ -394,11 +413,13 @@ pub trait EnumValueOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn deprecated(&self) -> bool;
     fn is_deprecated(&self) -> bool;
     /// Options not recognized by the parser.
-    fn uninterpreted_options(&self) -> I::UninterpretedOptionIter;
+    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionIter;
 }
 
-#[cfg_attr(test, automock)]
-pub trait MessageOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
+// #[cfg_attr(test, automock)]
+pub trait MessageOptions<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
     /// Set true to use the old proto1 MessageSet wire format for extensions.
     /// This is provided for backwards-compatibility with the MessageSet wire
     /// format.  You should not use this for any other reason:  It's less
@@ -447,11 +468,13 @@ pub trait MessageOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn is_deprecated(&self) -> bool;
     fn no_standard_descriptor_accessor(&self) -> bool;
     /// The parser stores options it doesn't recognize here. See above.
-    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
+    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionsIter;
 }
 
-#[cfg_attr(test, automock)]
-pub trait FieldOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
+// #[cfg_attr(test, automock)]
+pub trait FieldOptions<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
     /// The ctype option instructs the C++ code generator to use a different
     /// representation of the field than it normally would.  See the specific
     /// options below.  This option is not yet implemented in the open source
@@ -515,11 +538,13 @@ pub trait FieldOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn is_weak(&self) -> bool;
 
     /// Options the parser does not recognize.
-    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
+    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionsIter;
 }
 
-#[cfg_attr(test, automock)]
-pub trait EnumOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
+// #[cfg_attr(test, automock)]
+pub trait EnumOptions<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
     /// Is this enum deprecated?
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for the enum, or it will be completely ignored; in the very least, this
@@ -527,7 +552,7 @@ pub trait EnumOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn deprecated(&self) -> bool;
     fn is_deprecated(&self) -> bool;
     /// Options not recognized by the parser.
-    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
+    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionsIter;
     /// Allows mapping different tag names to the same value.
     fn allow_alias(&self) -> bool;
 }
@@ -536,8 +561,10 @@ pub trait EnumOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
 ///
 /// Note: Field numbers 1 through 32 are reserved for Google's internal RPC
 /// framework.
-#[cfg_attr(test, automock)]
-pub trait ServiceOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
+// #[cfg_attr(test, automock)]
+pub trait ServiceOptions<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
     /// Is this service deprecated?
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for the service, or it will be completely ignored; in the very least,
@@ -545,15 +572,17 @@ pub trait ServiceOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn deprecated(&self) -> bool;
     fn is_deprecated(&self) -> bool;
     /// The parser stores options it doesn't recognize here. See above.
-    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
+    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionsIter;
 }
 
 /// Options for a Method.
 ///
 /// Note:  Field numbers 1 through 32 are reserved for Google's internal RPC
 /// framework.
-#[cfg_attr(test, automock)]
-pub trait MethodOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
+// #[cfg_attr(test, automock)]
+pub trait MethodOptions<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
     // Note:  Field numbers 1 through 32 are reserved for Google's internal RPC
     //   framework.  We apologize for hoarding these numbers to ourselves, but
     //   we were already using them long before we decided to release Protocol
@@ -566,24 +595,26 @@ pub trait MethodOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn deprecated(&self) -> bool;
     fn is_deprecated(&self) -> bool;
     /// The parser stores options it doesn't recognize here. See above.
-    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
+    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionsIter;
 
     /// Is this method side-effect-free (or safe in HTTP parlance), or idempotent,
     /// or neither? HTTP based RPC implementation may choose GET verb for safe
     /// methods, and PUT verb for idempotent methods instead of the default POST.
     fn idempotency_level(&self) -> IdempotencyLevel;
 }
-#[cfg_attr(test, automock)]
-pub trait OneofOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
+// #[cfg_attr(test, automock)]
+pub trait OneofOptions<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
     /// The parser stores options it doesn't recognize here. See above.
-    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
+    fn uninterpreted_options(&self) -> Self::Impl::UninterpretedOptionsIter;
 }
 
 /// Range of reserved tag numbers. Reserved tag numbers may not be used by
 /// fields or extension ranges in the same message. Reserved ranges may
 /// not overlap.
-#[cfg_attr(test, automock)]
+// #[cfg_attr(test, automock)]
 pub trait ReservedRange<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
     /// Inclusive.
     fn start(&self) -> i32;
 
@@ -601,16 +632,21 @@ impl<'a, T: ReservedRange<'a>> PartialEq for T {
     }
 }
 
-pub trait ReservedRanges<'a, I: Impl<'a>>:
-    Clone + Copy + Debug + IntoIterator<Item = I::ReservedRange, IntoIter = I::ReservedRangeIter>
+pub trait ReservedRanges<'a>:
+    Clone
+    + Copy
+    + Debug
+    + IntoIterator<Item = Self::Impl::ReservedRange, IntoIter = Self::Impl::ReservedRangeIter>
 {
+    type Impl: crate::Impl<'a>;
+
     fn len(&self) -> usize {
         self.into_iter().len()
     }
     fn is_empty(&self) -> bool {
         self.into_iter().is_empty()
     }
-    fn get(&self, index: usize) -> Option<dyn ReservedRange<'a>> {
+    fn get(&self, index: usize) -> Option<Self::Impl::ReservedRange<'a>> {
         self.into_iter().nth(index)
     }
     fn is_in_reserved_range(&self, num: i32) -> bool {
@@ -618,7 +654,7 @@ pub trait ReservedRanges<'a, I: Impl<'a>>:
     }
 }
 
-pub trait ExtensionRange<'a, I: Impl<'a>>: Clone + Copy + Debug {
+pub trait ExtensionRange<'a>: Clone + Copy + Debug {
     /// Inclusive.
     fn start(&self) -> i32;
     /// Exclusive.
@@ -627,7 +663,7 @@ pub trait ExtensionRange<'a, I: Impl<'a>>: Clone + Copy + Debug {
         self.start() <= val && val < self.end()
     }
 }
-impl<'a, T: ExtensionRange<'a, I>, I: Impl<'a>> PartialEq for T {
+impl<'a, T: ExtensionRange<'a, I>> PartialEq for T {
     fn eq(&self, other: &Self) -> bool {
         self.range.start() == other.start() && self.end() == other.end()
     }
@@ -639,19 +675,23 @@ impl<'a, T: ExtensionRange<'a, I>, I: Impl<'a>> PartialEq for T {
 /// Note that this is distinct from DescriptorProto.ReservedRange in that it
 /// is inclusive such that it can appropriately represent the entire int32
 /// domain.
-#[cfg_attr(test, automock)]
-pub trait EnumReservedRange<'a, I: Impl<'a>>: Clone + Copy + Debug {
+// #[cfg_attr(test, automock)]
+pub trait EnumReservedRange<'a>: Clone + Copy + Debug {
+    type Impl: crate::Impl<'a>;
+
     /// Inclusive
     fn start(&self) -> i32;
     /// Inclusive
     fn end(&self) -> i32;
 }
 
-#[cfg_attr(test, automock)]
-pub trait EnumReservedRanges<'a, I: Impl<'a>>:
-    IntoIterator<Item = EnumReservedRange, IntoIter = EnumReservedRangeIter>
+// #[cfg_attr(test, automock)]
+pub trait EnumReservedRanges<'a>:
+    IntoIterator<Item = Self::Impl::EnumReservedRange, IntoIter = Self::Impl::EnumReservedRangeIter>
 {
-    fn iter(&self) -> EnumReservedRangeIter<'a> {
+    type Impl: crate::Impl<'a>;
+
+    fn iter(&self) -> self::Impl::EnumReservedRangeIter<'a> {
         self.ranges.into()
     }
     fn len(&self) -> usize {
@@ -660,7 +700,7 @@ pub trait EnumReservedRanges<'a, I: Impl<'a>>:
     fn is_empty(&self) -> bool {
         self.ranges.is_empty()
     }
-    fn get(&self, index: usize) -> Option<EnumReservedRange<'a>> {
+    fn get(&self, index: usize) -> Option<self::Impl::EnumReservedRange<'a>> {
         self.ranges.get(index).map(|r| r.into())
     }
     fn is_range_reserved(&self, min: i32, max: i32) -> bool {

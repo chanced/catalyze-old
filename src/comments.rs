@@ -1,3 +1,4 @@
+use crate::proto::Location;
 use crate::{iter::Iter, File, Package};
 
 #[derive(Debug)]

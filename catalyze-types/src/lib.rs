@@ -18,35 +18,36 @@ pub use well_known::*;
 pub trait Impl<'a> {
     // Descriptors
 
-    type FileDescriptor: FileDescriptor<'a, Self>;
-    type EnumDescriptor: EnumDescriptor<'a, Self>;
-    type EnumValueDescriptor: EnumValueDescriptor<'a, Self>;
-    type ServiceDescriptor: ServiceDescriptor<'a, Self>;
-    type MethodDescriptor: MethodDescriptor<'a, Self>;
-    type FieldDescriptor: FieldDescriptor<'a, Self>;
-    type OneofDescriptor: OneofDescriptor<'a, Self>;
-    type MessageDescriptor: MessageDescriptor<'a, Self>;
+    type FileDescriptor: FileDescriptor<'a, Impl = Self>;
+    type EnumDescriptor: EnumDescriptor<'a, Impl = Self>;
+    type EnumValueDescriptor: EnumValueDescriptor<'a, Impl = Self>;
+    type ServiceDescriptor: ServiceDescriptor<'a, Impl = Self>;
+    type MethodDescriptor: MethodDescriptor<'a, Impl = Self>;
+    type FieldDescriptor: FieldDescriptor<'a, Impl = Self>;
+    type OneofDescriptor: OneofDescriptor<'a, Impl = Self>;
+    type MessageDescriptor: MessageDescriptor<'a, Impl = Self>;
 
     // Descriptor Options
 
-    type FieldOptions: FieldOptions<'a, Self>;
-    type OneofOptions: OneofOptions<'a, Self>;
-    type MessageOptions: MessageOptions<'a, Self>;
-    type EnumOptions: EnumOptions<'a, Self>;
-    type EnumValueOptions: EnumValueOptions<'a, Self>;
-    type ServiceOptions: ServiceOptions<'a, Self>;
-    type MethodOptions: MethodOptions<'a, Self>;
-    type FileOptions: FileOptions<'a, Self>;
+    type FieldOptions: FieldOptions<'a, Impl = Self>;
+    type OneofOptions: OneofOptions<'a, Impl = Self>;
+    type MessageOptions: MessageOptions<'a, Impl = Self>;
+    type EnumOptions: EnumOptions<'a, Impl = Self>;
+    type EnumValueOptions: EnumValueOptions<'a, Impl = Self>;
+    type ServiceOptions: ServiceOptions<'a, Impl = Self>;
+    type MethodOptions: MethodOptions<'a, Impl = Self>;
+    type FileOptions: FileOptions<'a, Impl = Self>;
 
     // Descriptor Options Supporting Types
 
-    type NamePart: NamePart<'a, Self>;
-    type SourceCodeInfo: SourceCodeInfo<'a, Self>;
-    type Location: Location<'a, Self>;
-    type ReservedRanges: ReservedRanges<'a, Self>;
-    type ReservedRange: ReservedRange<'a, Self>;
-    type EnumReservedRanges: EnumReservedRanges<'a, Self>;
-    type EnumReservedRange: EnumReservedRange<'a, Self>;
+    type NamePart: NamePart<'a, Impl = Self>;
+    type SourceCodeInfo: SourceCodeInfo<'a, Impl = Self>;
+    type UninterpretedOption: UninterpretedOption<'a, Impl = Self>;
+    type Location: Location<'a, Impl = Self>;
+    type ReservedRanges: ReservedRanges<'a, Impl = Self>;
+    type ReservedRange: ReservedRange<'a, Impl = Self>;
+    type EnumReservedRanges: EnumReservedRanges<'a, Impl = Self>;
+    type EnumReservedRange: EnumReservedRange<'a, Impl = Self>;
 
     // Iterators
 

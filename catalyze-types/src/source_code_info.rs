@@ -1,11 +1,10 @@
 use super::FileDescriptorPath;
-use super::Impl;
-pub trait SourceCodeInfo<'a, I: Impl<'a>>:
-    IntoIterator<Item = I::Location, IntoIter = I::LocationIter>
-where
-    I: Impl<'a>,
+// use super::Impl;
+pub trait SourceCodeInfo<'a>:
+    IntoIterator<Item = Self::Impl::Location, IntoIter = Self::Impl::LocationIter>
 {
-    fn iter(&self) -> I::LocationIter {
+    type Impl: crate::Impl<'a>;
+    fn iter(&self) -> Self::Impl::LocationIter {
         self.into_iter()
     }
     fn len(&self) -> usize {
@@ -17,7 +16,8 @@ where
 }
 
 /// Comments associated to entities in the source code.
-pub trait Location<'a, I: Impl<'a>> {
+pub trait Location<'a> {
+    type Impl: crate::Impl<'a>;
     /// Identifies which part of the FileDescriptorProto was defined at this
     /// location.
     ///
