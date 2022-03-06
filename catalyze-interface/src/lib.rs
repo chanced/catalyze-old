@@ -1,7 +1,6 @@
-mod enums;
-mod interface;
-pub use enums::*;
-pub use interface::*;
+pub mod enums;
+pub mod interface;
+use interface::*;
 
 pub trait Impl<'a> {
     // Descriptors
@@ -37,7 +36,7 @@ pub trait Impl<'a> {
     type ReservedRange: ReservedRange<'a, Self>;
     type EnumReservedRanges: EnumReservedRanges<'a, Self>;
     type EnumReservedRange: EnumReservedRange<'a, Self>;
-
+    type ExtensionRange: ExtensionRange<'a, Self>;
     // Iterators
 
     type FileDescriptorIter: ExactSizeIterator<Item = Self::FileDescriptor>;

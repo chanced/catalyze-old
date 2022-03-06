@@ -7,18 +7,18 @@ edition = "2021"
 heck = "0.4"
 anyhow = "1.0.53"
 petgraph = { version = "0.6.0", optional = true }
-catalyze-prost = { path = "./catalyze-prost", optional = true }
+catalyze-prost = { path = "./catalyze-prost" }
 [build-dependencies]
 which = { version = "4.2" }
 
 
 [workspace]
-members = ["catalyze-build", "catalyze-prost", "catalyze-types"]
+members = ["catalyze-build", "catalyze-prost", "catalyze-interface"]
 
 [features]
 
-default = ["prost"]
+default = ["message-graph"]
 # Enables the `MessageGraph` util sourced from prost to determine dependency cycles.
 message-graph = ["petgraph"]
 # Default implementation for base types and parsing.
-prost = ["catalyze-prost"]
+# prost = ["catalyze-prost"]

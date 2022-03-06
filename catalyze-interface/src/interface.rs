@@ -1,5 +1,5 @@
-use super::*;
-use crate::WellKnownType;
+use super::{enums::*, Impl};
+
 use core::fmt::Debug;
 use std::{fmt::Display, ops::Deref, slice};
 
@@ -627,8 +627,9 @@ pub trait ExtensionRange<'a, I: Impl<'a>>: Clone + Copy + Debug {
         self.start() <= val && val < self.end()
     }
 }
+
 impl<'a, I: Impl<'a>, T: ExtensionRange<'a, I>> PartialEq for T {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, other: &I::ExtensionRange) -> bool {
         self.range.start() == other.start() && self.end() == other.end()
     }
 }
