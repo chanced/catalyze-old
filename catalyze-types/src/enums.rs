@@ -1,4 +1,5 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+
 pub enum Type {
     Scalar(Scalar),
     Enum,
@@ -64,7 +65,7 @@ impl TryFrom<Option<i32>> for CType {}
 impl TryFrom<i32> for CType {}
 impl<T: Into<i32>> TryFrom<T> for CType {}
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[repr(i32)]
 pub enum Label {
     Required = 1,

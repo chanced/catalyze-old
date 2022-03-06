@@ -1,3 +1,4 @@
+use crate::Impl;
 use std::{
     fmt::{Debug, Display},
     ops::Deref,
@@ -9,10 +10,8 @@ use std::{
 /// options protos in descriptor objects (e.g. returned by Descriptor::options(),
 /// or produced by Descriptor::CopyTo()) will never have UninterpretedOptions
 /// in them.
-pub trait UninterpretedOption<'a>: core::fmt::Debug
-    + Copy
-    + Clone
-    + IntoIterator<Item = dyn NamePart<'a>, IntoIter = dyn ExactSizeIterator<Item = dyn NamePart<'a>>>
+pub trait UninterpretedOption<'a, I: Impl<'a>>:
+    core::fmt::Debug + Copy + Clone + IntoIterator<Item = I::NamePart<'a>, IntoIter = I::NamePartIter>
 {
     fn name_parts(&self) -> dyn NameParts<'a>;
     fn identifier_value(&self) -> &'a str;
@@ -48,9 +47,6 @@ pub trait NameParts<'a>: Copy
             .join(".")
     }
 }
-impl<'a, T: NameParts<'a>> Deref<str> for T {
-    fn deref(&self) -> &str {}
-}
 impl<'a, T: NameParts<'a>> ToString for T {
     fn to_string(&self) -> String {
         self.value()
@@ -61,15 +57,13 @@ impl<'a, T: NameParts<'a>> Display for T {
         write!(f, "{}", self.formatted_value())
     }
 }
-impl<'a, T: Debug<'a>> Debug for T {
+impl<'a, T: NameParts<'a>> Debug for T {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        self.clone()
+        write!(f, "{}", self.formatted_value())
     }
 }
 
-
-
-pub trait NamePart<'a> {
+pub trait NamePart<'a, I: Impl<'a>> {
     /// the value of the part
     /// E.g. `"foo"`, `"bar.baz"`, or `"qux"` of:
     /// ```no_run
@@ -79,6 +73,13 @@ pub trait NamePart<'a> {
     fn is_extension(&self) -> bool;
     fn as_str(&self) -> &'a str {
         self.value()
+    }
+    fn formatted_value(&self) -> String {
+        if self.is_extension() {
+            format!("({})", self.value())
+        } else {
+            self.value().to_string()
+        }
     }
 }
 
@@ -126,6 +127,11 @@ impl<'a, T: NamePart<'a>> PartialEq<String> for T {
 }
 impl<'a, T: NamePart<'a>> PartialEq<&str> for T {
     fn eq(&self, other: &&str) -> bool {
+        self.as_str() == *other
+    }
+}
+impl<'a, T: NamePart<'a>> PartialEq<T> for str {
+    fn eq(&self, other: &dyn NamePart<'a>) -> bool {
         self.as_str() == *other
     }
 }

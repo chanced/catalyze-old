@@ -1,13 +1,10 @@
+use super::*;
+use crate::WellKnownType;
 use core::fmt::Debug;
-
 use std::slice;
 
-use crate::{iter::CommentsIter, WellKnownType};
-
-use super::*;
-
 /// Describes a complete .proto file.
-pub trait FileDescriptor<'a>: Clone + Copy + Debug {
+pub trait FileDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// file name, relative to root of source tree
     fn name(&self) -> &'a str;
     /// e.g. "foo", "foo.bar", etc.
@@ -17,58 +14,61 @@ pub trait FileDescriptor<'a>: Clone + Copy + Debug {
     /// Indexes of the public imported files in the dependency list.
     fn public_dependencies(&self) -> slice::Iter<i32>;
     /// All top-level `Message` definitions in this file.
-    fn messages(&self) -> dyn ExactSizeIterator<Item = dyn MessageDescriptor<'a>>;
-    /// All comments contained in this file
-    fn comments(&self) -> CommentsIter<'a>;
+    fn messages(&self) -> I::MessageDescriptorIter;
     /// All top-level `Enum` definitions in this file.
-    fn enums(&self) -> dyn ExactSizeIterator<Item = dyn EnumDescriptor<'a>>;
+    fn enums(&self) -> I::EnumDescriptorIter;
     /// All top-level `Service` definitions in this file.
-    fn services(&self) -> dyn ExactSizeIterator<Item = dyn ServiceDescriptor<'a>>;
-    fn options(&self) -> dyn FileOptions<'a>;
-    fn source_code_info(&self) -> SourceCodeInfo<'a>;
+    fn services(&self) -> I::ServiceDescriptorIter;
+    fn options(&self) -> I::FileOptions;
+    fn source_code_info(&self) -> I::SourceCodeInfo<'a, I>;
     /// Syntax of this file
     fn syntax(&self) -> Syntax;
 }
 
 /// Describes a message type.
-pub trait MessageDescriptor<'a>: Clone + Copy + Debug {
+
+pub trait MessageDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// The name of this message type.
     fn name(&self) -> &'a str;
     /// The `Message`'s `Field`s.
-    fn fields(&self) -> dyn ExactSizeIterator<Item = dyn FieldDescriptor<'a>>;
+    fn fields(&self) -> I::FieldDescriptorIter;
     /// `Extension`s defined in this `Message`.
-    fn extensions(&self) -> dyn ExactSizeIterator<Item = dyn FieldDescriptor<'a>>;
+    fn extensions(&self) -> I::FieldDescriptorIter;
     /// Nested `Message`s defined in this `Message`.
-    fn nested_messages(&self) -> dyn ExactSizeIterator<Item = dyn MessageDescriptor<'a>>;
+    fn nested_messages(&self) -> I::MessageDescriptor;
     /// Nested `Enum`s defined in this `Message`.
-    fn enums(&self) -> dyn ExactSizeIterator<Item = dyn EnumDescriptor<'a>>;
+    fn enums(&self) -> I::EnumDescriptor;
     /// Exntension set aside for this `Message`.
-    fn extension_ranges(&self) -> dyn ExactSizeIterator<Item = dyn ExtensionRange>;
+    fn extension_ranges(&self) -> I::ExtensionRangeIter;
     /// `Oneof`s defined in this `Message`.
-    fn oneofs(&self) -> dyn ExactSizeIterator<Item = dyn OneofDescriptor<'a>>;
-    fn options(&self) -> dyn MessageOptions<'a>;
-    fn reserved_ranges(&self) -> dyn ReservedRanges<'a>;
+    fn oneofs(&self) -> I::OneofDescriptor;
+    fn options(&self) -> I::MessageOptions;
+    fn reserved_ranges(&self) -> I::ReservedRanges;
     fn reserved_names(&self) -> slice::Iter<String>;
 }
 
-pub trait EnumDescriptor<'a>: Clone + Copy + Debug {
+#[cfg_attr(test, automock)]
+pub trait EnumDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn name(&self) -> &'a str;
-    fn values(&self) -> dyn ExactSizeIterator<Item = dyn EnumValueDescriptor<'a>>;
-    fn options(&self) -> dyn EnumOptions<'a>;
+    fn values(&self) -> I::EnumValueDescriptorIter;
+    fn options(&self) -> I::EnumOptions<'a>;
     /// Range of reserved numeric values. Reserved numeric values may not be used
     /// by enum values in the same enum declaration. Reserved ranges may not
     /// overlap.   
-    fn reserved_ranges(&self) -> EnumReservedRanges<'a>;
+    fn reserved_ranges(&self) -> I::EnumReservedRanges;
     fn reserved_names(&self) -> slice::Iter<String>;
 }
-pub trait EnumValueDescriptor<'a>: Clone + Copy + Debug {
+
+#[cfg_attr(test, automock)]
+pub trait EnumValueDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn name(&self) -> &'a str;
     fn number(&self) -> i32;
-    fn options(&self) -> dyn EnumValueOptions<'a>;
+    fn options(&self) -> I::EnumValueOptions;
 }
 
 /// Describes a field within a message.
-pub trait FieldDescriptor<'a>: Clone + Copy + Debug {
+#[cfg_attr(test, automock)]
+pub trait FieldDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn name(&self) -> &str;
     fn number(&self) -> i32;
     fn label(&self) -> Label;
@@ -94,7 +94,7 @@ pub trait FieldDescriptor<'a>: Clone + Copy + Debug {
     /// will be used. Otherwise, it's deduced from the field's name by converting
     /// it to camelCase.
     fn json_name(&self) -> &str;
-    fn options(&self) -> dyn FieldOptions<'a>;
+    fn options(&self) -> I::FieldOptions<'a>;
     /// If true, this is a proto3 "optional". When a proto3 field is optional, it
     /// tracks presence regardless of field type.
     ///
@@ -222,22 +222,20 @@ pub trait FieldDescriptor<'a>: Clone + Copy + Debug {
 }
 
 /// Describes a service.
-pub trait ServiceDescriptor<'a>: Clone + Copy + Debug {
+pub trait ServiceDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn name(&self) -> &'a str;
-    fn options(&self) -> dyn ServiceOptions<'a>;
-    fn methods(&self) -> dyn ExactSizeIterator<Item = dyn MethodDescriptor<'a>>;
+    fn options(&self) -> I::ServiceOptions;
+    fn methods(&self) -> I::MethodDescriptorIter;
 }
 
 /// Describes a method.
-pub trait MethodDescriptor<'a>: Clone + Copy + Debug {
+pub trait MethodDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn name(&self) -> &'a str;
     /// Input type name.
     ///
     /// These are resolved in the same way as
     /// `FieldDescriptor.type_name`, but must refer to a message type
-    fn input_type(&self) -> &'a str {
-        self.desc.input_type()
-    }
+    fn input_type(&self) -> &'a str;
     /// Output type name.
     ///
     /// These are resolved in the same way as
@@ -247,13 +245,14 @@ pub trait MethodDescriptor<'a>: Clone + Copy + Debug {
     fn client_streaming(&self) -> bool;
     /// Identifies if server streams multiple server messages
     fn server_streaming(&self) -> bool;
-    fn options(&self) -> dyn MethodOptions<'a>;
+    fn options(&self) -> I::MethodOptions;
 }
 
 /// Describes a oneof.
-pub trait OneofDescriptor<'a>: Clone + Copy + Debug {
+#[cfg_attr(test, automock)]
+pub trait OneofDescriptor<'a, I: Impl<'a>>: Clone + Copy + Debug {
     fn name(&self) -> &'a str;
-    fn options(&self) -> dyn OneofOptions<'a>;
+    fn options(&self) -> I::OneofOptions;
 }
 
 // ===================================================================
@@ -288,7 +287,8 @@ pub trait OneofDescriptor<'a>: Clone + Copy + Debug {
 //   If this turns out to be popular, a web service will be set up
 //   to automatically assign option numbers.
 
-pub trait FileOptions<'a>: Clone + Copy + Debug {
+#[cfg_attr(test, automock)]
+pub trait FileOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Java package where classes generated from this .proto will be
     /// placed.  By default, the proto package is used, but this is often
     /// inappropriate because proto packages do not normally start with backwards
@@ -382,9 +382,11 @@ pub trait FileOptions<'a>: Clone + Copy + Debug {
     fn ruby_package(&self) -> &str;
     /// The parser stores options it doesn't recognize here.
     /// See the documentation for the "Options" section above.
-    fn uninterpreted_options(&self) -> dyn ExactSizeIterator<Item = dyn UninterpretedOption<'a>>;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionIter;
 }
-pub trait EnumValueOptions<'a>: Clone + Copy + Debug {
+
+#[cfg_attr(test, automock)]
+pub trait EnumValueOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Is this enum value deprecated?
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for the enum value, or it will be completely ignored; in the very least,
@@ -392,9 +394,11 @@ pub trait EnumValueOptions<'a>: Clone + Copy + Debug {
     fn deprecated(&self) -> bool;
     fn is_deprecated(&self) -> bool;
     /// Options not recognized by the parser.
-    fn uninterpreted_options(&self) -> dyn ExactSizeIterator<Item = dyn UninterpretedOption<'a>>;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionIter;
 }
-pub trait MessageOptions<'a>: Clone + Copy + Debug {
+
+#[cfg_attr(test, automock)]
+pub trait MessageOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Set true to use the old proto1 MessageSet wire format for extensions.
     /// This is provided for backwards-compatibility with the MessageSet wire
     /// format.  You should not use this for any other reason:  It's less
@@ -443,10 +447,11 @@ pub trait MessageOptions<'a>: Clone + Copy + Debug {
     fn is_deprecated(&self) -> bool;
     fn no_standard_descriptor_accessor(&self) -> bool;
     /// The parser stores options it doesn't recognize here. See above.
-    fn uninterpreted_options(&self) -> dyn ExactSizeIterator<Item = dyn UninterpretedOption<'a>>;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
 }
 
-pub trait FieldOptions<'a>: Clone + Copy + Debug {
+#[cfg_attr(test, automock)]
+pub trait FieldOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// The ctype option instructs the C++ code generator to use a different
     /// representation of the field than it normally would.  See the specific
     /// options below.  This option is not yet implemented in the open source
@@ -510,10 +515,11 @@ pub trait FieldOptions<'a>: Clone + Copy + Debug {
     fn is_weak(&self) -> bool;
 
     /// Options the parser does not recognize.
-    fn uninterpreted_options(&self) -> dyn ExactSizeIterator<Item = dyn UninterpretedOption<'a>>;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
 }
 
-pub trait EnumOptions<'a>: Clone + Copy + Debug {
+#[cfg_attr(test, automock)]
+pub trait EnumOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Is this enum deprecated?
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for the enum, or it will be completely ignored; in the very least, this
@@ -521,7 +527,7 @@ pub trait EnumOptions<'a>: Clone + Copy + Debug {
     fn deprecated(&self) -> bool;
     fn is_deprecated(&self) -> bool;
     /// Options not recognized by the parser.
-    fn uninterpreted_options(&self) -> dyn ExactSizeIterator<Item = dyn UninterpretedOption<'a>>;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
     /// Allows mapping different tag names to the same value.
     fn allow_alias(&self) -> bool;
 }
@@ -530,8 +536,8 @@ pub trait EnumOptions<'a>: Clone + Copy + Debug {
 ///
 /// Note: Field numbers 1 through 32 are reserved for Google's internal RPC
 /// framework.
-
-pub trait ServiceOptions<'a>: Clone + Copy + Debug {
+#[cfg_attr(test, automock)]
+pub trait ServiceOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Is this service deprecated?
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for the service, or it will be completely ignored; in the very least,
@@ -539,14 +545,15 @@ pub trait ServiceOptions<'a>: Clone + Copy + Debug {
     fn deprecated(&self) -> bool;
     fn is_deprecated(&self) -> bool;
     /// The parser stores options it doesn't recognize here. See above.
-    fn uninterpreted_options(&self) -> dyn ExactSizeIterator<Item = dyn UninterpretedOption<'a>>;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
 }
 
 /// Options for a Method.
 ///
 /// Note:  Field numbers 1 through 32 are reserved for Google's internal RPC
 /// framework.
-pub trait MethodOptions<'a>: Clone + Copy + Debug {
+#[cfg_attr(test, automock)]
+pub trait MethodOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     // Note:  Field numbers 1 through 32 are reserved for Google's internal RPC
     //   framework.  We apologize for hoarding these numbers to ourselves, but
     //   we were already using them long before we decided to release Protocol
@@ -559,23 +566,23 @@ pub trait MethodOptions<'a>: Clone + Copy + Debug {
     fn deprecated(&self) -> bool;
     fn is_deprecated(&self) -> bool;
     /// The parser stores options it doesn't recognize here. See above.
-    fn uninterpreted_options(&self) -> dyn ExactSizeIterator<Item = dyn UninterpretedOption<'a>>;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
 
     /// Is this method side-effect-free (or safe in HTTP parlance), or idempotent,
     /// or neither? HTTP based RPC implementation may choose GET verb for safe
     /// methods, and PUT verb for idempotent methods instead of the default POST.
     fn idempotency_level(&self) -> IdempotencyLevel;
-    fn opts(&self) -> &'a prost_types::MethodOptions;
 }
-
-pub trait OneofOptions<'a>: Clone + Copy + Debug {
+#[cfg_attr(test, automock)]
+pub trait OneofOptions<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// The parser stores options it doesn't recognize here. See above.
-    fn uninterpreted_options(&self) -> dyn ExactSizeIterator<Item = dyn UninterpretedOption<'a>>;
+    fn uninterpreted_options(&self) -> I::UninterpretedOptionsIter;
 }
 
 /// Range of reserved tag numbers. Reserved tag numbers may not be used by
 /// fields or extension ranges in the same message. Reserved ranges may
 /// not overlap.
+#[cfg_attr(test, automock)]
 pub trait ReservedRange<'a>: Clone + Copy + Debug {
     /// Inclusive.
     fn start(&self) -> i32;
@@ -587,98 +594,42 @@ pub trait ReservedRange<'a>: Clone + Copy + Debug {
         self.start() <= val && val < self.end()
     }
 }
-impl<'a, T> PartialEq for T
-where
-    T: ReservedRange<'a>,
-{
+
+impl<'a, T: ReservedRange<'a>> PartialEq for T {
     fn eq(&self, other: &Self) -> bool {
         self.start() == other.start() && self.end() == other.end()
     }
 }
 
-pub trait ReservedRanges<'a>:
-    IntoIterator<Item = dyn ReservedRange<'a>, IntoIter = dyn ReservedRangeIter<'a, Self::Item>>
-where
-    Self: Clone + Copy + Debug,
+pub trait ReservedRanges<'a, I: Impl<'a>>:
+    Clone + Copy + Debug + IntoIterator<Item = I::ReservedRange, IntoIter = I::ReservedRangeIter>
 {
-    fn iter(&self) -> ReservedRangeIter<'a> {
-        self.ranges.into()
-    }
     fn len(&self) -> usize {
-        self.ranges.len()
+        self.into_iter().len()
     }
     fn is_empty(&self) -> bool {
-        self.ranges.is_empty()
+        self.into_iter().is_empty()
     }
-    fn get(&self, index: usize) -> Option<ReservedRange<'a>> {
-        self.ranges.get(index).map(Into::into)
-    }
-    fn is_range_reserved(&self, min: i32, max: i32) -> bool {
-        self.iter().any(|r| r.start() <= min && r.end() >= max)
+    fn get(&self, index: usize) -> Option<dyn ReservedRange<'a>> {
+        self.into_iter().nth(index)
     }
     fn is_in_reserved_range(&self, num: i32) -> bool {
-        self.iter().any(|r| r.start() <= num && r.end() >= num)
-    }
-}
-impl<'a> From<&'a Vec<prost_types::descriptor_proto::ReservedRange>> for ReservedRanges<'a> {
-    fn from(ranges: &'a Vec<prost_types::descriptor_proto::ReservedRange>) -> Self {
-        ReservedRanges { ranges }
-    }
-}
-impl<'a> Copy for ReservedRanges<'a> {}
-impl<'a> Clone for ReservedRanges<'a> {
-    fn clone(&self) -> Self {
-        ReservedRanges {
-            ranges: self.ranges,
-        }
+        self.into_iter().any(|r| r.start() <= num && r.end() >= num)
     }
 }
 
-#[derive(Debug)]
-pub struct ExtensionRange<'a> {
-    range: &'a prost_types::descriptor_proto::ExtensionRange,
-}
-impl<'a> PartialEq for ExtensionRange<'a> {
-    fn eq(&self, other: &Self) -> bool {
-        self.range.start() == other.start() && self.end() == other.end()
-    }
-}
-impl<'a> ExtensionRange<'a> {
+pub trait ExtensionRange<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Inclusive.
-    pub fn start(&self) -> i32 {
-        self.range.start()
-    }
+    fn start(&self) -> i32;
     /// Exclusive.
-    pub fn end(&self) -> i32 {
-        self.range.end()
-    }
-    pub fn in_range(&self, val: i32) -> bool {
+    fn end(&self) -> i32;
+    fn in_range(&self, val: i32) -> bool {
         self.start() <= val && val < self.end()
     }
 }
-impl<'a> From<&'a prost_types::descriptor_proto::ExtensionRange> for ExtensionRange<'a> {
-    fn from(range: &'a prost_types::descriptor_proto::ExtensionRange) -> Self {
-        ExtensionRange { range }
-    }
-}
-impl<'a> Copy for ExtensionRange<'a> {}
-impl<'a> Clone for ExtensionRange<'a> {
-    fn clone(&self) -> Self {
-        ExtensionRange { range: self.range }
-    }
-}
-
-impl<'a> From<&'a Vec<prost_types::descriptor_proto::ExtensionRange>> for ExtensionRanges<'a> {
-    fn from(ranges: &'a Vec<prost_types::descriptor_proto::ExtensionRange>) -> Self {
-        ExtensionRanges { ranges }
-    }
-}
-impl<'a> Copy for ExtensionRanges<'a> {}
-impl<'a> Clone for ExtensionRanges<'a> {
-    fn clone(&self) -> Self {
-        ExtensionRanges {
-            ranges: self.ranges,
-        }
+impl<'a, T: ExtensionRange<'a, I>, I: Impl<'a>> PartialEq for T {
+    fn eq(&self, other: &Self) -> bool {
+        self.range.start() == other.start() && self.end() == other.end()
     }
 }
 
@@ -688,75 +639,34 @@ impl<'a> Clone for ExtensionRanges<'a> {
 /// Note that this is distinct from DescriptorProto.ReservedRange in that it
 /// is inclusive such that it can appropriately represent the entire int32
 /// domain.
-#[derive(Debug, PartialEq)]
-pub struct EnumReservedRange<'a> {
-    rr: &'a prost_types::enum_descriptor_proto::EnumReservedRange,
-}
-impl<'a> From<&'a prost_types::enum_descriptor_proto::EnumReservedRange> for EnumReservedRange<'a> {
-    fn from(r: &'a prost_types::enum_descriptor_proto::EnumReservedRange) -> Self {
-        Self { rr: r }
-    }
-}
-impl<'a> EnumReservedRange<'a> {
+#[cfg_attr(test, automock)]
+pub trait EnumReservedRange<'a, I: Impl<'a>>: Clone + Copy + Debug {
     /// Inclusive
-    pub fn start(&self) -> i32 {
-        self.rr.start()
-    }
+    fn start(&self) -> i32;
     /// Inclusive
-    pub fn end(&self) -> i32 {
-        self.rr.end()
-    }
-}
-impl<'a> Copy for EnumReservedRange<'a> {}
-impl<'a> Clone for EnumReservedRange<'a> {
-    fn clone(&self) -> Self {
-        Self { rr: self.rr }
-    }
+    fn end(&self) -> i32;
 }
 
-#[derive(Debug)]
-pub struct EnumReservedRanges<'a> {
-    ranges: &'a [prost_types::enum_descriptor_proto::EnumReservedRange],
-}
-impl<'a> IntoIterator for EnumReservedRanges<'a> {
-    type Item = EnumReservedRange<'a>;
-    type IntoIter = EnumReservedRangeIter<'a>;
-    fn into_iter(self) -> Self::IntoIter {
+#[cfg_attr(test, automock)]
+pub trait EnumReservedRanges<'a, I: Impl<'a>>:
+    IntoIterator<Item = EnumReservedRange, IntoIter = EnumReservedRangeIter>
+{
+    fn iter(&self) -> EnumReservedRangeIter<'a> {
         self.ranges.into()
     }
-}
-impl<'a> EnumReservedRanges<'a> {
-    pub fn iter(&self) -> EnumReservedRangeIter<'a> {
-        self.ranges.into()
-    }
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         self.ranges.len()
     }
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.ranges.is_empty()
     }
-    pub fn get(&self, index: usize) -> Option<EnumReservedRange<'a>> {
+    fn get(&self, index: usize) -> Option<EnumReservedRange<'a>> {
         self.ranges.get(index).map(|r| r.into())
     }
-    pub fn is_range_reserved(&self, min: i32, max: i32) -> bool {
+    fn is_range_reserved(&self, min: i32, max: i32) -> bool {
         self.iter().any(|r| r.start() <= min && r.end() >= max)
     }
-    pub fn is_in_reserved_range(&self, num: i32) -> bool {
+    fn is_in_reserved_range(&self, num: i32) -> bool {
         self.iter().any(|r| r.start() <= num && r.end() >= num)
-    }
-}
-impl<'a> Copy for EnumReservedRanges<'a> {}
-impl<'a> Clone for EnumReservedRanges<'a> {
-    fn clone(&self) -> Self {
-        Self {
-            ranges: self.ranges,
-        }
-    }
-}
-impl<'a> From<&'a Vec<prost_types::enum_descriptor_proto::EnumReservedRange>>
-    for EnumReservedRanges<'a>
-{
-    fn from(ranges: &'a Vec<prost_types::enum_descriptor_proto::EnumReservedRange>) -> Self {
-        Self { ranges }
     }
 }

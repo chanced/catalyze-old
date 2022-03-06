@@ -30,7 +30,7 @@ impl<'a, U> Clone for Message<'a, U> {
 pub(crate) struct MessageDetail<'a, U> {
     name: Name<U>,
     is_map_entry: bool,
-    descriptor: MessageDescriptor<'a, U>,
+    descriptor: dyn MessageDescriptor<'a, U>,
     well_known_type: Option<WellKnownType>,
     fqn: String,
     util: RefCell<Rc<U>>,
@@ -51,7 +51,7 @@ pub(crate) struct MessageDetail<'a, U> {
 }
 
 impl<'a, U> Message<'a, U> {
-    pub(crate) fn new(desc: MessageDescriptor<'a, U>, container: Container<'a, U>) -> Self {
+    pub(crate) fn new(desc: dyn MessageDescriptor<'a, U>, container: Container<'a, U>) -> Self {
         let util = container.util();
         let fqn = format_fqn(&container, desc.name());
         // let well_known_type = if container.package().is_well_known() {

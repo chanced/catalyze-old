@@ -56,8 +56,6 @@ impl<'a, U> Node<'a, U> {
     }
 
     pub(crate) fn set_comments(&self, c: Comments<'a, U>) {
-        let x: prost_types::EnumDescriptorProto;
-
         match self {
             Node::Message(m) => m.set_comments(c),
             Node::Field(f) => f.set_comments(c),

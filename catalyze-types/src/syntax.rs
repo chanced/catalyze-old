@@ -57,20 +57,3 @@ impl From<&str> for Syntax {
         }
     }
 }
-impl From<prost_types::Syntax> for Syntax {
-    fn from(syntax: prost_types::Syntax) -> Self {
-        match syntax {
-            prost_types::Syntax::Proto2 => Syntax::Proto2,
-            prost_types::Syntax::Proto3 => Syntax::Proto3,
-        }
-    }
-}
-
-impl From<&prost_types::Syntax> for Syntax {
-    fn from(syntax: &prost_types::Syntax) -> Self {
-        match syntax {
-            prost_types::Syntax::Proto2 => Syntax::Proto2,
-            prost_types::Syntax::Proto3 => Syntax::Proto3,
-        }
-    }
-}

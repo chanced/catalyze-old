@@ -15,7 +15,7 @@ use std::rc::{Rc, Weak};
 
 #[derive(Debug, Clone)]
 struct FileDetail<'a, U> {
-    desc: FileDescriptor<'a, U>,
+    desc: dyn FileDescriptor<'a, U>,
     name: Name<U>,
     file_path: PathBuf,
     build_target: bool,
@@ -38,7 +38,7 @@ pub struct File<'a, U>(Rc<FileDetail<'a, U>>);
 impl<'a, U> File<'a, U> {
     pub(crate) fn new(
         build_target: bool,
-        desc: FileDescriptor<'a, U>,
+        desc: dyn FileDescriptor<'a, U>,
         pkg: Package<'a, U>,
     ) -> Self {
         let util = pkg.util();

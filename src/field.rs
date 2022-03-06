@@ -30,7 +30,7 @@ pub(crate) struct FieldDetail<'a, U> {
     is_map: bool,
     in_oneof: bool,
     util: RefCell<Rc<U>>,
-    desc: FieldDescriptor<'a, U>,
+    desc: dyn FieldDescriptor<'a, U>,
     comments: RefCell<Comments<'a, U>>,
 }
 impl<'a, U> Clone for FieldDetail<'a, U> {
@@ -70,7 +70,7 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn syntax(&self) -> Syntax {
         self.syntax
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+    pub fn descriptor(&self) -> dyn FieldDescriptor<'a, U> {
         self.desc
     }
     pub fn is_map(&self) -> bool {

@@ -1,10 +1,10 @@
 use anyhow::bail;
 
 /// Paths for nodes in a FileDescriptorProto
-#[derive(Clone, PartialEq, Eq, Copy)]
 
 /// TODO: This could/should be turned into a tree of nested enums, where leaves end in something like Node(i32)
 
+#[derive(Clone, PartialEq, Eq, Copy)]
 #[repr(i32)]
 pub enum FileDescriptorPath {
     /// file name, relative to root of source tree

@@ -13,7 +13,7 @@ which = { version = "4.2" }
 
 
 [workspace]
-members = ["./catalyze-build", "./catalyze-prost"]
+members = ["catalyze-build", "catalyze-prost", "catalyze-types"]
 
 [features]
 # Enables the `MessageGraph` util sourced from prost to determine dependency cycles.

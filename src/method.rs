@@ -1,13 +1,13 @@
 use std::{cell::RefCell, rc::Rc};
 
+use crate::proto::MethodDescriptor;
 use crate::{FullyQualified, Name, Node, NodeAtPath};
-
 pub(crate) type MethodList<'a, U> = Rc<RefCell<Vec<Method<'a, U>>>>;
 
 #[derive(Debug, Clone)]
 struct MethodDetail<'a, U> {
     name: Name<U>,
-    desc: &'a prost_types::MethodDescriptorProto,
+    desc: dyn MethodDescriptor<'a>,
     fqn: String,
 }
 
