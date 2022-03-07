@@ -2,9 +2,8 @@ pub mod enums;
 pub mod interface;
 use interface::*;
 
-pub trait Impl<'a> {
+pub trait Interface<'a>: Sized {
     // Descriptors
-
     type FileDescriptor: FileDescriptor<'a, Self>;
     type EnumDescriptor: EnumDescriptor<'a, Self>;
     type EnumValueDescriptor: EnumValueDescriptor<'a, Self>;

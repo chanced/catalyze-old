@@ -8,12 +8,13 @@ heck = "0.4"
 anyhow = "1.0.53"
 petgraph = { version = "0.6.0", optional = true }
 catalyze-prost = { path = "./catalyze-prost" }
+lazy_static = "1.4.0"
 [build-dependencies]
 which = { version = "4.2" }
 
 
 [workspace]
-members = ["catalyze-build", "catalyze-prost", "catalyze-interface"]
+members = ["catalyze-build", "catalyze-prost"]
 
 [features]
 
