@@ -1,4 +1,4 @@
-use crate::util::ToCase;
+use crate::util::{Generic, ToCase};
 use crate::WELL_KNNOWN_TYPE_PACKAGE;
 pub use heck::{
     AsLowerCamelCase, ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase,
@@ -245,6 +245,13 @@ impl<'a, U> fmt::Debug for Name<U> {
 impl<'a, U> fmt::Display for Name<U> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.val)
+    }
+}
+
+#[cfg(test)]
+impl Default for Name<Generic> {
+    fn default() -> Self {
+        Name::new("", Rc::new(Generic {}))
     }
 }
 

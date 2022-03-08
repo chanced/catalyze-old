@@ -14,8 +14,8 @@ pub use repeated_field::*;
 pub use scalar_field::*;
 
 use crate::{
-    proto::{FieldDescriptor, Location, Syntax},
-    Comments, FullyQualified, Message, Name, Node, NodeAtPath, WeakMessage,
+    proto::{FieldDescriptor, Syntax},
+    Comments, File, FullyQualified, Message, Name, Node, NodeAtPath, Package, WeakMessage,
 };
 use std::{cell::RefCell, convert::From, rc::Rc};
 
@@ -30,7 +30,7 @@ pub(crate) struct FieldDetail<'a, U> {
     is_map: bool,
     in_oneof: bool,
     util: RefCell<Rc<U>>,
-    desc: dyn FieldDescriptor<'a, U>,
+    desc: FieldDescriptor<'a>,
     comments: RefCell<Comments<'a, U>>,
 }
 impl<'a, U> Clone for FieldDetail<'a, U> {
@@ -70,7 +70,7 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn syntax(&self) -> Syntax {
         self.syntax
     }
-    pub fn descriptor(&self) -> dyn FieldDescriptor<'a, U> {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.desc
     }
     pub fn is_map(&self) -> bool {
@@ -104,6 +104,13 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn comments(&self) -> Comments<'a, U> {
         *self.comments.borrow()
     }
+    pub fn file(&self) -> File<'a, U> {
+        self.msg.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.file().package()
+    }
+
     /// Returns `true` for all fields that have explicit presence.
     ///
     /// See:
@@ -170,6 +177,27 @@ impl<'a, U> Field<'a, U> {
             Field::Scalar(f) => f.comments(),
         }
     }
+
+    pub fn file(&self) -> File<'a, U> {
+        match self {
+            Field::Embed(f) => f.file(),
+            Field::Enum(f) => f.file(),
+            Field::Map(f) => f.file(),
+            Field::Oneof(f) => f.file(),
+            Field::Repeated(f) => f.file(),
+            Field::Scalar(f) => f.file(),
+        }
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        match self {
+            Field::Embed(f) => f.package(),
+            Field::Enum(f) => f.package(),
+            Field::Map(f) => f.package(),
+            Field::Oneof(f) => f.package(),
+            Field::Repeated(f) => f.package(),
+            Field::Scalar(f) => f.package(),
+        }
+    }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         match self {
             Field::Embed(f) => f.set_comments(comments),
@@ -214,6 +242,31 @@ impl<'a, U> FullyQualified for Field<'a, U> {
             Field::Repeated(f) => f.fully_qualified_name(),
             Field::Scalar(f) => f.fully_qualified_name(),
         }
+    }
+}
+
+#[cfg(test)]
+impl<'a> Default for FieldDetail<'a, crate::util::Generic> {
+    fn default() -> Self {
+        let msg = Message::default();
+        Self {
+            msg: msg.clone().into(),
+            name: Default::default(),
+            fqn: Default::default(),
+            syntax: Syntax::Proto3,
+            is_map: false,
+            in_oneof: false,
+            util: RefCell::new(msg.util()),
+            desc: FieldDescriptor::default(),
+            comments: Default::default(),
+        }
+    }
+}
+
+#[cfg(test)]
+impl<'a> Default for Field<'a, crate::util::Generic> {
+    fn default() -> Self {
+        Self::Scalar(ScalarField::default())
     }
 }
 

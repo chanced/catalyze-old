@@ -1,11 +1,13 @@
 use crate::container::Container;
-use crate::iter::{AllEnums, AllMessages, FileRefIter, Iter, TransitiveImports};
+use crate::iter::{FileRefIter, Iter, TransitiveImports};
 use crate::package::WeakPackage;
 
-use crate::proto::{FileDescriptor, FileDescriptorPath};
+use crate::proto::path::FileDescriptorPath;
+use crate::proto::FileDescriptor;
+
 use crate::{
-    Comments, Enum, EnumList, Extension, ExtensionList, FullyQualified, Message, MessageList, Name,
-    Node, NodeAtPath, Package, Service, ServiceList,
+    AllEnums, AllMessages, Comments, Enum, EnumList, Extension, ExtensionList, FullyQualified,
+    Message, MessageList, Name, Node, NodeAtPath, Package, Service, ServiceList,
 };
 use std::cell::RefCell;
 
@@ -15,7 +17,7 @@ use std::rc::{Rc, Weak};
 
 #[derive(Debug, Clone)]
 struct FileDetail<'a, U> {
-    desc: dyn FileDescriptor<'a, U>,
+    desc: FileDescriptor<'a>,
     name: Name<U>,
     file_path: PathBuf,
     build_target: bool,
@@ -36,11 +38,7 @@ struct FileDetail<'a, U> {
 pub struct File<'a, U>(Rc<FileDetail<'a, U>>);
 
 impl<'a, U> File<'a, U> {
-    pub(crate) fn new(
-        build_target: bool,
-        desc: dyn FileDescriptor<'a, U>,
-        pkg: Package<'a, U>,
-    ) -> Self {
+    pub(crate) fn new(build_target: bool, desc: FileDescriptor<'a>, pkg: Package<'a, U>) -> Self {
         let util = pkg.util();
         let name = Name::new(desc.name(), util.clone());
         let fqn = match desc.package() {
@@ -74,7 +72,7 @@ impl<'a, U> File<'a, U> {
 
                 // TODO: handle map & oneof sitautions
                 todo!();
-                msgs.push(msg);
+                // msgs.push(msg);
             }
         }
         {
@@ -87,7 +85,7 @@ impl<'a, U> File<'a, U> {
         {
             let mut services = file.0.services.borrow_mut();
             for sd in desc.services() {
-                let svc = Service::new(sd, container.clone());
+                let svc = Service::new(sd, file.clone());
                 services.push(svc);
             }
         }
@@ -104,9 +102,12 @@ impl<'a, U> File<'a, U> {
                     Ok(p) => match p {
                         FileDescriptorPath::Package => file.set_package_comments(loc.into()),
                         FileDescriptorPath::Syntax => file.set_comments(loc.into()),
-                        _ => file
-                            .node_at_path(loc.path())
-                            .map(|node| node.set_comments(loc.into())),
+                        _ => {
+                            let n = file.node_at_path(loc.path());
+                            if n.is_some() {
+                                n.unwrap().set_comments(loc.into())
+                            }
+                        }
                     },
                     Err(_) => continue,
                 }
@@ -132,12 +133,11 @@ impl<'a, U> File<'a, U> {
     pub fn package_comments(&self) -> Comments<'a, U> {
         *self.0.pkg_comments.borrow()
     }
-
-    pub(crate) fn set_package_comments(&self, comments: Comments<'a, U>) {
-        *self.0.pkg_comments.borrow_mut() = comments;
-    }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         *self.0.comments.borrow_mut() = comments;
+    }
+    pub(crate) fn set_package_comments(&self, comments: Comments<'a, U>) {
+        *self.0.pkg_comments.borrow_mut() = comments;
     }
     pub fn util(&self) -> Rc<U> {
         self.0.util.borrow().clone()
@@ -247,6 +247,29 @@ impl<'a, U> Clone for File<'a, U> {
 impl<'a, U> FullyQualified for File<'a, U> {
     fn fully_qualified_name(&self) -> String {
         self.0.fqn.clone()
+    }
+}
+
+#[cfg(test)]
+impl<'a> Default for File<'a, crate::util::Generic> {
+    fn default() -> Self {
+        File(Rc::new(FileDetail {
+            build_target: false,
+            fqn: "".to_string(),
+            file_path: PathBuf::new(),
+            name: Name::default(),
+            pkg: Package::default().into(),
+            dependencies: Default::default(),
+            dependents: Default::default(),
+            messages: Default::default(),
+            enums: Default::default(),
+            services: Default::default(),
+            defined_extensions: Default::default(),
+            comments: Default::default(),
+            pkg_comments: RefCell::new(Comments::default()),
+            util: RefCell::new(Rc::new(crate::util::Generic::default())),
+            desc: FileDescriptor::default(),
+        }))
     }
 }
 

@@ -3,6 +3,9 @@ mod generic;
 
 mod rust;
 pub mod typescript;
+
+use std::error::Error;
+
 pub use format::*;
 pub use generic::*;
 pub use rust::*;
@@ -13,5 +16,6 @@ pub mod message_graph;
 use crate::Ast;
 
 pub trait Util: Sized {
-    fn init(&self, ast: Ast<'_, Self>) -> Self;
+    type Error: Error + Send + Sync + 'static;
+    fn init<'a>(&self, ast: &Ast<'a, Self>) -> Result<Self, Self::Error>;
 }

@@ -1,13 +1,15 @@
 use std::{
     cell::RefCell,
+    collections::VecDeque,
     rc::{Rc, Weak},
 };
 
 use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
-    proto::{EnumDescriptor, EnumDescriptorPath},
-    Comments, EnumValue, FullyQualified, Name, Node, NodeAtPath, Package, WeakMessage,
+    proto::{path::EnumDescriptorPath, EnumDescriptor},
+    Comments, EnumValue, File, FullyQualified, Message, MessageList, Name, Node, NodeAtPath,
+    Package, WeakMessage,
 };
 
 pub(crate) type EnumList<'a, U> = Rc<RefCell<Vec<Enum<'a, U>>>>;
@@ -21,7 +23,7 @@ struct EnumDetail<'a, U> {
     container: WeakContainer<'a, U>,
     dependents: Rc<RefCell<Vec<WeakMessage<'a, U>>>>,
     util: RefCell<Rc<U>>,
-    descriptor: dyn EnumDescriptor<'a, U>,
+    descriptor: EnumDescriptor<'a>,
 }
 
 impl<'a, U> EnumDetail<'a, U> {
@@ -37,7 +39,7 @@ impl<'a, U> EnumDetail<'a, U> {
 pub struct Enum<'a, U>(Rc<EnumDetail<'a, U>>);
 
 impl<'a, U> Enum<'a, U> {
-    pub(crate) fn new(desc: dyn EnumDescriptor<'a, U>, container: Container<'a, U>) -> Self {
+    pub(crate) fn new(desc: EnumDescriptor<'a>, container: Container<'a, U>) -> Self {
         let util = container.util();
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
 
@@ -62,6 +64,12 @@ impl<'a, U> Enum<'a, U> {
         e
     }
 
+    pub fn container(&self) -> Container<'a, U> {
+        self.0.container.clone().into()
+    }
+    pub fn file(&self) -> File<'a, U> {
+        self.0.container.file()
+    }
     pub fn name(&self) -> Name<U> {
         self.0.name.clone()
     }
@@ -148,5 +156,57 @@ impl<'a, U> From<Enum<'a, U>> for WeakEnum<'a, U> {
 impl<'a, U> From<&Enum<'a, U>> for WeakEnum<'a, U> {
     fn from(e: &Enum<'a, U>) -> Self {
         e.downgrade()
+    }
+}
+
+#[cfg(test)]
+impl<'a> Default for Enum<'a, crate::util::Generic> {
+    fn default() -> Self {
+        let container = Container::default();
+        Enum(Rc::new(EnumDetail {
+            name: Name::default(),
+            values: Rc::new(RefCell::new(Vec::default())),
+            container: container.clone().into(),
+            dependents: Rc::new(RefCell::new(Vec::default())),
+            fqn: "".to_string(),
+            util: RefCell::new(container.util()),
+            descriptor: EnumDescriptor::default(),
+            comments: RefCell::new(Comments::default()),
+        }))
+    }
+}
+
+#[derive(Debug)]
+pub struct AllEnums<'a, U> {
+    msgs: VecDeque<Message<'a, U>>,
+    enums: VecDeque<Enum<'a, U>>,
+}
+impl<'a, U> AllEnums<'a, U> {
+    pub(crate) fn new(enums: EnumList<'a, U>, msgs: MessageList<'a, U>) -> Self {
+        Self {
+            msgs: msgs.borrow().iter().cloned().collect(),
+            enums: enums.borrow().iter().cloned().collect(),
+        }
+    }
+}
+impl<'a, U> Iterator for AllEnums<'a, U> {
+    type Item = Enum<'a, U>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(e) = self.enums.pop_front() {
+            Some(e)
+        } else {
+            while let Some(msg) = self.msgs.pop_front() {
+                for v in msg.messages() {
+                    self.msgs.push_back(v);
+                }
+                for v in msg.enums() {
+                    self.enums.push_back(v);
+                }
+                if let Some(e) = self.enums.pop_front() {
+                    return Some(e);
+                }
+            }
+            None
+        }
     }
 }

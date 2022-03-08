@@ -3,14 +3,16 @@ use std::rc::{Rc, Weak};
 
 use crate::extension::WeakExtension;
 use crate::field::FieldList;
-use crate::iter::{AllEnums, AllMessages, Iter};
-use crate::proto::{DescriptorPath, MessageDescriptor};
+use crate::iter::Iter;
+use crate::proto::{path::DescriptorPath, MessageDescriptor};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
-    format_fqn, Comments, Enum, EnumList, Extension, Field, FullyQualified, Node, NodeAtPath,
-    Oneof, OneofList,
+    format_fqn, AllEnums, Comments, Enum, EnumList, Extension, Field, File, FullyQualified, Node,
+    NodeAtPath, Oneof, OneofList,
 };
 use crate::{Package, WellKnownType};
+
+use std::{collections::VecDeque, marker::PhantomData};
 
 pub(crate) type MessageList<'a, U> = Rc<RefCell<Vec<Message<'a, U>>>>;
 
@@ -30,7 +32,7 @@ impl<'a, U> Clone for Message<'a, U> {
 pub(crate) struct MessageDetail<'a, U> {
     name: Name<U>,
     is_map_entry: bool,
-    descriptor: dyn MessageDescriptor<'a, U>,
+    descriptor: MessageDescriptor<'a>,
     well_known_type: Option<WellKnownType>,
     fqn: String,
     util: RefCell<Rc<U>>,
@@ -51,7 +53,7 @@ pub(crate) struct MessageDetail<'a, U> {
 }
 
 impl<'a, U> Message<'a, U> {
-    pub(crate) fn new(desc: dyn MessageDescriptor<'a, U>, container: Container<'a, U>) -> Self {
+    pub(crate) fn new(desc: MessageDescriptor<'a>, container: Container<'a, U>) -> Self {
         let util = container.util();
         let fqn = format_fqn(&container, desc.name());
         // let well_known_type = if container.package().is_well_known() {
@@ -65,7 +67,6 @@ impl<'a, U> Message<'a, U> {
 
         // TODO: Fix this
         let well_known_type = None;
-
         let msg = Message(Rc::new(MessageDetail {
             name: Name::new(desc.name(), util.clone()),
             container: container.into(),
@@ -107,7 +108,7 @@ impl<'a, U> Message<'a, U> {
         {
             let mut oneofs = msg.0.oneofs.borrow_mut();
             for od in desc.oneofs() {
-                let o = Oneof::new(od, container.clone());
+                let o = Oneof::new(od, msg.clone());
                 oneofs.push(o);
             }
         }
@@ -142,8 +143,11 @@ impl<'a, U> Message<'a, U> {
         self.0.well_known_type.is_some()
     }
     pub fn container(&self) -> Container<'a, U> {
-        todo!()
-        // self.0.container.upgrade()
+        self.0.container.clone().into()
+    }
+
+    pub fn file(&self) -> File<'a, U> {
+        self.0.container.file()
     }
 
     pub fn fields(&self) -> Iter<Field<'a, U>> {
@@ -168,7 +172,7 @@ impl<'a, U> Message<'a, U> {
         AllEnums::new(self.0.enums.clone(), self.0.messages.clone())
     }
 
-    // pub fn dependents(&self) -> UpgradeIter<Message<'a, U>, dyn Into<Message<'a, U>>> {
+    // pub fn dependents(&self) -> UpgradeIter<Message<'a, U>, Into<Message<'a, U>>> {
     //     UpgradeIter::new(self.0.dependents.clone().borrow().into_iter())
     // }
 
@@ -176,6 +180,13 @@ impl<'a, U> Message<'a, U> {
         Iter::from(&self.0.defined_extensions)
     }
 
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.0.comments.borrow().clone()
+    }
+
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.comments.replace(comments);
+    }
     pub(crate) fn add_field(&self, field: Field<'a, U>) {
         self.0.fields.borrow_mut().push(field);
     }
@@ -183,9 +194,31 @@ impl<'a, U> Message<'a, U> {
     pub(crate) fn add_dependent(&self, dependent: Message<'a, U>) {
         self.0.dependents.borrow_mut().push(dependent.into());
     }
+}
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
-        self.0.comments.replace(comments);
+#[cfg(test)]
+impl<'a> Default for Message<'a, crate::util::Generic> {
+    fn default() -> Self {
+        let container = Container::default();
+        Message(Rc::new(MessageDetail {
+            name: Name::default(),
+            container: container.clone().into(),
+            fqn: String::default(),
+            well_known_type: None,
+            descriptor: Default::default(),
+            util: RefCell::new(container.util()),
+            is_map_entry: false,
+            enums: Default::default(),
+            fields: Default::default(),
+            oneofs: Default::default(),
+            preserved_messages: Default::default(),
+            messages: Default::default(),
+            maps: Default::default(),
+            dependents: Default::default(),
+            applied_extensions: Default::default(),
+            defined_extensions: Default::default(),
+            comments: Default::default(),
+        }))
     }
 }
 
@@ -232,6 +265,7 @@ impl<'a, U> NodeAtPath<'a, U> for Message<'a, U> {
                     .borrow()
                     .get(next)
                     .map(|m| Node::Message(m.clone())),
+                DescriptorPath::Extension => todo!(),
             };
             node.and_then(|n| n.node_at_path(&path[2..]))
         })
@@ -271,6 +305,9 @@ impl<'a, U> WeakMessage<'a, U> {
     fn upgrade(&self) -> Message<'a, U> {
         self.into()
     }
+    pub fn file(&self) -> File<'a, U> {
+        self.upgrade().file()
+    }
 }
 
 impl<'a, U> From<&Message<'a, U>> for WeakMessage<'a, U> {
@@ -288,5 +325,32 @@ impl<'a, U> From<Message<'a, U>> for WeakMessage<'a, U> {
 impl<'a, U> Clone for WeakMessage<'a, U> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
+    }
+}
+
+#[derive(Debug)]
+pub struct AllMessages<'a, U> {
+    q: VecDeque<Message<'a, U>>,
+    phantom: PhantomData<&'a U>,
+}
+impl<'a, U> AllMessages<'a, U> {
+    pub(crate) fn new(msgs: MessageList<'a, U>) -> Self {
+        Self {
+            q: VecDeque::from_iter(msgs.borrow().iter().cloned()),
+            phantom: PhantomData,
+        }
+    }
+}
+impl<'a, U> Iterator for AllMessages<'a, U> {
+    type Item = Message<'a, U>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(msg) = self.q.pop_front() {
+            for v in msg.messages() {
+                self.q.push_back(v);
+            }
+            Some(msg)
+        } else {
+            None
+        }
     }
 }

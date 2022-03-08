@@ -2,7 +2,8 @@ use std::rc::Rc;
 
 use crate::{
     proto::{FieldDescriptor, Syntax},
-    Comments, EmbedFieldDetail, EnumFieldDetail, FullyQualified, Message, Name, ScalarFieldDetail,
+    Comments, EmbedFieldDetail, EnumFieldDetail, File, FullyQualified, Message, Name, Package,
+    ScalarFieldDetail,
 };
 
 /// Represents a field marked as `repeated`. The field can hold
@@ -22,6 +23,23 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Message(f) => f.name(),
         }
     }
+
+    pub fn file(&self) -> File<'a, U> {
+        match self {
+            RepeatedField::Scalar(f) => f.file(),
+            RepeatedField::Enum(f) => f.file(),
+            RepeatedField::Message(f) => f.file(),
+        }
+    }
+
+    pub fn package(&self) -> Package<'a, U> {
+        match self {
+            RepeatedField::Scalar(f) => f.package(),
+            RepeatedField::Enum(f) => f.package(),
+            RepeatedField::Message(f) => f.package(),
+        }
+    }
+
     pub fn fully_qualified_name(&self) -> String {
         match self {
             RepeatedField::Scalar(f) => f.fully_qualified_name(),
@@ -60,7 +78,7 @@ impl<'a, U> RepeatedField<'a, U> {
         }
     }
 
-    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         match self {
             RepeatedField::Scalar(f) => f.descriptor(),
             RepeatedField::Enum(f) => f.descriptor(),
@@ -172,6 +190,13 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
     pub fn is_map(&self) -> bool {
         self.0.detail.is_map()
     }
+    pub fn file(&self) -> File<'a, U> {
+        self.0.detail.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.0.detail.package()
+    }
+
     pub fn message(&self) -> Message<'a, U> {
         self.0.detail.message()
     }
@@ -185,7 +210,7 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.detail.descriptor()
     }
     pub fn comments(&self) -> Comments<'a, U> {
@@ -212,6 +237,13 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
+    pub fn file(&self) -> File<'a, U> {
+        self.0.detail.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.0.detail.package()
+    }
+
     pub fn is_repeated(&self) -> bool {
         self.0.detail.is_repeated()
     }
@@ -231,7 +263,7 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.detail.descriptor()
     }
     pub fn is_marked_optional(&self) -> bool {
@@ -273,6 +305,14 @@ impl<'a, U> RepeatedScalarField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
+
+    pub fn file(&self) -> File<'a, U> {
+        self.0.detail.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.0.detail.package()
+    }
+
     pub fn is_repeated(&self) -> bool {
         self.0.detail.is_repeated()
     }
@@ -292,11 +332,11 @@ impl<'a, U> RepeatedScalarField<'a, U> {
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.detail.descriptor()
     }
     pub fn comments(&self) -> Comments<'a, U> {
-        self.0.comments()
+        self.0.detail.comments()
     }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);

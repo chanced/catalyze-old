@@ -1,7 +1,8 @@
 use std::rc::{Rc, Weak};
 
 use crate::{
-    proto::Scalar, Comments, FullyQualified, Message, Name, Oneof, ScalarField, WeakMessage,
+    proto::Scalar, Comments, File, FullyQualified, Message, Name, Oneof, Package, ScalarField,
+    WeakMessage,
 };
 
 use super::FieldDetail;
@@ -24,6 +25,14 @@ impl<'a, U> OneofFieldDetail<'a, U> {
     pub fn comments(&self) -> Comments<'a, U> {
         self.detail.comments()
     }
+
+    pub fn file(&self) -> File<'a, U> {
+        self.detail.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.detail.package()
+    }
+
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.detail.set_comments(comments);
     }
@@ -82,6 +91,21 @@ impl<'a, U> OneofField<'a, U> {
             OneofField::Message(f) => f.comments(),
         }
     }
+
+    pub fn file(&self) -> File<'a, U> {
+        match self {
+            OneofField::Scalar(f) => f.file(),
+            OneofField::Enum(f) => f.file(),
+            OneofField::Message(f) => f.file(),
+        }
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        match self {
+            OneofField::Scalar(f) => f.package(),
+            OneofField::Enum(f) => f.package(),
+            OneofField::Message(f) => f.package(),
+        }
+    }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         match self {
             OneofField::Scalar(f) => f.set_comments(comments),
@@ -122,6 +146,14 @@ impl<'a, U> OneofEnumField<'a, U> {
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.detail.comments()
     }
+
+    pub fn file(&self) -> File<'a, U> {
+        self.0.detail.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.0.detail.package()
+    }
+
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
     }
@@ -161,6 +193,14 @@ impl<'a, U> OneofScalarField<'a, U> {
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.detail.comments()
     }
+
+    pub fn file(&self) -> File<'a, U> {
+        self.0.detail.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.0.detail.package()
+    }
+
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
     }
@@ -204,6 +244,13 @@ impl<'a, U> OneofMessageField<'a, U> {
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.detail.comments()
     }
+    pub fn file(&self) -> File<'a, U> {
+        self.0.detail.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.0.detail.package()
+    }
+
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
     }

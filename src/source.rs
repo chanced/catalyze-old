@@ -18,26 +18,26 @@ pub struct InputSource {
 }
 
 pub trait Source<'a> {
-    fn targets(&self) -> &[String];
-    fn files(&self) -> &[FileDescriptorProto];
+    fn targets(&'a self) -> &'a [String];
+    fn files(&'a self) -> &'a [FileDescriptorProto];
 }
 
 impl<'a> Source<'a> for prost_types::compiler::CodeGeneratorRequest {
-    fn targets(&self) -> &[String] {
+    fn targets(&'a self) -> &'a [String] {
         &self.file_to_generate
     }
 
-    fn files(&self) -> &[FileDescriptorProto] {
+    fn files(&'a self) -> &'a [FileDescriptorProto] {
         &self.proto_file
     }
 }
 
 impl<'a> Source<'a> for InputSource {
-    fn targets(&self) -> &[String] {
+    fn targets(&'a self) -> &'a [String] {
         &self.targets
     }
 
-    fn files(&self) -> &[FileDescriptorProto] {
+    fn files(&'a self) -> &'a [FileDescriptorProto] {
         &self.file_descriptor_set.file
     }
 }

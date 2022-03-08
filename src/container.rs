@@ -1,8 +1,10 @@
 use std::rc::Rc;
 
 use crate::file::WeakFile;
-use crate::iter::{AllEnums, AllMessages, Iter};
-use crate::{Enum, File, FullyQualified, Message, Name, Node, Package, WeakMessage};
+use crate::iter::Iter;
+use crate::{
+    AllEnums, AllMessages, Enum, File, FullyQualified, Message, Name, Node, Package, WeakMessage,
+};
 
 // pub enum Entity {
 
@@ -80,6 +82,13 @@ impl<'a, U> Container<'a, U> {
     }
 }
 
+#[cfg(test)]
+impl<'a> Default for Container<'a, crate::util::Generic> {
+    fn default() -> Self {
+        Container::File(File::default())
+    }
+}
+
 impl<'a, U> From<File<'a, U>> for Container<'a, U> {
     fn from(f: File<'a, U>) -> Self {
         Container::File(f)
@@ -126,7 +135,7 @@ impl<'a, U> FullyQualified for Container<'a, U> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(crate) enum WeakContainer<'a, U> {
     File(WeakFile<'a, U>),
     Message(WeakMessage<'a, U>),
@@ -143,6 +152,12 @@ impl<'a, U> WeakContainer<'a, U> {
         match self {
             WeakContainer::File(f) => f.build_target(),
             WeakContainer::Message(m) => m.build_target(),
+        }
+    }
+    pub(crate) fn file(&self) -> File<'a, U> {
+        match self {
+            WeakContainer::File(f) => f.into(),
+            WeakContainer::Message(m) => m.file(),
         }
     }
 }
@@ -188,6 +203,14 @@ impl<'a, U> FullyQualified for WeakContainer<'a, U> {
         match self {
             WeakContainer::File(f) => f.fully_qualified_name(),
             WeakContainer::Message(m) => m.fully_qualified_name(),
+        }
+    }
+}
+impl<'a, U> Clone for WeakContainer<'a, U> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::File(arg0) => Self::File(arg0.clone()),
+            Self::Message(arg0) => Self::Message(arg0.clone()),
         }
     }
 }

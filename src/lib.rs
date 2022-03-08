@@ -1,7 +1,7 @@
 mod ast;
 pub mod codec;
 mod comments;
-pub mod container;
+mod container;
 mod r#enum;
 mod enum_value;
 mod extension;

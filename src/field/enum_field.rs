@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    proto::FieldDescriptor, proto::Syntax, Comments, Enum, FieldDetail, FullyQualified, Message,
-    Name, WeakEnum,
+    proto::FieldDescriptor, proto::Syntax, Comments, Enum, FieldDetail, File, FullyQualified,
+    Message, Name, Package, WeakEnum,
 };
 
 #[derive(Debug, Clone)]
@@ -31,8 +31,24 @@ impl<'a, U> EnumFieldDetail<'a, U> {
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.detail.descriptor()
+    }
+    pub fn r#enum(&self) -> Enum<'a, U> {
+        self.r#enum.clone().into()
+    }
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.detail.comments()
+    }
+
+    pub fn set_comments(&self, comments: Comments<'a, U>) {
+        self.detail.set_comments(comments)
+    }
+    pub fn file(&self) -> File<'a, U> {
+        self.detail.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.detail.package()
     }
 }
 
@@ -59,6 +75,13 @@ impl<'a, U> EnumField<'a, U> {
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.detail.comments()
     }
+    pub fn package(&self) -> Package<'a, U> {
+        self.0.detail.package()
+    }
+    pub fn file(&self) -> File<'a, U> {
+        self.0.detail.file()
+    }
+
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
     }

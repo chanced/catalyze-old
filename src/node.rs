@@ -1,6 +1,8 @@
+use std::collections::VecDeque;
+
 use crate::{
-    Comments, Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof, Package,
-    Service,
+    iter::Iter, Comments, Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof,
+    Package, Service,
 };
 
 pub(crate) trait NodeAtPath<'a, U> {
@@ -69,6 +71,20 @@ impl<'a, U> Node<'a, U> {
             Node::Package(_) | Node::File(_) => unreachable!(),
         }
     }
+    pub fn package(&self) -> Package<'a, U> {
+        match self {
+            Node::Package(p) => p.clone(),
+            Node::File(f) => f.package(),
+            Node::Message(m) => m.package(),
+            Node::Field(f) => f.package(),
+            Node::Oneof(o) => o.package(),
+            Node::Enum(e) => e.package(),
+            Node::EnumValue(ev) => ev.package(),
+            Node::Service(s) => s.package(),
+            Node::Method(m) => m.package(),
+            Node::Extension(e) => e.package(),
+        }
+    }
 }
 
 impl<'a, U> NodeAtPath<'a, U> for Node<'a, U> {
@@ -82,8 +98,8 @@ impl<'a, U> NodeAtPath<'a, U> for Node<'a, U> {
             Node::Service(s) => s.node_at_path(path),
             Node::Method(m) => m.node_at_path(path),
             Node::Field(f) => f.node_at_path(path),
-            Node::Extension(_) => panic!("Can not path to an extension"), // TODO: confirm this
-            Node::Package(_) => panic!("Can not path to a package"),
+            Node::Extension(e) => e.node_at_path(path), // TODO: confirm this
+            Node::Package(_) => unreachable!(),
         }
     }
 }
@@ -249,3 +265,86 @@ impl<'a, U> From<&Extension<'a, U>> for Node<'a, U> {
 //     Method(Method<'a, U>),
 //     Field(Field<'a, U>),
 //     Extension(Extension<'a, U>),
+
+#[derive(Debug)]
+enum NodeValIter<'a, U> {
+    Package(std::slice::Iter<'a, Package<'a, U>>),
+    File(Iter<File<'a, U>>),
+    Message(Iter<Message<'a, U>>),
+    Oneof(Iter<Oneof<'a, U>>),
+    Enum(Iter<Enum<'a, U>>),
+    EnumValue(Iter<EnumValue<'a, U>>),
+    Service(Iter<Service<'a, U>>),
+    Method(Iter<Method<'a, U>>),
+    Field(Iter<Field<'a, U>>),
+    Extension(Iter<Extension<'a, U>>),
+}
+
+impl<'a, U> Iterator for NodeValIter<'a, U> {
+    type Item = Node<'a, U>;
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            NodeValIter::Package(i) => i.next().map(Into::into),
+            NodeValIter::File(i) => i.next().map(Into::into),
+            NodeValIter::Message(i) => i.next().map(Into::into),
+            NodeValIter::Oneof(i) => i.next().map(Into::into),
+            NodeValIter::Enum(i) => i.next().map(Into::into),
+            NodeValIter::EnumValue(i) => i.next().map(Into::into),
+            NodeValIter::Service(i) => i.next().map(Into::into),
+            NodeValIter::Method(i) => i.next().map(Into::into),
+            NodeValIter::Field(i) => i.next().map(Into::into),
+            NodeValIter::Extension(i) => i.next().map(Into::into),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct NodeIter<'a, U> {
+    iters: VecDeque<NodeValIter<'a, U>>,
+}
+impl<'a, U> Iterator for NodeIter<'a, U> {
+    type Item = Node<'a, U>;
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(i) = self.iters.front_mut() {
+                if let Some(n) = i.next() {
+                    return Some(n);
+                } else {
+                    self.iters.pop_front();
+                }
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
+/// ```text
+///     A
+///    / \
+///   B   C
+///  /   / \
+/// D   E   F
+/// => A, B, D, C, E, F
+///```
+pub struct AllNodesIter<'a, U> {
+    node: Node<'a, U>,
+    iter: NodeIter<'a, U>,
+}
+impl<'a, U> Iterator for AllNodesIter<'a, U> {
+    type Item = Node<'a, U>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        todo!()
+    }
+}
+// Package(Package<'a, U>),
+// File(File<'a, U>),
+// Message(Message<'a, U>),
+// Oneof(Oneof<'a, U>),
+// Enum(Enum<'a, U>),
+// EnumValue(EnumValue<'a, U>),
+// Service(Service<'a, U>),
+// Method(Method<'a, U>),
+// Field(Field<'a, U>),
+// Extension(Extension<'a, U>),

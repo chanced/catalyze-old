@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    proto::FieldDescriptor, proto::Syntax, Comments, FullyQualified, Message, Name, WeakMessage,
+    proto::FieldDescriptor, proto::Syntax, Comments, File, FullyQualified, Message, Name, Package,
+    WeakMessage,
 };
 
 use super::FieldDetail;
@@ -37,7 +38,7 @@ impl<'a, U> EmbedFieldDetail<'a, U> {
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.detail.descriptor()
     }
     pub fn embed(&self) -> Message<'a, U> {
@@ -69,6 +70,13 @@ impl<'a, U> EmbedField<'a, U> {
     }
     pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
+    }
+
+    pub fn file(&self) -> File<'a, U> {
+        self.0.detail.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.0.detail.package()
     }
 }
 impl<'a, U> Clone for EmbedField<'a, U> {

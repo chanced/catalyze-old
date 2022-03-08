@@ -4,7 +4,7 @@ use super::FieldDetail;
 use crate::{
     proto::Syntax,
     proto::{FieldDescriptor, Scalar},
-    Comments, FullyQualified, Message, Name,
+    Comments, File, FullyQualified, Message, Name, Package,
 };
 
 #[derive(Debug)]
@@ -42,8 +42,22 @@ impl<'a, U> ScalarFieldDetail<'a, U> {
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.detail.descriptor()
+    }
+
+    pub fn comments(&self) -> Comments<'a, U> {
+        self.detail.comments()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.detail.package()
+    }
+    pub fn file(&self) -> File<'a, U> {
+        self.detail.file()
+    }
+
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.detail.set_comments(comments);
     }
 }
 
@@ -71,6 +85,13 @@ impl<'a, U> ScalarField<'a, U> {
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.detail.comments()
     }
+    pub fn file(&self) -> File<'a, U> {
+        self.0.detail.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.0.detail.package()
+    }
+
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
     }
@@ -84,6 +105,16 @@ impl<'a, U> FullyQualified for ScalarField<'a, U> {
 impl<'a, U> Clone for ScalarField<'a, U> {
     fn clone(&self) -> Self {
         ScalarField(self.0.clone())
+    }
+}
+
+#[cfg(test)]
+impl<'a> Default for ScalarField<'a, crate::util::Generic> {
+    fn default() -> Self {
+        Self(Rc::new(ScalarFieldDetail {
+            detail: Default::default(),
+            scalar: Scalar::String,
+        }))
     }
 }
 

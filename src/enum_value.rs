@@ -1,15 +1,15 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    format_fqn, proto::EnumValueDescriptor, Comments, Enum, FullyQualified, Name, Node, NodeAtPath,
-    WeakEnum,
+    container::Container, format_fqn, proto::EnumValueDescriptor, Comments, Enum, File,
+    FullyQualified, Name, Node, NodeAtPath, Package, WeakEnum,
 };
 
 #[derive(Debug, Clone)]
 struct EnumValueDetail<'a, U> {
     name: Name<U>,
     fqn: String,
-    desc: dyn EnumValueDescriptor<'a, U>,
+    desc: EnumValueDescriptor<'a>,
     e: WeakEnum<'a, U>,
     comments: RefCell<Comments<'a, U>>,
 }
@@ -21,9 +21,14 @@ impl<'a, U> EnumValueDetail<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.fqn.clone()
     }
-    pub fn descriptor(&self) -> dyn EnumValueDescriptor<'a, U> {
+    pub fn descriptor(&self) -> EnumValueDescriptor<'a> {
         self.desc
     }
+
+    pub fn enumeration(&self) -> Enum<'a, U> {
+        self.e.clone().into()
+    }
+
     pub fn comments(&self) -> Comments<'a, U> {
         *self.comments.borrow()
     }
@@ -36,7 +41,7 @@ impl<'a, U> EnumValueDetail<'a, U> {
 pub struct EnumValue<'a, U>(Rc<EnumValueDetail<'a, U>>);
 
 impl<'a, U> EnumValue<'a, U> {
-    pub(crate) fn new(desc: dyn EnumValueDescriptor<'a, U>, e: Enum<'a, U>) -> Self {
+    pub(crate) fn new(desc: EnumValueDescriptor<'a>, e: Enum<'a, U>) -> Self {
         EnumValue(Rc::new(EnumValueDetail {
             name: Name::new(desc.name(), e.util()),
             fqn: format_fqn(&e, desc.name()),
@@ -59,6 +64,17 @@ impl<'a, U> EnumValue<'a, U> {
     /// Returns the `Enum` that contains this value.
     pub fn r#enum(&self) -> Enum<'a, U> {
         self.0.e.clone().into()
+    }
+    pub fn container(&self) -> Container<'a, U> {
+        self.enumeration().container()
+    }
+
+    pub fn file(&self) -> File<'a, U> {
+        self.enumeration().file()
+    }
+
+    pub fn package(&self) -> Package<'a, U> {
+        self.enumeration().package()
     }
 
     fn fully_qualified_name(&self) -> String {
@@ -91,5 +107,19 @@ impl<'a, U> NodeAtPath<'a, U> for EnumValue<'a, U> {
         } else {
             None
         }
+    }
+}
+
+#[cfg(test)]
+impl<'a> Default for EnumValue<'a, crate::util::Generic> {
+    fn default() -> Self {
+        let e = Enum::default();
+        EnumValue(Rc::new(EnumValueDetail {
+            name: Name::new("", e.util()),
+            fqn: "".to_string(),
+            desc: EnumValueDescriptor::default(),
+            e: e.clone().into(),
+            comments: RefCell::new(Comments::default()),
+        }))
     }
 }

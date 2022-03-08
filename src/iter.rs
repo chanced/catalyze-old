@@ -62,67 +62,6 @@ impl<'a, U> Iterator for TransitiveImports<'a, U> {
     }
 }
 
-#[derive(Debug)]
-pub struct AllMessages<'a, U> {
-    q: VecDeque<Message<'a, U>>,
-    phantom: PhantomData<&'a U>,
-}
-impl<'a, U> AllMessages<'a, U> {
-    pub(crate) fn new(msgs: MessageList<'a, U>) -> Self {
-        Self {
-            q: VecDeque::from_iter(msgs.borrow().iter().cloned()),
-            phantom: PhantomData,
-        }
-    }
-}
-impl<'a, U> Iterator for AllMessages<'a, U> {
-    type Item = Message<'a, U>;
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(msg) = self.q.pop_front() {
-            for v in msg.messages() {
-                self.q.push_back(v);
-            }
-            Some(msg)
-        } else {
-            None
-        }
-    }
-}
-
-pub struct AllEnums<'a, U> {
-    msgs: VecDeque<Message<'a, U>>,
-    enums: VecDeque<Enum<'a, U>>,
-}
-impl<'a, U> AllEnums<'a, U> {
-    pub(crate) fn new(enums: EnumList<'a, U>, msgs: MessageList<'a, U>) -> Self {
-        Self {
-            msgs: msgs.borrow().iter().cloned().collect(),
-            enums: enums.borrow().iter().cloned().collect(),
-        }
-    }
-}
-impl<'a, U> Iterator for AllEnums<'a, U> {
-    type Item = Enum<'a, U>;
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(e) = self.enums.pop_front() {
-            Some(e)
-        } else {
-            while let Some(msg) = self.msgs.pop_front() {
-                for v in msg.messages() {
-                    self.msgs.push_back(v);
-                }
-                for v in msg.enums() {
-                    self.enums.push_back(v);
-                }
-                if let Some(e) = self.enums.pop_front() {
-                    return Some(e);
-                }
-            }
-            None
-        }
-    }
-}
-
 /// FileRefIter is an iterator that upgrades weak references to `File`s.
 pub struct FileRefIter<'a, U> {
     files: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
@@ -156,44 +95,6 @@ impl<'a, U> Iterator for FileRefIter<'a, U> {
         None
     }
 }
-
-// #[derive(Debug)]
-// pub struct CommentsIter<'a, U> {
-//     iter: std::slice::Iter<'a, prost_types::source_code_info::Location>,
-//     phantom: PhantomData<U>,
-// }
-
-// impl<'a, U> CommentsIter<'a, U> {
-//     pub fn len(&self) -> usize {
-//         self.iter.len()
-//     }
-//     pub fn is_empty(&self) -> bool {
-//         self.len() == 0
-//     }
-// }
-// impl<'a, U> Iterator for CommentsIter<'a, U> {
-//     type Item = Comments<'a, U>;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-//         self.iter.next().map(Into::into)
-//     }
-// }
-// impl<'a, U> From<SourceCodeInfo<'a, U>> for CommentsIter<'a, U> {
-//     fn from(info: SourceCodeInfo<'a, U>) -> Self {
-//         CommentsIter {
-//             iter: info.info.location.iter(),
-//             phantom: PhantomData,
-//         }
-//     }
-// }
-// impl<'a, U> From<&SourceCodeInfo<'a, U>> for CommentsIter<'a, U> {
-//     fn from(info: &SourceCodeInfo<'a, U>) -> Self {
-//         CommentsIter {
-//             iter: info.info.location.iter(),
-//             phantom: PhantomData,
-//         }
-//     }
-// }
 
 // #[cfg(test)]
 // mod tests {

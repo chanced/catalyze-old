@@ -1,5 +1,5 @@
 use super::*;
-use std::{marker::PhantomData, slice};
+use std::slice;
 
 #[derive(Debug)]
 pub struct EnumDescriptorIter<'a> {
@@ -23,6 +23,33 @@ impl<'a> Iterator for EnumDescriptorIter<'a> {
 impl<'a> From<&'a Vec<prost_types::EnumDescriptorProto>> for EnumDescriptorIter<'a> {
     fn from(data: &'a Vec<prost_types::EnumDescriptorProto>) -> Self {
         EnumDescriptorIter { iter: data.iter() }
+    }
+}
+
+#[derive(Debug)]
+pub struct FileDescriptorIter<'a> {
+    iter: std::slice::Iter<'a, prost_types::FileDescriptorProto>,
+}
+
+impl<'a> Iterator for FileDescriptorIter<'a> {
+    type Item = FileDescriptor<'a>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(FileDescriptor::from)
+    }
+}
+
+impl<'a> From<&'a Vec<prost_types::FileDescriptorProto>> for FileDescriptorIter<'a> {
+    fn from(data: &'a Vec<prost_types::FileDescriptorProto>) -> Self {
+        FileDescriptorIter { iter: data.iter() }
+    }
+}
+
+impl<'a> FileDescriptorIter<'a> {
+    pub fn len(&self) -> usize {
+        self.iter.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 
@@ -223,7 +250,7 @@ impl<'a> From<&'a [prost_types::descriptor_proto::ExtensionRange]> for Extension
         ExtensionRangeIter { iter: data.iter() }
     }
 }
-impl ExtensionRangeIter<'_, ()> {
+impl<'a> ExtensionRangeIter<'a> {
     pub fn len(&self) -> usize {
         self.iter.len()
     }
@@ -236,7 +263,7 @@ impl ExtensionRangeIter<'_, ()> {
 pub struct ReservedRangeIter<'a> {
     iter: std::slice::Iter<'a, prost_types::descriptor_proto::ReservedRange>,
 }
-impl ReservedRangeIter<'_, ()> {
+impl<'a> ReservedRangeIter<'a> {
     pub fn len(&self) -> usize {
         self.iter.len()
     }

@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    proto::FieldDescriptor, proto::Syntax, Comments, Enum, FullyQualified, Message, Name,
-    ScalarField, WeakEnum, WeakMessage, WellKnownEnum, WellKnownType,
+    proto::FieldDescriptor, proto::Syntax, Comments, Enum, File, FullyQualified, Message, Name,
+    Package, ScalarField, WeakEnum, WeakMessage, WellKnownEnum, WellKnownType,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -52,7 +52,7 @@ impl<'a, U> MapFieldDetail<'a, U> {
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.detail.descriptor()
     }
 
@@ -69,6 +69,13 @@ impl<'a, U> MapFieldDetail<'a, U> {
     }
     pub fn set_comments(&self, comments: Comments<'a, U>) {
         self.detail.comments.replace(comments);
+    }
+
+    pub fn file(&self) -> File<'a, U> {
+        self.detail.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.detail.package()
     }
 }
 
@@ -121,12 +128,26 @@ impl<'a, U> MapField<'a, U> {
             _ => None,
         }
     }
-
     pub fn comments(&self) -> Comments<'a, U> {
         match self {
             MapField::Scalar(f) => f.comments(),
             MapField::Enum(f) => f.comments(),
             MapField::Embed(f) => f.comments(),
+        }
+    }
+
+    pub fn file(&self) -> File<'a, U> {
+        match self {
+            MapField::Scalar(f) => f.file(),
+            MapField::Enum(f) => f.file(),
+            MapField::Embed(f) => f.file(),
+        }
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        match self {
+            MapField::Scalar(f) => f.package(),
+            MapField::Enum(f) => f.package(),
+            MapField::Embed(f) => f.package(),
         }
     }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
@@ -229,12 +250,20 @@ impl<'a, U> MappedScalarField<'a, U> {
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.detail.descriptor()
     }
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.detail.comments()
     }
+
+    pub fn file(&self) -> File<'a, U> {
+        self.0.detail.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.0.detail.package()
+    }
+
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
     }
@@ -284,13 +313,11 @@ impl<'a, U> MappedEmbedField<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.detail.replace_util(util);
-    }
+
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.detail.descriptor()
     }
     /// Returns the embedded message.
@@ -304,8 +331,18 @@ impl<'a, U> MappedEmbedField<'a, U> {
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.detail.comments()
     }
+    pub fn file(&self) -> File<'a, U> {
+        self.0.detail.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.0.detail.package()
+    }
+
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
+    }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.detail.replace_util(util);
     }
 }
 
@@ -355,14 +392,18 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.detail.replace_util(util);
-    }
+
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a, U> {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.detail.descriptor()
+    }
+    pub fn file(&self) -> File<'a, U> {
+        self.0.detail.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.0.detail.package()
     }
 
     /// Alias for `r#enum()`
@@ -375,14 +416,18 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.detail.comments()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
-        self.0.detail.set_comments(comments);
-    }
     pub fn well_known_type(&self) -> Option<WellKnownEnum> {
         self.0.detail.well_known_type().map(|wkt| match wkt {
             crate::WellKnownType::Enum(wke) => wke,
             _ => unreachable!(),
         })
+    }
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        self.0.detail.set_comments(comments);
+    }
+
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.detail.replace_util(util);
     }
 }
 

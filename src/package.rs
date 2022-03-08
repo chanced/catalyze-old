@@ -1,7 +1,6 @@
 use crate::iter::Iter;
-use crate::proto::PackageComments;
 pub use crate::File;
-use crate::{FullyQualified, Name};
+use crate::{FullyQualified, Name, NodeAtPath, PackageComments};
 
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
@@ -58,9 +57,6 @@ impl<'a, U> Package<'a, U> {
     pub fn files(&self) -> Iter<File<'a, U>> {
         Iter::from(&self.0.files)
     }
-    pub fn comments(&self) -> PackageComments<'a, U> {
-        PackageComments::new(self.clone())
-    }
     pub fn is_well_known(&self) -> bool {
         self.0.name.is_well_known_package()
     }
@@ -82,6 +78,13 @@ impl<'a, U> From<WeakPackage<'a, U>> for Package<'a, U> {
 impl<'a, U> From<&WeakPackage<'a, U>> for Package<'a, U> {
     fn from(pkg: &WeakPackage<'a, U>) -> Self {
         pkg.upgrade()
+    }
+}
+
+#[cfg(test)]
+impl<'a> Default for Package<'a, crate::util::Generic> {
+    fn default() -> Self {
+        Self::new("", Rc::new(crate::util::Generic::default()))
     }
 }
 
