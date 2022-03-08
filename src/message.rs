@@ -57,7 +57,7 @@ impl<'a, U> Message<'a, U> {
         let util = container.util();
         let fqn = format_fqn(&container, desc.name());
 
-        let wkt = if container.package().is_well_known() {
+        let wkt = if container.package().is_well_known_type() {
             WellKnownMessage::from_str(desc.name()).ok()
         } else {
             None
@@ -135,7 +135,7 @@ impl<'a, U> Message<'a, U> {
         self.0.container.package()
     }
 
-    pub fn is_well_known(&self) -> bool {
+    pub fn is_well_known_type(&self) -> bool {
         self.0.wkt.is_some()
     }
     pub fn well_known_type(&self) -> Option<WellKnownType> {
@@ -311,8 +311,8 @@ impl<'a, U> WeakMessage<'a, U> {
         self.upgrade().file()
     }
 
-    pub fn is_well_known(&self) -> bool {
-        self.upgrade().is_well_known()
+    pub fn is_well_known_type(&self) -> bool {
+        self.upgrade().is_well_known_type()
     }
     pub fn well_known_type(&self) -> Option<WellKnownType> {
         self.upgrade().well_known_type()

@@ -44,8 +44,8 @@ impl<'a, U> EnumDetail<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.container().package()
     }
-    pub fn is_well_known(&self) -> bool {
-        self.package().is_well_known()
+    pub fn is_well_known_type(&self) -> bool {
+        self.package().is_well_known_type()
     }
 
     pub fn well_known_type(&self) -> Option<WellKnownType> {
@@ -63,7 +63,7 @@ impl<'a, U> Enum<'a, U> {
     pub(crate) fn new(desc: EnumDescriptor<'a>, container: Container<'a, U>) -> Self {
         let util = container.util();
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
-        let wkt = if container.package().is_well_known() {
+        let wkt = if container.package().is_well_known_type() {
             WellKnownEnum::from_str(desc.name()).ok()
         } else {
             None
@@ -96,8 +96,8 @@ impl<'a, U> Enum<'a, U> {
     pub fn well_known_type(&self) -> Option<WellKnownType> {
         self.0.well_known_type()
     }
-    pub fn is_well_known(&self) -> bool {
-        self.0.is_well_known()
+    pub fn is_well_known_type(&self) -> bool {
+        self.0.is_well_known_type()
     }
 
     pub fn container(&self) -> Container<'a, U> {
@@ -188,8 +188,8 @@ impl<'a, U> WeakEnum<'a, U> {
     pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
         self.upgrade().well_known_enum()
     }
-    pub fn is_well_known(&self) -> bool {
-        self.upgrade().is_well_known()
+    pub fn is_well_known_type(&self) -> bool {
+        self.upgrade().is_well_known_type()
     }
 }
 impl<'a, U> Clone for WeakEnum<'a, U> {

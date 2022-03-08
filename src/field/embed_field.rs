@@ -55,8 +55,8 @@ impl<'a, U> EmbedFieldDetail<'a, U> {
     pub fn build_target(&self) -> bool {
         self.detail.build_target()
     }
-    pub fn is_well_known(&self) -> bool {
-        self.embed.is_well_known()
+    pub fn is_well_known_type(&self) -> bool {
+        self.embed.is_well_known_type()
     }
     pub fn well_known_type(&self) -> Option<WellKnownType> {
         self.embed().well_known_type()
@@ -109,8 +109,8 @@ impl<'a, U> EmbedField<'a, U> {
 
     /// Indicates whether or not the field is labeled as a required field. This
     /// will only be `true` if the syntax is proto2.
-    pub fn is_required(&self) -> bool {
-        self.0.detail.is_required()
+    pub fn is_marked_required(&self) -> bool {
+        self.0.detail.is_marked_required()
     }
     pub fn is_marked_optional(&self) -> bool {
         self.0.detail.is_marked_optional()
@@ -128,12 +128,24 @@ impl<'a, U> EmbedField<'a, U> {
         self.0.imports()
     }
 
-    pub fn descriptor(&self) -> FieldDescriptor {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.descriptor()
     }
 
     pub fn syntax(&self) -> Syntax {
         self.0.syntax()
+    }
+
+    pub fn is_well_known_type(&self) -> bool {
+        self.0.is_well_known_type()
+    }
+
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        self.0.well_known_type()
+    }
+
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.replace_util(util)
     }
 }
 impl<'a, U> Clone for EmbedField<'a, U> {

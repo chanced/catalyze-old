@@ -62,6 +62,13 @@ impl<'a, U> ScalarFieldDetail<'a, U> {
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.detail.set_comments(comments);
     }
+
+    pub fn is_marked_required(&self) -> bool {
+        self.detail.is_marked_required()
+    }
+    pub fn is_marked_optional(&self) -> bool {
+        self.detail.is_marked_optional()
+    }
 }
 
 impl<'a, U> Clone for ScalarFieldDetail<'a, U> {
@@ -80,39 +87,55 @@ impl<'a, U> ScalarField<'a, U> {
         self.0.scalar
     }
     pub fn name(&self) -> Name<U> {
-        self.0.detail.name()
+        self.0.name()
     }
     pub fn fully_qualified_name(&self) -> String {
-        self.0.detail.fully_qualified_name()
+        self.0.fully_qualified_name()
     }
     pub fn comments(&self) -> Comments<'a, U> {
-        self.0.detail.comments()
+        self.0.comments()
     }
     pub fn file(&self) -> File<'a, U> {
-        self.0.detail.file()
+        self.0.file()
     }
     pub fn package(&self) -> Package<'a, U> {
-        self.0.detail.package()
+        self.0.package()
     }
     pub fn syntax(&self) -> Syntax {
-        self.0.detail.syntax()
+        self.0.syntax()
     }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
-        self.0.detail.set_comments(comments);
+        self.0.set_comments(comments);
     }
 
     pub fn build_target(&self) -> bool {
-        self.0.detail.build_target()
+        self.0.build_target()
     }
 
-    pub fn descriptor(&self) -> FieldDescriptor {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.descriptor()
+    }
+
+    pub fn is_marked_required(&self) -> bool {
+        self.0.is_marked_required()
+    }
+
+    pub fn is_marked_optional(&self) -> bool {
+        self.0.is_marked_optional()
+    }
+
+    pub fn has_presence(&self) -> bool {
+        self.syntax().is_proto2() || self.is_marked_optional()
+    }
+
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.replace_util(util);
     }
 }
 
 impl<'a, U> FullyQualified for ScalarField<'a, U> {
     fn fully_qualified_name(&self) -> String {
-        self.0.detail.fully_qualified_name()
+        self.0.fully_qualified_name()
     }
 }
 impl<'a, U> Clone for ScalarField<'a, U> {

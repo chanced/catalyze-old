@@ -411,7 +411,7 @@ impl<'a> FieldDescriptor<'a> {
             Syntax::Proto3 => self.proto3_optional(),
         }
     }
-    pub fn is_required(&self, syntax: Syntax) -> bool {
+    pub fn is_marked_required(&self, syntax: Syntax) -> bool {
         syntax.supports_required_prefix() && self.label() == Label::Required
     }
 }

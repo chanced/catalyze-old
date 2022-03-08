@@ -92,8 +92,8 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn is_marked_optional(&self) -> bool {
         self.desc.is_marked_optional(self.syntax)
     }
-    pub fn is_required(&self) -> bool {
-        self.desc.is_required(self.syntax)
+    pub fn is_marked_required(&self) -> bool {
+        self.desc.is_marked_required(self.syntax)
     }
 
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
@@ -111,29 +111,6 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn build_target(&self) -> bool {
         self.file().build_target()
     }
-
-    /// Returns `true` for all fields that have explicit presence.
-    ///
-    /// See:
-    /// - https://github.com/protocolbuffers/protobuf/blob/v3.17.0/docs/field_presence.md
-    /// - https://github.com/protocolbuffers/protobuf/blob/master/docs/implementing_proto3_presence.md
-    // pub fn has_presence(&self) -> bool {
-    //     if self.in_oneof {
-    //         return true;
-    //     }
-    //     if self.desc.is_embed() {
-    //         return true;
-    //     }
-    //     if !self.is_repeated() && !self.is_map() {
-    //         if self.syntax.is_proto2() {
-    //             true
-    //         } else {
-    //             self.desc.is_marked_optional(self.syntax)
-    //         }
-    //     } else {
-    //         false
-    //     }
-    // }
 }
 
 #[derive(Debug)]
@@ -305,13 +282,13 @@ impl<'a, U> Field<'a, U> {
             _ => false,
         }
     }
-    pub fn is_well_known(&self) -> bool {
+    pub fn is_well_known_type(&self) -> bool {
         match self {
-            Field::Embed(f) => f.is_well_known(),
-            Field::Enum(f) => f.is_well_known(),
-            Field::Map(f) => f.is_well_known(),
-            Field::Oneof(f) => f.is_well_known(),
-            Field::Repeated(f) => f.is_well_known(),
+            Field::Embed(f) => f.is_well_known_type(),
+            Field::Enum(f) => f.is_well_known_type(),
+            Field::Map(f) => f.is_well_known_type(),
+            Field::Oneof(f) => f.is_well_known_type(),
+            Field::Repeated(f) => f.is_well_known_type(),
             _ => false,
         }
     }
@@ -327,24 +304,22 @@ impl<'a, U> Field<'a, U> {
     }
     /// Indicates whether or not the field is labeled as a required field. This
     /// will only be `true` if the syntax is proto2.
-    pub fn is_required(&self) -> bool {
+    pub fn is_marked_required(&self) -> bool {
         match self {
-            Field::Embed(f) => f.is_required(),
-            Field::Enum(f) => f.is_required(),
-            Field::Map(f) => f.is_required(),
-            Field::Oneof(f) => f.is_required(),
-            Field::Repeated(f) => f.is_required(),
-            Field::Scalar(f) => f.is_required(),
+            Field::Embed(f) => f.is_marked_required(),
+            Field::Enum(f) => f.is_marked_required(),
+            Field::Map(f) => f.is_marked_required(),
+            Field::Oneof(f) => f.is_marked_required(),
+            Field::Repeated(f) => f.is_marked_required(),
+            Field::Scalar(f) => f.is_marked_required(),
         }
     }
     pub fn is_marked_optional(&self) -> bool {
         match self {
             Field::Embed(f) => f.is_marked_optional(),
             Field::Enum(f) => f.is_marked_optional(),
-            Field::Map(f) => f.is_marked_optional(),
-            Field::Oneof(f) => f.is_marked_optional(),
-            Field::Repeated(f) => f.is_marked_optional(),
             Field::Scalar(f) => f.is_marked_optional(),
+            _ => false,
         }
     }
     pub fn is_scalar(&self) -> bool {
@@ -352,21 +327,48 @@ impl<'a, U> Field<'a, U> {
             Field::Map(f) => f.is_scalar(),
             Field::Oneof(f) => f.is_scalar(),
             Field::Repeated(f) => f.is_scalar(),
-            Field::Scalar(f) => f.is_scalar(),
-            _ => false
+            Field::Scalar(f) => true,
+            _ => false,
         }
     }
     pub fn is_enum(&self) -> bool {
         match self {
-            Field::Embed(f) => f.is_enum(),
-            Field::Enum(f) => f.is_enum(),
+            Field::Enum(f) => true,
             Field::Map(f) => f.is_enum(),
             Field::Oneof(f) => f.is_enum(),
             Field::Repeated(f) => f.is_enum(),
-            Field::Scalar(_) => false,
+            _ => false,
         }
     }
     /// Returns `true` for all fields that have explicit presence.
+    ///
+    /// ---
+    /// ### Proto2
+    /// Field type                                   | Explicit Presence
+    /// -------------------------------------------- | :-----------------:
+    /// Singular numeric (integer or floating point) | ✔️
+    /// Singular enum                                | ✔️
+    /// Singular string or bytes                     | ✔️
+    /// Singular message                             | ✔️
+    /// Repeated                                     |
+    /// Oneofs                                       | ✔️
+    /// Maps                                         |
+    ///
+    /// ---
+    /// ### Proto3
+    /// Field type                                   | `optional` | Explicit Presence
+    /// -------------------------------------------- |:----------: | :-----------------:
+    /// Singular numeric (integer or floating point) | No         |
+    /// Singular enum                                | No         |
+    /// Singular string or bytes                     | No         |
+    /// Singular numeric (integer or floating point) | Yes        | ✔️
+    /// Singular enum                                | Yes        | ✔️
+    /// Singular string or bytes                     | Yes        | ✔️
+    /// Singular message                             | Yes        | ✔️
+    /// Singular message                             | No         | ✔️
+    /// Repeated                                     | N/A        |
+    /// Oneofs                                       | N/A        | ✔️
+    /// Maps                                         | N/A        |
     ///
     /// See:
     /// - https://github.com/protocolbuffers/protobuf/blob/v3.17.0/docs/field_presence.md

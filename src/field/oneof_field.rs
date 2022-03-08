@@ -3,14 +3,14 @@ use std::rc::{Rc, Weak};
 use crate::{
     proto::{FieldDescriptor, Scalar, Syntax},
     Comments, Enum, File, FullyQualified, Message, Name, Oneof, Package, WeakEnum, WeakMessage,
+    WeakOneof, WellKnownType,
 };
 
 use super::FieldDetail;
 #[derive(Debug)]
 pub(crate) struct OneofFieldDetail<'a, U> {
     pub detail: FieldDetail<'a, U>,
-    pub oneof: Weak<Oneof<'a, U>>,
-    pub is_synthetic: bool,
+    pub oneof: WeakOneof<'a, U>,
 }
 impl<'a, U> OneofFieldDetail<'a, U> {
     pub fn name(&self) -> Name<U> {
@@ -37,9 +37,26 @@ impl<'a, U> OneofFieldDetail<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.detail.package()
     }
-
+    pub fn oneof(&self) -> Oneof<'a, U> {
+        self.oneof.into()
+    }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.detail.set_comments(comments);
+    }
+
+    pub fn is_marked_required(&self) -> bool {
+        self.detail.is_marked_required()
+    }
+
+    pub fn is_in_real_oneof(&self) -> bool {
+        self.oneof().is_real()
+    }
+    pub fn is_in_synthetic_oneof(&self) -> bool {
+        self.oneof().is_synthetic()
+    }
+
+    fn replace_util(&self, util: Rc<U>) {
+        self.detail.replace_util(util)
     }
 }
 impl<'a, U> Clone for OneofFieldDetail<'a, U> {
@@ -47,7 +64,6 @@ impl<'a, U> Clone for OneofFieldDetail<'a, U> {
         Self {
             detail: self.detail.clone(),
             oneof: self.oneof.clone(),
-            is_synthetic: self.is_synthetic,
         }
     }
 }
@@ -168,7 +184,7 @@ impl<'a, U> OneofField<'a, U> {
         }
     }
 
-    pub fn descriptor(&self) -> crate::proto::FieldDescriptor {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         match self {
             OneofField::Scalar(f) => f.descriptor(),
             OneofField::Enum(f) => f.descriptor(),
@@ -176,11 +192,75 @@ impl<'a, U> OneofField<'a, U> {
         }
     }
 
-    pub fn syntax(&self) -> crate::proto::Syntax {
+    pub fn syntax(&self) -> Syntax {
         match self {
             OneofField::Scalar(f) => f.syntax(),
             OneofField::Enum(f) => f.syntax(),
             OneofField::Embed(f) => f.syntax(),
+        }
+    }
+
+    pub fn is_marked_required(&self) -> bool {
+        match self {
+            OneofField::Scalar(f) => f.is_marked_required(),
+            OneofField::Enum(f) => f.is_marked_required(),
+            OneofField::Embed(f) => f.is_marked_required(),
+        }
+    }
+
+    pub fn is_embed(&self) -> bool {
+        matches!(self, OneofField::Embed(_))
+    }
+
+    pub fn is_in_real_oneof(&self) -> bool {
+        match self {
+            OneofField::Scalar(f) => f.is_in_real_oneof(),
+            OneofField::Enum(f) => f.is_in_real_oneof(),
+            OneofField::Embed(f) => f.is_in_real_oneof(),
+        }
+    }
+
+    pub fn is_in_synthetic_oneof(&self) -> bool {
+        match self {
+            OneofField::Scalar(f) => f.is_in_synthetic_oneof(),
+            OneofField::Enum(f) => f.is_in_synthetic_oneof(),
+            OneofField::Embed(f) => f.is_in_synthetic_oneof(),
+        }
+    }
+
+    pub fn is_well_known_type(&self) -> bool {
+        match self {
+            OneofField::Enum(f) => f.is_well_known_type(),
+            OneofField::Embed(f) => f.is_well_known_type(),
+            OneofField::Scalar(_) => false,
+        }
+    }
+
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        match self {
+            OneofField::Enum(f) => f.well_known_type(),
+            OneofField::Embed(f) => f.well_known_type(),
+            OneofField::Scalar(_) => None,
+        }
+    }
+
+    pub fn is_enum(&self) -> bool {
+        matches!(self, OneofField::Enum(_))
+    }
+
+    pub fn has_presence(&self) -> bool {
+        match self {
+            OneofField::Scalar(f) => f.has_presence(),
+            OneofField::Enum(f) => f.has_presence(),
+            OneofField::Embed(f) => f.has_presence(),
+        }
+    }
+
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        match self {
+            OneofField::Scalar(f) => f.replace_util(util),
+            OneofField::Enum(f) => f.replace_util(util),
+            OneofField::Embed(f) => f.replace_util(util),
         }
     }
 }
@@ -247,12 +327,39 @@ impl<'a, U> OneofEnumField<'a, U> {
         self.file().build_target()
     }
 
-    pub fn descriptor(&self) -> FieldDescriptor {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.detail.descriptor()
     }
 
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
+    }
+
+    pub fn is_marked_required(&self) -> bool {
+        self.0.detail.is_marked_required()
+    }
+
+    pub fn is_in_real_oneof(&self) -> bool {
+        self.0.detail.is_in_real_oneof()
+    }
+
+    pub fn is_in_synthetic_oneof(&self) -> bool {
+        self.0.detail.is_in_synthetic_oneof()
+    }
+
+    pub fn is_well_known_type(&self) -> bool {
+        self.enumeration().is_well_known_type()
+    }
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        self.r#enum().well_known_type()
+    }
+
+    pub fn has_presence(&self) -> bool {
+        true
+    }
+
+    fn replace_util(&self, util: Rc<U>) {
+        self.0.detail.replace_util(util);
     }
 }
 impl<'a, U> FullyQualified for OneofEnumField<'a, U> {
@@ -271,6 +378,7 @@ pub struct OneofScalarFieldDetail<'a, U> {
     scalar: Scalar,
     detail: OneofFieldDetail<'a, U>,
 }
+
 #[derive(Debug)]
 pub struct OneofScalarField<'a, U>(Rc<OneofScalarFieldDetail<'a, U>>);
 
@@ -278,7 +386,9 @@ impl<'a, U> OneofScalarField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.0.detail.name()
     }
-
+    pub fn oneof(&self) -> Oneof<'a, U> {
+        self.0.detail.oneof()
+    }
     pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
@@ -308,12 +418,32 @@ impl<'a, U> OneofScalarField<'a, U> {
         self.file().build_target()
     }
 
-    pub fn descriptor(&self) -> crate::proto::FieldDescriptor {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.detail.descriptor()
     }
 
-    pub fn syntax(&self) -> crate::proto::Syntax {
+    pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
+    }
+
+    pub fn is_marked_required(&self) -> bool {
+        self.0.detail.is_marked_required()
+    }
+
+    pub fn is_in_real_oneof(&self) -> bool {
+        self.0.detail.is_in_real_oneof()
+    }
+
+    pub fn is_in_synthetic_oneof(&self) -> bool {
+        self.0.detail.is_in_synthetic_oneof()
+    }
+
+    pub fn has_presence(&self) -> bool {
+        true
+    }
+
+    fn replace_util(&self, util: Rc<U>) {
+        self.0.detail.replace_util(util);
     }
 }
 
@@ -384,12 +514,38 @@ impl<'a, U> OneofEmbedField<'a, U> {
         self.0.detail.set_comments(comments);
     }
 
-    pub fn descriptor(&self) -> FieldDescriptor {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.detail.descriptor()
     }
 
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
+    }
+
+    fn is_marked_required(&self) -> bool {
+        self.0.detail.is_marked_required()
+    }
+
+    pub fn is_in_real_oneof(&self) -> bool {
+        self.0.detail.is_in_real_oneof()
+    }
+    pub fn is_in_synthetic_oneof(&self) -> bool {
+        self.0.detail.is_in_synthetic_oneof()
+    }
+
+    pub fn is_well_known_type(&self) -> bool {
+        self.0.embed.is_well_known_type()
+    }
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        self.0.embed.well_known_type()
+    }
+
+    pub fn has_presence(&self) -> bool {
+        true
+    }
+
+    fn replace_util(&self, util: Rc<U>) {
+        self.0.detail.replace_util(util);
     }
 }
 

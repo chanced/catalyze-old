@@ -25,6 +25,13 @@ impl<'a, U> EnumFieldDetail<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.detail.util()
     }
+    pub fn is_marked_required(&self) -> bool {
+        self.detail.is_marked_required()
+    }
+    pub fn is_marked_optional(&self) -> bool {
+        self.detail.is_marked_optional()
+    }
+
     pub(crate) fn replace_util(&self, util: Rc<U>) {
         self.detail.util.replace(util);
     }
@@ -63,12 +70,12 @@ impl<'a, U> EnumFieldDetail<'a, U> {
             None
         }
     }
-    
+
     pub fn has_import(&self) -> bool {
         self.e.file() != self.detail.file()
     }
-    pub fn is_well_known(&self) -> bool {
-        self.e.is_well_known()
+    pub fn is_well_known_type(&self) -> bool {
+        self.e.is_well_known_type()
     }
     pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
         self.e.well_known_enum()
@@ -127,8 +134,8 @@ impl<'a, U> EnumField<'a, U> {
         self.0.detail.set_comments(comments);
     }
 
-    pub fn is_well_known(&self) -> bool {
-        self.0.is_well_known()
+    pub fn is_well_known_type(&self) -> bool {
+        self.0.is_well_known_type()
     }
 
     pub fn has_import(&self) -> bool {
@@ -136,6 +143,22 @@ impl<'a, U> EnumField<'a, U> {
     }
     pub fn imports(&self) -> Option<File<'a, U>> {
         self.0.imports()
+    }
+
+    pub fn is_marked_required(&self) -> bool {
+        self.0.is_marked_required()
+    }
+
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        self.0.well_known_type()
+    }
+
+    pub fn is_marked_optional(&self) -> bool {
+        self.0.is_marked_optional()
+    }
+
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.replace_util(util)
     }
 }
 

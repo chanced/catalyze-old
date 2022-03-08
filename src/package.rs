@@ -60,7 +60,7 @@ impl<'a, U> Package<'a, U> {
     pub fn files(&self) -> Iter<File<'a, U>> {
         Iter::from(&self.0.files)
     }
-    pub fn is_well_known(&self) -> bool {
+    pub fn is_well_known_type(&self) -> bool {
         self.0.is_wk
     }
     fn downgrade(&self) -> WeakPackage<'a, U> {

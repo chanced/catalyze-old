@@ -4,6 +4,8 @@ use std::{
     rc::{Rc, Weak},
 };
 
+use petgraph::visit::Walker;
+
 use crate::{
     iter::Iter, proto::OneofDescriptor, Comments, Field, File, FullyQualified, Message, Name, Node,
     NodeAtPath, Package, WeakMessage,
@@ -62,11 +64,8 @@ impl<'a, U> Oneof<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.file().package()
     }
-    pub fn imports(&self) -> std::slice::Iter<File<'a, U>> {
-        self.fields()
-            .filter_map(|f| f.imports())
-            .collect::<Vec<_>>()
-            .iter()
+    pub fn imports(&self) -> FilterMap<Iter<Field<'a, U>>, File<'a, U>> {
+        self.fields().filter_map(|f| f.imports())
     }
     pub(crate) fn add_field(&self, field: Field<'a, U>) {
         self.0.fields.borrow_mut().push(field);
@@ -76,6 +75,13 @@ impl<'a, U> Oneof<'a, U> {
     }
     fn downgrade(&self) -> WeakOneof<'a, U> {
         WeakOneof(Rc::downgrade(&self.0))
+    }
+
+    pub fn is_real(&self) -> bool {
+        !self.0.is_synthetic
+    }
+    pub fn is_synthetic(&self) -> bool {
+        self.0.is_synthetic
     }
 }
 impl<'a, U> NodeAtPath<'a, U> for Oneof<'a, U> {

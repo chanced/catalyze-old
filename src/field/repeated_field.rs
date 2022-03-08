@@ -3,7 +3,7 @@ use std::rc::Rc;
 use crate::{
     proto::{FieldDescriptor, Scalar, Syntax},
     Comments, EmbedFieldDetail, Enum, EnumFieldDetail, File, FullyQualified, Message, Name,
-    Package, ScalarFieldDetail,
+    Package, ScalarFieldDetail, WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
 /// Represents a field marked as `repeated`. The field can hold
@@ -166,6 +166,38 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Embed(m) => m.replace_util(util),
         }
     }
+
+    pub fn is_marked_required(&self) -> bool {
+        match self {
+            RepeatedField::Scalar(f) => f.is_marked_required(),
+            RepeatedField::Enum(f) => f.is_marked_required(),
+            RepeatedField::Embed(f) => f.is_marked_required(),
+        }
+    }
+
+    pub fn is_embed(&self) -> bool {
+        matches!(self, RepeatedField::Embed(_))
+    }
+
+    pub(crate) fn is_well_known_type(&self) -> bool {
+        match self {
+            RepeatedField::Enum(f) => f.is_well_known_type(),
+            RepeatedField::Embed(f) => f.is_well_known_type(),
+            RepeatedField::Scalar(f) => false,
+        }
+    }
+
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        match self {
+            RepeatedField::Enum(f) => f.well_known_type(),
+            RepeatedField::Embed(f) => f.well_known_type(),
+            RepeatedField::Scalar(_) => None,
+        }
+    }
+
+    pub fn is_enum(&self) -> bool {
+        matches!(self, RepeatedField::Enum(_))
+    }
 }
 impl<'a, U> Clone for RepeatedField<'a, U> {
     fn clone(&self) -> Self {
@@ -286,6 +318,20 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
     pub fn build_target(&self) -> bool {
         self.0.detail.build_target()
     }
+
+    pub fn is_marked_required(&self) -> bool {
+        self.0.detail.is_marked_required()
+    }
+
+    pub fn is_well_known_type(&self) -> bool {
+        self.0.embed().is_well_known_type()
+    }
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        self.0.embed().well_known_type()
+    }
+    pub fn well_known_message(&self) -> Option<WellKnownMessage> {
+        self.0.embed().well_known_message()
+    }
 }
 
 impl<'a, U> Clone for RepeatedEmbedField<'a, U> {
@@ -336,8 +382,8 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn is_marked_optional(&self) -> bool {
         self.0.detail.is_marked_optional()
     }
-    pub fn is_required(&self) -> bool {
-        self.0.detail.is_required()
+    pub fn is_marked_required(&self) -> bool {
+        self.0.detail.is_marked_required()
     }
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.detail.comments()
@@ -361,6 +407,16 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     }
     pub fn build_target(&self) -> bool {
         self.0.build_target()
+    }
+
+    pub fn is_well_known_type(&self) -> bool {
+        self.0.enumeration().is_well_known_type()
+    }
+    pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
+        self.0.enumeration().well_known_enum()
+    }
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        self.0.enumeration().well_known_type()
     }
 }
 impl<'a, U> Clone for RepeatedEnumField<'a, U> {
@@ -432,6 +488,10 @@ impl<'a, U> RepeatedScalarField<'a, U> {
 
     pub fn build_target(&self) -> bool {
         self.0.detail.build_target()
+    }
+
+    pub fn is_marked_required(&self) -> bool {
+        self.0.detail.is_marked_required()
     }
 }
 

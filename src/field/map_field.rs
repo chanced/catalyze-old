@@ -4,7 +4,7 @@ use crate::{
     proto::FieldDescriptor,
     proto::{Scalar, Syntax},
     Comments, Enum, File, FullyQualified, Message, Name, Package, ScalarField, WeakEnum,
-    WeakMessage, WellKnownEnum, WellKnownType,
+    WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -83,6 +83,10 @@ impl<'a, U> MapFieldDetail<'a, U> {
 
     pub fn build_target(&self) -> bool {
         self.detail.build_target()
+    }
+
+    pub fn is_marked_required(&self) -> bool {
+        self.detail.is_marked_required()
     }
 }
 
@@ -197,7 +201,7 @@ impl<'a, U> MapField<'a, U> {
             MapField::Embed(f) => f.imports(),
         }
     }
-    pub fn descriptor(&self) -> FieldDescriptor {
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
         match self {
             MapField::Scalar(f) => f.descriptor(),
             MapField::Enum(f) => f.descriptor(),
@@ -217,6 +221,64 @@ impl<'a, U> MapField<'a, U> {
         match self {
             MapField::Scalar(f) => Some(f.scalar()),
             _ => None,
+        }
+    }
+
+    pub fn is_marked_required(&self) -> bool {
+        match self {
+            MapField::Scalar(f) => f.is_marked_required(),
+            MapField::Enum(f) => f.is_marked_required(),
+            MapField::Embed(f) => f.is_marked_required(),
+        }
+    }
+
+    pub fn is_embed(&self) -> bool {
+        match self {
+            MapField::Embed(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_well_known_type(&self) -> bool {
+        match self {
+            MapField::Enum(f) => f.is_well_known_type(),
+            MapField::Embed(f) => f.is_well_known_type(),
+            MapField::Scalar(f) => false,
+        }
+    }
+
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        match self {
+            MapField::Enum(f) => f.well_known_type(),
+            MapField::Embed(f) => f.well_known_type(),
+            MapField::Scalar(_) => None,
+        }
+    }
+
+    pub fn is_scalar(&self) -> bool {
+        match self {
+            MapField::Scalar(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_enum(&self) -> bool {
+        matches!(self, MapField::Enum(_))
+    }
+
+    pub(crate) fn has_presence(&self) -> bool {
+        match self {
+            MapField::Scalar(f) => f.has_presence(),
+            MapField::Enum(f) => f.has_presence(),
+            MapField::Embed(f) => f.has_presence(),
+        }
+    }
+
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        match self {
+            MapField::Scalar(f) => f.replace_util(util),
+            MapField::Enum(f) => f.replace_util(util),
+            MapField::Embed(f) => f.replace_util(util),
         }
     }
 }
@@ -341,6 +403,14 @@ impl<'a, U> MappedScalarField<'a, U> {
     pub fn key(&self) -> MapKey {
         self.0.detail.key()
     }
+
+    pub fn is_marked_required(&self) -> bool {
+        self.0.detail.is_marked_required()
+    }
+
+    pub fn has_presence(&self) -> bool {
+        false
+    }
 }
 
 impl<'a, U> FullyQualified for MappedScalarField<'a, U> {
@@ -400,7 +470,7 @@ impl<'a, U> MappedEmbedField<'a, U> {
     }
 
     pub fn has_presence(&self) -> bool {
-        true
+        false
     }
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.detail.comments()
@@ -436,6 +506,21 @@ impl<'a, U> MappedEmbedField<'a, U> {
 
     pub fn key(&self) -> MapKey {
         self.0.detail.key()
+    }
+
+    pub fn is_marked_required(&self) -> bool {
+        self.0.detail.is_marked_required()
+    }
+
+    pub fn is_well_known_type(&self) -> bool {
+        self.0.embed.is_well_known_type()
+    }
+
+    fn well_known_type(&self) -> Option<WellKnownType> {
+        self.0.embed.well_known_type()
+    }
+    fn well_known_message(&self) -> Option<WellKnownMessage> {
+        self.0.embed.well_known_message()
     }
 }
 
@@ -509,15 +594,15 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.detail.comments()
     }
-    pub fn well_known_type(&self) -> Option<WellKnownEnum> {
-        self.0.e.well_known_enum()
-    }
-    pub fn well_known_enum(&self) -> Option<WellKnownType> {
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
         self.0.e.well_known_type()
     }
+    pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
+        self.0.e.well_known_enum()
+    }
 
-    pub fn is_well_known(&self) -> bool {
-        self.0.e.is_well_known()
+    pub fn is_well_known_type(&self) -> bool {
+        self.0.e.is_well_known_type()
     }
 
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
@@ -545,6 +630,14 @@ impl<'a, U> MappedEnumField<'a, U> {
 
     pub fn key(&self) -> MapKey {
         self.0.detail.key()
+    }
+
+    pub fn is_marked_required(&self) -> bool {
+        self.0.detail.is_marked_required()
+    }
+
+    pub fn has_presence(&self) -> bool {
+        false
     }
 }
 
