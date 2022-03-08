@@ -8,7 +8,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub(crate) struct EnumFieldDetail<'a, U> {
     pub detail: FieldDetail<'a, U>,
-    pub r#enum: WeakEnum<'a, U>,
+    pub e: WeakEnum<'a, U>,
 }
 
 impl<'a, U> EnumFieldDetail<'a, U> {
@@ -35,7 +35,7 @@ impl<'a, U> EnumFieldDetail<'a, U> {
         self.detail.descriptor()
     }
     pub fn r#enum(&self) -> Enum<'a, U> {
-        self.r#enum.clone().into()
+        self.e.clone().into()
     }
     pub fn comments(&self) -> Comments<'a, U> {
         self.detail.comments()
@@ -49,6 +49,16 @@ impl<'a, U> EnumFieldDetail<'a, U> {
     }
     pub fn package(&self) -> Package<'a, U> {
         self.detail.package()
+    }
+    pub fn extern_dep(&self) -> Option<File<'a, U>> {
+        if self.e.file() != self.detail.file() {
+            Some(self.e.file().clone())
+        } else {
+            None
+        }
+    }
+    pub fn has_extern_dep(&self) -> bool {
+        self.e.file() != self.detail.file()
     }
 }
 
@@ -64,7 +74,7 @@ impl<'a, U> EnumField<'a, U> {
     }
     /// Returns the `Enum` of this `EnumField`.
     pub fn r#enum(&self) -> Enum<'a, U> {
-        self.0.r#enum.clone().into()
+        self.0.e.clone().into()
     }
     /// alias for `r#enum`
     ///
@@ -84,6 +94,14 @@ impl<'a, U> EnumField<'a, U> {
 
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
+    }
+
+    pub(crate) fn is_well_known_type(&self) -> bool {
+        self.0.e.is_well_known_type()
+    }
+
+    pub(crate) fn has_extern_dep(&self) -> bool {
+        todo!()
     }
 }
 

@@ -6,8 +6,6 @@ use crate::Node;
 use crate::Source;
 use crate::{File, Package};
 
-use std::borrow::Borrow;
-use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -57,14 +55,14 @@ impl<'a, U: Util> Ast<'a, U> {
         let mut ord_fds: Vec<FileDescriptor<'a>> = Vec::with_capacity(fl.len());
         for f in fl {
             let name = f.name();
-            let fd = fds.entry(name.to_string()).or_insert(f.into());
-            ord_fds.push(fd.clone());
+            let fd = fds.entry(name.to_string()).or_insert_with(|| f.into());
+            ord_fds.push(*fd);
         }
         let mut ast = Self {
             util: RefCell::new(util.clone()),
             fds,
             ord_fds,
-            targets: source.targets().into_iter().cloned().collect(),
+            targets: source.targets().iter().cloned().collect(),
             packages: HashMap::default(),
             nodes: HashMap::default(),
             extensions: Vec::default(),

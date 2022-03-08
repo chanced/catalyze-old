@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     proto::FieldDescriptor, proto::Syntax, Comments, File, FullyQualified, Message, Name, Package,
-    WeakMessage,
+    WeakMessage, WellKnownType,
 };
 
 use super::FieldDetail;
@@ -44,6 +44,16 @@ impl<'a, U> EmbedFieldDetail<'a, U> {
     pub fn embed(&self) -> Message<'a, U> {
         self.embed.clone().into()
     }
+    pub fn extern_dep(&self) -> Option<File<'a, U>> {
+        if self.embed.file() != self.detail.file() {
+            Some(self.embed.file().clone())
+        } else {
+            None
+        }
+    }
+    pub fn has_extern_dep(&self) -> bool {
+        self.embed.file() != self.detail.file()
+    }
 }
 
 impl<'a, U> Clone for EmbedFieldDetail<'a, U> {
@@ -77,6 +87,27 @@ impl<'a, U> EmbedField<'a, U> {
     }
     pub fn package(&self) -> Package<'a, U> {
         self.0.detail.package()
+    }
+
+    /// Indicates whether or not the field is labeled as a required field. This
+    /// will only be `true` if the syntax is proto2.
+    pub fn is_required(&self) -> bool {
+        self.0.detail.is_required()
+    }
+    pub fn is_marked_optional(&self) -> bool {
+        self.0.detail.is_marked_optional()
+    }
+
+    pub fn has_presence(&self) -> bool {
+        self.0.detail.has_presence()
+    }
+
+    pub(crate) fn has_extern_dep(&self) -> bool {
+        self.0.has_extern_dep()
+    }
+
+    pub(crate) fn extern_dep(&self) -> Option<File<'a, U>> {
+        self.0.extern_dep()
     }
 }
 impl<'a, U> Clone for EmbedField<'a, U> {

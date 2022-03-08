@@ -14,8 +14,9 @@ pub use repeated_field::*;
 pub use scalar_field::*;
 
 use crate::{
-    proto::{FieldDescriptor, Syntax},
-    Comments, File, FullyQualified, Message, Name, Node, NodeAtPath, Package, WeakMessage,
+    proto::{FieldDescriptor, Scalar, Syntax},
+    Comments, Enum, File, FullyQualified, Message, Name, Node, NodeAtPath, Package, WeakMessage,
+    WellKnownType,
 };
 use std::{cell::RefCell, convert::From, rc::Rc};
 
@@ -39,10 +40,10 @@ impl<'a, U> Clone for FieldDetail<'a, U> {
             msg: self.msg.clone(),
             name: self.name.clone(),
             fqn: self.fqn.clone(),
-            syntax: self.syntax.clone(),
+            syntax: self.syntax,
             is_map: self.is_map,
             util: self.util.clone(),
-            desc: self.desc.clone(),
+            desc: self.desc,
             in_oneof: self.in_oneof,
             comments: self.comments.clone(),
         }
@@ -95,9 +96,6 @@ impl<'a, U> FieldDetail<'a, U> {
         self.desc.is_required(self.syntax)
     }
 
-    pub fn is_well_known_type(&self) -> bool {
-        self.desc.is_well_known_type()
-    }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.comments.replace(comments);
     }
@@ -167,6 +165,7 @@ impl<'a, U> Field<'a, U> {
             Field::Scalar(f) => f.fully_qualified_name(),
         }
     }
+
     pub fn comments(&self) -> Comments<'a, U> {
         match self {
             Field::Embed(f) => f.comments(),
@@ -178,6 +177,203 @@ impl<'a, U> Field<'a, U> {
         }
     }
 
+    pub fn has_extern_dep(&self) -> bool {
+        match self {
+            Field::Embed(f) => f.has_extern_dep(),
+            Field::Enum(f) => f.has_extern_dep(),
+            Field::Map(f) => f.has_extern_dep(),
+            Field::Oneof(f) => f.has_extern_dep(),
+            Field::Repeated(f) => f.has_extern_dep(),
+            _ => false,
+        }
+    }
+    pub fn extern_dep(&self) -> Option<File<'a, U>> {
+        match self {
+            Field::Embed(f) => f.extern_dep(),
+            Field::Enum(f) => f.extern_dep(),
+            Field::Map(f) => f.extern_dep(),
+            Field::Oneof(f) => f.extern_dep(),
+            Field::Repeated(f) => f.extern_dep(),
+            Field::Scalar(f) => None,
+        }
+    }
+
+    pub fn build_target(&self) -> bool {
+        match self {
+            Field::Embed(f) => f.build_target(),
+            Field::Enum(f) => f.build_target(),
+            Field::Map(f) => f.build_target(),
+            Field::Oneof(f) => f.build_target(),
+            Field::Repeated(f) => f.build_target(),
+            Field::Scalar(f) => f.build_target(),
+        }
+    }
+    pub fn r#enum(&self) -> Option<Enum<'a, U>> {
+        match self {
+            Field::Enum(f) => Some(f.r#enum()),
+            Field::Map(f) => f.r#enum(),
+            Field::Oneof(f) => f.r#enum(),
+            Field::Repeated(f) => f.r#enum(),
+            _ => None,
+        }
+    }
+    pub fn enumeration(&self) -> Option<Enum<'a, U>> {
+        self.r#enum()
+    }
+    pub fn embed(&self) -> Option<Message<'a, U>> {
+        match self {
+            Field::Embed(f) => Some(f.embed()),
+            Field::Map(f) => f.embed(),
+            Field::Oneof(f) => f.embed(),
+            Field::Repeated(f) => f.embed(),
+            _ => None,
+        }
+    }
+
+    pub fn scalar(&self) -> Option<Scalar> {
+        match self {
+            Field::Map(f) => f.scalar(),
+            Field::Oneof(f) => f.scalar(),
+            Field::Repeated(f) => f.scalar(),
+            Field::Scalar(f) => Some(f.scalar()),
+            _ => false,
+        }
+    }
+
+    pub fn is_repeated(&self) -> bool {
+        match self {
+            Field::Repeated(_) => true,
+            _ => false,
+        }
+    }
+    pub fn is_map(&self) -> bool {
+        match self {
+            Field::Map(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_embed(&self) -> bool {
+        match self {
+            Field::Embed(f) => f.is_embed(),
+            Field::Map(f) => f.is_embed(),
+            Field::Oneof(f) => f.is_embed(),
+            Field::Repeated(f) => f.is_embed(),
+            _ => false,
+        }
+    }
+    pub fn is_in_oneof(&self) -> bool {
+        match self {
+            Field::Oneof(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_in_real_oneof(&self) -> bool {
+        match self {
+            Field::Oneof(f) => f.is_in_real_oneof(),
+            _ => false,
+        }
+    }
+    pub fn is_in_synthetic_oneof(&self) -> bool {
+        match self {
+            Field::Oneof(f) => f.is_in_synthetic_oneof(),
+            _ => false,
+        }
+    }
+    pub fn is_well_known_type(&self) -> bool {
+        match self {
+            Field::Embed(f) => f.is_well_known_type(),
+            Field::Enum(f) => f.is_well_known_type(),
+            Field::Map(f) => f.is_well_known_type(),
+            Field::Oneof(f) => f.is_well_known_type(),
+            Field::Repeated(f) => f.is_well_known_type(),
+            _ => false,
+        }
+    }
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        match self {
+            Field::Embed(f) => f.well_known_type(),
+            Field::Enum(f) => f.well_known_type(),
+            Field::Map(f) => f.well_known_type(),
+            Field::Oneof(f) => f.well_known_type(),
+            Field::Repeated(f) => f.well_known_type(),
+            _ => None,
+        }
+    }
+    pub fn syntax(&self) -> Syntax {
+        match self {
+            Field::Embed(f) => f.syntax(),
+            Field::Enum(f) => f.syntax(),
+            Field::Map(f) => f.syntax(),
+            Field::Oneof(f) => f.syntax(),
+            Field::Repeated(f) => f.syntax(),
+            Field::Scalar(f) => f.syntax(),
+        }
+    }
+    /// Indicates whether or not the field is labeled as a required field. This
+    /// will only be `true` if the syntax is proto2.
+    pub fn is_required(&self) -> bool {
+        match self {
+            Field::Embed(f) => f.is_required(),
+            Field::Enum(f) => f.is_required(),
+            Field::Map(f) => f.is_required(),
+            Field::Oneof(f) => f.is_required(),
+            Field::Repeated(f) => f.is_required(),
+            Field::Scalar(f) => f.is_required(),
+        }
+    }
+    pub fn is_marked_optional(&self) -> bool {
+        match self {
+            Field::Embed(f) => f.is_marked_optional(),
+            Field::Enum(f) => f.is_marked_optional(),
+            Field::Map(f) => f.is_marked_optional(),
+            Field::Oneof(f) => f.is_marked_optional(),
+            Field::Repeated(f) => f.is_marked_optional(),
+            Field::Scalar(f) => f.is_marked_optional(),
+        }
+    }
+    pub fn is_scalar(&self) -> bool {
+        match self {
+            Field::Embed(f) => f.is_scalar(),
+            Field::Enum(f) => f.is_scalar(),
+            Field::Map(f) => f.is_scalar(),
+            Field::Oneof(f) => f.is_scalar(),
+            Field::Repeated(f) => f.is_scalar(),
+            Field::Scalar(f) => f.is_scalar(),
+        }
+    }
+    pub fn is_enum(&self) -> bool {
+        match self {
+            Field::Embed(f) => f.is_enum(),
+            Field::Enum(f) => f.is_enum(),
+            Field::Map(f) => f.is_enum(),
+            Field::Oneof(f) => f.is_enum(),
+            Field::Repeated(f) => f.is_enum(),
+            Field::Scalar(f) => f.is_enum(),
+        }
+    }
+
+    pub fn has_presence(&self) -> bool {
+        match self {
+            Field::Embed(f) => f.has_presence(),
+            Field::Enum(f) => f.has_presence(),
+            Field::Map(f) => f.has_presence(),
+            Field::Oneof(f) => f.has_presence(),
+            Field::Repeated(f) => f.has_presence(),
+            Field::Scalar(f) => f.has_presence(),
+        }
+    }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        match self {
+            Field::Embed(f) => f.replace_util(util),
+            Field::Enum(f) => f.replace_util(util),
+            Field::Map(f) => f.replace_util(util),
+            Field::Oneof(f) => f.replace_util(util),
+            Field::Repeated(f) => f.replace_util(util),
+            Field::Scalar(f) => f.replace_util(util),
+        }
+    }
     pub fn file(&self) -> File<'a, U> {
         match self {
             Field::Embed(f) => f.file(),
@@ -266,6 +462,7 @@ impl<'a> Default for FieldDetail<'a, crate::util::Generic> {
 #[cfg(test)]
 impl<'a> Default for Field<'a, crate::util::Generic> {
     fn default() -> Self {
+        let msg = Message::default();
         Self::Scalar(ScalarField::default())
     }
 }

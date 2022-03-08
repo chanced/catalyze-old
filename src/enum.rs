@@ -2,6 +2,7 @@ use std::{
     cell::RefCell,
     collections::VecDeque,
     rc::{Rc, Weak},
+    str::FromStr,
 };
 
 use crate::{
@@ -9,7 +10,7 @@ use crate::{
     iter::Iter,
     proto::{path::EnumDescriptorPath, EnumDescriptor},
     Comments, EnumValue, File, FullyQualified, Message, MessageList, Name, Node, NodeAtPath,
-    Package, WeakMessage,
+    Package, WeakMessage, WellKnownEnum, WellKnownType,
 };
 
 pub(crate) type EnumList<'a, U> = Rc<RefCell<Vec<Enum<'a, U>>>>;
@@ -24,6 +25,7 @@ struct EnumDetail<'a, U> {
     dependents: Rc<RefCell<Vec<WeakMessage<'a, U>>>>,
     util: RefCell<Rc<U>>,
     descriptor: EnumDescriptor<'a>,
+    wkt: Option<WellKnownEnum>,
 }
 
 impl<'a, U> EnumDetail<'a, U> {
@@ -32,6 +34,25 @@ impl<'a, U> EnumDetail<'a, U> {
     }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.comments.replace(comments);
+    }
+    pub fn container(&self) -> Container<'a, U> {
+        self.container.clone().into()
+    }
+    pub fn file(&self) -> File<'a, U> {
+        self.container.file()
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.container().package()
+    }
+    pub fn is_well_known(&self) -> bool {
+        self.package().is_well_known()
+    }
+
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        self.wkt.map(Into::into)
+    }
+    pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
+        self.wkt
     }
 }
 
@@ -42,7 +63,11 @@ impl<'a, U> Enum<'a, U> {
     pub(crate) fn new(desc: EnumDescriptor<'a>, container: Container<'a, U>) -> Self {
         let util = container.util();
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
-
+        let wkt = if container.package().is_well_known() {
+            WellKnownEnum::from_str(desc.name()).ok()
+        } else {
+            None
+        };
         let e = Enum(Rc::new(EnumDetail {
             name: Name::new(desc.name(), util.clone()),
             values: Rc::new(RefCell::new(Vec::with_capacity(desc.values().len()))),
@@ -52,6 +77,7 @@ impl<'a, U> Enum<'a, U> {
             util: RefCell::new(util),
             descriptor: desc.clone(),
             comments: RefCell::new(Comments::default()),
+            wkt,
         }));
 
         {
@@ -68,7 +94,7 @@ impl<'a, U> Enum<'a, U> {
         self.0.container.clone().into()
     }
     pub fn file(&self) -> File<'a, U> {
-        self.0.container.file()
+        self.0.file()
     }
     pub fn name(&self) -> Name<U> {
         self.0.name.clone()
@@ -83,7 +109,7 @@ impl<'a, U> Enum<'a, U> {
         Iter::from(&self.0.values)
     }
     pub fn package(&self) -> Package<'a, U> {
-        self.0.container.package()
+        self.0.package()
     }
     fn downgrade(&self) -> WeakEnum<'a, U> {
         WeakEnum(Rc::downgrade(&self.0))
@@ -91,6 +117,17 @@ impl<'a, U> Enum<'a, U> {
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.comments()
     }
+    pub fn is_well_known(&self) -> bool {
+        self.0.well_known_type().is_some()
+    }
+
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        self.0.well_known_type()
+    }
+    pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
+        self.0.well_known_enum()
+    }
+
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.set_comments(comments);
     }
@@ -142,6 +179,15 @@ impl<'a, U> WeakEnum<'a, U> {
     fn upgrade(&self) -> Enum<'a, U> {
         Enum(self.0.upgrade().expect("Failed to upgrade WeakEnum"))
     }
+    pub fn file(&self) -> File<'a, U> {
+        self.upgrade().file()
+    }
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        self.upgrade().well_known_type()
+    }
+    pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
+        self.upgrade().well_known_enum()
+    }
 }
 impl<'a, U> Clone for WeakEnum<'a, U> {
     fn clone(&self) -> Self {
@@ -172,6 +218,7 @@ impl<'a> Default for Enum<'a, crate::util::Generic> {
             util: RefCell::new(container.util()),
             descriptor: EnumDescriptor::default(),
             comments: RefCell::new(Comments::default()),
+            wkt: None,
         }))
     }
 }
@@ -189,6 +236,7 @@ impl<'a, U> AllEnums<'a, U> {
         }
     }
 }
+
 impl<'a, U> Iterator for AllEnums<'a, U> {
     type Item = Enum<'a, U>;
     fn next(&mut self) -> Option<Self::Item> {

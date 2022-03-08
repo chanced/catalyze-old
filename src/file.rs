@@ -128,7 +128,9 @@ impl<'a, U> File<'a, U> {
     pub fn comments(&self) -> Comments<'a, U> {
         *self.0.comments.borrow()
     }
-
+    pub fn file_path(&self) -> &PathBuf {
+        &self.0.file_path
+    }
     /// Returns comments attached to the package in this File if any exist.
     pub fn package_comments(&self) -> Comments<'a, U> {
         *self.0.pkg_comments.borrow()
@@ -272,6 +274,17 @@ impl<'a> Default for File<'a, crate::util::Generic> {
         }))
     }
 }
+impl<'a, U> PartialEq for File<'a, U> {
+    fn eq(&self, other: &Self) -> bool {
+        self.file_path() == other.file_path()
+    }
+}
+
+impl<'a, U> PartialEq<WeakFile<'a, U>> for File<'a, U> {
+    fn eq(&self, other: &WeakFile<'a, U>) -> bool {
+        self.file_path() == other.upgrade().file_path()
+    }
+}
 
 #[derive(Debug)]
 pub(crate) struct WeakFile<'a, U>(Weak<FileDetail<'a, U>>);
@@ -310,5 +323,15 @@ impl<'a, U> From<File<'a, U>> for WeakFile<'a, U> {
 impl<'a, U> From<&File<'a, U>> for WeakFile<'a, U> {
     fn from(file: &File<'a, U>) -> Self {
         file.downgrade()
+    }
+}
+impl<'a, U> PartialEq<File<'a, U>> for WeakFile<'a, U> {
+    fn eq(&self, other: &File<'a, U>) -> bool {
+        self.upgrade().file_path() == other.file_path()
+    }
+}
+impl<'a, U> PartialEq for WeakFile<'a, U> {
+    fn eq(&self, other: &Self) -> bool {
+        self.upgrade().file_path() == other.upgrade().file_path()
     }
 }

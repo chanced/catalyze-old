@@ -246,14 +246,6 @@ impl<'a> FieldDescriptor<'a> {
         Label::from(self.desc.label())
     }
 
-    pub fn well_known_type(&self) -> Option<WellKnownType> {
-        todo!()
-    }
-
-    pub fn is_well_known_type(&self) -> bool {
-        self.well_known_type().is_some()
-    }
-
     /// If type_name is set, this need not be set.  If both this and type_name
     /// are set, this must be one of Enum, Message or Group.
     pub fn r#type(&self) -> Type {

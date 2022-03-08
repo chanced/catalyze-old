@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+use std::str::FromStr;
 
 use crate::extension::WeakExtension;
 use crate::field::FieldList;
@@ -8,7 +9,7 @@ use crate::proto::{path::DescriptorPath, MessageDescriptor};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
     format_fqn, AllEnums, Comments, Enum, EnumList, Extension, Field, File, FullyQualified, Node,
-    NodeAtPath, Oneof, OneofList,
+    NodeAtPath, Oneof, OneofList, WellKnownMessage,
 };
 use crate::{Package, WellKnownType};
 
@@ -48,24 +49,21 @@ pub(crate) struct MessageDetail<'a, U> {
     defined_extensions: Rc<RefCell<Vec<Extension<'a, U>>>>,
     /// `Extension`s applied to this `Message`
     applied_extensions: Rc<RefCell<Vec<WeakExtension<'a, U>>>>,
-
     comments: RefCell<Comments<'a, U>>,
+    wkt: Option<WellKnownMessage>,
 }
 
 impl<'a, U> Message<'a, U> {
     pub(crate) fn new(desc: MessageDescriptor<'a>, container: Container<'a, U>) -> Self {
         let util = container.util();
         let fqn = format_fqn(&container, desc.name());
-        // let well_known_type = if container.package().is_well_known() {
-        //     match WellKnownType::from_str(&fqn) {
-        //         Ok(wkt) => Some(wkt),
-        //         Err(_) => None,
-        //     }
-        // } else {
-        //     None
-        // };
 
-        // TODO: Fix this
+        let wkt = if container.package().is_well_known() {
+            WellKnownMessage::from_str(desc.name()).ok()
+        } else {
+            None
+        };
+
         let well_known_type = None;
         let msg = Message(Rc::new(MessageDetail {
             name: Name::new(desc.name(), util.clone()),
@@ -88,6 +86,7 @@ impl<'a, U> Message<'a, U> {
             applied_extensions: Rc::new(RefCell::new(Vec::new())),
             defined_extensions: Rc::new(RefCell::new(Vec::with_capacity(desc.extensions().len()))),
             comments: RefCell::new(Comments::default()),
+            wkt,
         }));
 
         let container = Container::Message(msg.clone());

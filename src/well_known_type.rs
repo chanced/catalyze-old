@@ -1,9 +1,56 @@
+use anyhow::bail;
+
+pub const WELL_KNNOWN_TYPE_PACKAGE: &str = "google.protobuf";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WellKnownType {
     Enum(WellKnownEnum),
     Message(WellKnownMessage),
 }
-pub const WELL_KNNOWN_TYPE_PACKAGE: &str = "google.protobuf";
+
+impl std::str::FromStr for WellKnownType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> ::std::result::Result<WellKnownType, Self::Err> {
+        type Err = anyhow::Error;
+        match s {
+            "Any" => Ok(WellKnownType::Message(WellKnownMessage::Any)),
+            "Api" => Ok(WellKnownType::Message(WellKnownMessage::Api)),
+            "BoolValue" => Ok(WellKnownType::Message(WellKnownMessage::BoolValue)),
+            "BytesValue" => Ok(WellKnownType::Message(WellKnownMessage::BytesValue)),
+            "DoubleValue" => Ok(WellKnownType::Message(WellKnownMessage::DoubleValue)),
+            "Duration" => Ok(WellKnownType::Message(WellKnownMessage::Duration)),
+            "Empty" => Ok(WellKnownType::Message(WellKnownMessage::Empty)),
+            "Enum" => Ok(WellKnownType::Message(WellKnownMessage::Enum)),
+            "EnumValue" => Ok(WellKnownType::Message(WellKnownMessage::EnumValue)),
+            "Field" => Ok(WellKnownType::Message(WellKnownMessage::Field)),
+            "FieldKind" => Ok(WellKnownType::Message(WellKnownMessage::FieldKind)),
+            "FieldMask" => Ok(WellKnownType::Message(WellKnownMessage::FieldMask)),
+            "FloatValue" => Ok(WellKnownType::Message(WellKnownMessage::FloatValue)),
+            "Int32Value" => Ok(WellKnownType::Message(WellKnownMessage::Int32Value)),
+            "Int64Value" => Ok(WellKnownType::Message(WellKnownMessage::Int64Value)),
+            "ListValue" => Ok(WellKnownType::Message(WellKnownMessage::ListValue)),
+            "Method" => Ok(WellKnownType::Message(WellKnownMessage::Method)),
+
+            "FieldCardinality" => Ok(WellKnownType::Enum(WellKnownEnum::FieldCardinality)),
+            "FieldKind" => Ok(WellKnownType::Enum(WellKnownEnum::FieldKind)),
+            "NullValue" => Ok(WellKnownType::Enum(WellKnownEnum::NullValue)),
+            "Syntax" => Ok(WellKnownType::Enum(WellKnownEnum::Syntax)),
+            _ => bail!("Not a Well-Known Type: {}", s),
+        }
+    }
+}
+
+impl From<WellKnownEnum> for WellKnownType {
+    fn from(e: WellKnownEnum) -> Self {
+        WellKnownType::Enum(e)
+    }
+}
+
+impl From<WellKnownMessage> for WellKnownType {
+    fn from(m: WellKnownMessage) -> Self {
+        WellKnownType::Message(m)
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WellKnownMessage {
@@ -182,34 +229,48 @@ pub enum WellKnownMessage {
     Value,
 }
 
-impl std::str::FromStr for WellKnownType {
+impl std::str::FromStr for WellKnownMessage {
     type Err = anyhow::Error;
-
-    fn from_str(_s: &str) -> ::std::result::Result<WellKnownType, Self::Err> {
-        //TODO: this has changed as I need to be able to identify nested enums
-        todo!();
-
-        // match s {
-        //     "Any" => Ok(WellKnownType::Any),
-        //     "Duration" => Ok(WellKnownType::Duration),
-        //     "Empty" => Ok(WellKnownType::Empty),
-        //     "Struct" => Ok(WellKnownType::Struct),
-        //     "Timestamp" => Ok(WellKnownType::Timestamp),
-        //     "Value" => Ok(WellKnownType::Value),
-        //     "ListValue" => Ok(WellKnownType::List),
-        //     "DoubleValue" => Ok(WellKnownType::Double),
-        //     "FloatValue" => Ok(WellKnownType::Float),
-        //     "Int64Value" => Ok(WellKnownType::Int64),
-        //     "UInt64Value" => Ok(WellKnownType::Uint64),
-        //     "Int32Value" => Ok(WellKnownType::Int32),
-        //     "UInt32Value" => Ok(WellKnownType::Uint32),
-        //     "BoolValue" => Ok(WellKnownType::Bool),
-        //     "StringValue" => Ok(WellKnownType::String),
-        //     "BytesValue" => Ok(WellKnownType::Bytes),
-        //     _ => bail!("Unknown WellKnownType"),
-        // }
+    fn from_str(s: &str) -> ::std::result::Result<WellKnownMessage, Self::Err> {
+        type Err = anyhow::Error;
+        match s {
+            "Any" => Ok(WellKnownMessage::Any),
+            "Api" => Ok(WellKnownMessage::Api),
+            "BoolValue" => Ok(WellKnownMessage::BoolValue),
+            "BytesValue" => Ok(WellKnownMessage::BytesValue),
+            "DoubleValue" => Ok(WellKnownMessage::DoubleValue),
+            "Duration" => Ok(WellKnownMessage::Duration),
+            "Empty" => Ok(WellKnownMessage::Empty),
+            "Enum" => Ok(WellKnownMessage::Enum),
+            "EnumValue" => Ok(WellKnownMessage::EnumValue),
+            "Field" => Ok(WellKnownMessage::Field),
+            "FieldKind" => Ok(WellKnownMessage::FieldKind),
+            "FieldMask" => Ok(WellKnownMessage::FieldMask),
+            "FloatValue" => Ok(WellKnownMessage::FloatValue),
+            "Int32Value" => Ok(WellKnownMessage::Int32Value),
+            "Int64Value" => Ok(WellKnownMessage::Int64Value),
+            "ListValue" => Ok(WellKnownMessage::ListValue),
+            "Method" => Ok(WellKnownMessage::Method),
+            _ => bail!("Not a Well-Known Message: {}", s),
+        }
     }
 }
+
+impl std::str::FromStr for WellKnownEnum {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> ::std::result::Result<WellKnownEnum, Self::Err> {
+        type Err = anyhow::Error;
+        match s {
+            "FieldCardinality" => Ok(WellKnownEnum::FieldCardinality),
+            "FieldKind" => Ok(WellKnownEnum::FieldKind),
+            "NullValue" => Ok(WellKnownEnum::NullValue),
+            "Syntax" => Ok(WellKnownEnum::Syntax),
+            _ => bail!("Not a Well-Known Type: {}", s),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WellKnownEnum {
     /// Whether a field is optional, required, or repeated.
