@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    proto::FieldDescriptor, proto::Syntax, Comments, Enum, FieldDetail, File, FullyQualified,
-    Message, Name, Package, WeakEnum,
+    file, proto::FieldDescriptor, proto::Syntax, Comments, Enum, FieldDetail, File, FullyQualified,
+    Message, Name, Package, WeakEnum, WellKnownEnum, WellKnownType,
 };
 
 #[derive(Debug, Clone)]
@@ -37,6 +37,12 @@ impl<'a, U> EnumFieldDetail<'a, U> {
     pub fn r#enum(&self) -> Enum<'a, U> {
         self.e.clone().into()
     }
+    pub fn build_target(&self) -> bool {
+        self.file().build_target()
+    }
+    pub fn enumeration(&self) -> Enum<'a, U> {
+        self.r#enum()
+    }
     pub fn comments(&self) -> Comments<'a, U> {
         self.detail.comments()
     }
@@ -50,15 +56,25 @@ impl<'a, U> EnumFieldDetail<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.detail.package()
     }
-    pub fn extern_dep(&self) -> Option<File<'a, U>> {
+    pub fn imports(&self) -> Option<File<'a, U>> {
         if self.e.file() != self.detail.file() {
             Some(self.e.file().clone())
         } else {
             None
         }
     }
-    pub fn has_extern_dep(&self) -> bool {
+    
+    pub fn has_import(&self) -> bool {
         self.e.file() != self.detail.file()
+    }
+    pub fn is_well_known(&self) -> bool {
+        self.e.is_well_known()
+    }
+    pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
+        self.e.well_known_enum()
+    }
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        self.e.well_known_type()
     }
 }
 
@@ -76,6 +92,11 @@ impl<'a, U> EnumField<'a, U> {
     pub fn r#enum(&self) -> Enum<'a, U> {
         self.0.e.clone().into()
     }
+
+    pub fn build_target(&self) -> bool {
+        self.0.build_target()
+    }
+
     /// alias for `r#enum`
     ///
     /// Returns the `Enum` of this `EnumField`.
@@ -85,6 +106,16 @@ impl<'a, U> EnumField<'a, U> {
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.detail.comments()
     }
+    pub fn has_presence(&self) -> bool {
+        self.syntax() == Syntax::Proto2 || self.descriptor().is_marked_optional(self.syntax())
+    }
+    pub fn syntax(&self) -> Syntax {
+        self.0.syntax()
+    }
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+        self.0.descriptor()
+    }
+
     pub fn package(&self) -> Package<'a, U> {
         self.0.detail.package()
     }
@@ -92,16 +123,19 @@ impl<'a, U> EnumField<'a, U> {
         self.0.detail.file()
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
     }
 
-    pub(crate) fn is_well_known_type(&self) -> bool {
-        self.0.e.is_well_known_type()
+    pub fn is_well_known(&self) -> bool {
+        self.0.is_well_known()
     }
 
-    pub(crate) fn has_extern_dep(&self) -> bool {
-        todo!()
+    pub fn has_import(&self) -> bool {
+        self.0.has_import()
+    }
+    pub fn imports(&self) -> Option<File<'a, U>> {
+        self.0.imports()
     }
 }
 

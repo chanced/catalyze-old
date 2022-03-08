@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
 use crate::{
-    proto::{FieldDescriptor, Syntax},
-    Comments, EmbedFieldDetail, EnumFieldDetail, File, FullyQualified, Message, Name, Package,
-    ScalarFieldDetail,
+    proto::{FieldDescriptor, Scalar, Syntax},
+    Comments, EmbedFieldDetail, Enum, EnumFieldDetail, File, FullyQualified, Message, Name,
+    Package, ScalarFieldDetail,
 };
 
 /// Represents a field marked as `repeated`. The field can hold
@@ -12,7 +12,7 @@ use crate::{
 pub enum RepeatedField<'a, U> {
     Scalar(RepeatedScalarField<'a, U>),
     Enum(RepeatedEnumField<'a, U>),
-    Message(RepeatedEmbedField<'a, U>),
+    Embed(RepeatedEmbedField<'a, U>),
 }
 
 impl<'a, U> RepeatedField<'a, U> {
@@ -20,7 +20,7 @@ impl<'a, U> RepeatedField<'a, U> {
         match self {
             RepeatedField::Scalar(f) => f.name(),
             RepeatedField::Enum(f) => f.name(),
-            RepeatedField::Message(f) => f.name(),
+            RepeatedField::Embed(f) => f.name(),
         }
     }
 
@@ -28,7 +28,7 @@ impl<'a, U> RepeatedField<'a, U> {
         match self {
             RepeatedField::Scalar(f) => f.file(),
             RepeatedField::Enum(f) => f.file(),
-            RepeatedField::Message(f) => f.file(),
+            RepeatedField::Embed(f) => f.file(),
         }
     }
 
@@ -36,7 +36,7 @@ impl<'a, U> RepeatedField<'a, U> {
         match self {
             RepeatedField::Scalar(f) => f.package(),
             RepeatedField::Enum(f) => f.package(),
-            RepeatedField::Message(f) => f.package(),
+            RepeatedField::Embed(f) => f.package(),
         }
     }
 
@@ -44,7 +44,7 @@ impl<'a, U> RepeatedField<'a, U> {
         match self {
             RepeatedField::Scalar(f) => f.fully_qualified_name(),
             RepeatedField::Enum(f) => f.fully_qualified_name(),
-            RepeatedField::Message(f) => f.fully_qualified_name(),
+            RepeatedField::Embed(f) => f.fully_qualified_name(),
         }
     }
     /// Returns the Message containing this RepeatedField
@@ -52,7 +52,7 @@ impl<'a, U> RepeatedField<'a, U> {
         match self {
             RepeatedField::Scalar(f) => f.message(),
             RepeatedField::Enum(f) => f.message(),
-            RepeatedField::Message(f) => f.message(),
+            RepeatedField::Embed(f) => f.message(),
         }
     }
     /// Returns `Rc<U>`
@@ -60,21 +60,15 @@ impl<'a, U> RepeatedField<'a, U> {
         match self {
             RepeatedField::Scalar(f) => f.util(),
             RepeatedField::Enum(f) => f.util(),
-            RepeatedField::Message(f) => f.util(),
+            RepeatedField::Embed(f) => f.util(),
         }
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        match self {
-            RepeatedField::Scalar(s) => s.replace_util(util),
-            RepeatedField::Enum(e) => e.replace_util(util),
-            RepeatedField::Message(m) => m.replace_util(util),
-        }
-    }
+
     pub fn syntax(&self) -> Syntax {
         match self {
             RepeatedField::Scalar(f) => f.syntax(),
             RepeatedField::Enum(f) => f.syntax(),
-            RepeatedField::Message(f) => f.syntax(),
+            RepeatedField::Embed(f) => f.syntax(),
         }
     }
 
@@ -82,21 +76,60 @@ impl<'a, U> RepeatedField<'a, U> {
         match self {
             RepeatedField::Scalar(f) => f.descriptor(),
             RepeatedField::Enum(f) => f.descriptor(),
-            RepeatedField::Message(f) => f.descriptor(),
+            RepeatedField::Embed(f) => f.descriptor(),
         }
     }
     pub fn comments(&self) -> Comments<'a, U> {
         match self {
             RepeatedField::Scalar(f) => f.comments(),
             RepeatedField::Enum(f) => f.comments(),
-            RepeatedField::Message(f) => f.comments(),
+            RepeatedField::Embed(f) => f.comments(),
         }
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+
+    pub fn has_import(&self) -> bool {
         match self {
-            RepeatedField::Scalar(f) => f.set_comments(comments),
-            RepeatedField::Enum(f) => f.set_comments(comments),
-            RepeatedField::Message(f) => f.set_comments(comments),
+            RepeatedField::Enum(f) => f.has_import(),
+            RepeatedField::Embed(f) => f.has_import(),
+            RepeatedField::Scalar(_) => false,
+        }
+    }
+    pub fn imports(&self) -> Option<File<'a, U>> {
+        match self {
+            RepeatedField::Enum(f) => f.imports(),
+            RepeatedField::Embed(f) => f.imports(),
+            RepeatedField::Scalar(_) => None,
+        }
+    }
+    pub fn build_target(&self) -> bool {
+        match self {
+            RepeatedField::Scalar(f) => f.build_target(),
+            RepeatedField::Enum(f) => f.build_target(),
+            RepeatedField::Embed(f) => f.build_target(),
+        }
+    }
+    pub fn r#enum(&self) -> Option<Enum<'a, U>> {
+        match self {
+            RepeatedField::Enum(f) => Some(f.r#enum()),
+            _ => None,
+        }
+    }
+    pub fn enumeration(&self) -> Option<Enum<'a, U>> {
+        match self {
+            RepeatedField::Enum(f) => Some(f.enumeration()),
+            _ => None,
+        }
+    }
+    pub fn embed(&self) -> Option<Message<'a, U>> {
+        match self {
+            RepeatedField::Embed(f) => Some(f.embed()),
+            _ => None,
+        }
+    }
+    pub fn scalar(&self) -> Option<Scalar> {
+        match self {
+            RepeatedField::Scalar(f) => Some(f.scalar()),
+            _ => None,
         }
     }
     pub fn is_map(&self) -> bool {
@@ -116,7 +149,22 @@ impl<'a, U> RepeatedField<'a, U> {
     }
 
     pub fn has_presence(&self) -> bool {
-        matches!(self, RepeatedField::Message(_))
+        matches!(self, RepeatedField::Embed(_))
+    }
+
+    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+        match self {
+            RepeatedField::Scalar(f) => f.set_comments(comments),
+            RepeatedField::Enum(f) => f.set_comments(comments),
+            RepeatedField::Embed(f) => f.set_comments(comments),
+        }
+    }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        match self {
+            RepeatedField::Scalar(s) => s.replace_util(util),
+            RepeatedField::Enum(e) => e.replace_util(util),
+            RepeatedField::Embed(m) => m.replace_util(util),
+        }
     }
 }
 impl<'a, U> Clone for RepeatedField<'a, U> {
@@ -124,7 +172,7 @@ impl<'a, U> Clone for RepeatedField<'a, U> {
         match self {
             RepeatedField::Scalar(f) => RepeatedField::Scalar(f.clone()),
             RepeatedField::Enum(f) => RepeatedField::Enum(f.clone()),
-            RepeatedField::Message(f) => RepeatedField::Message(f.clone()),
+            RepeatedField::Embed(f) => RepeatedField::Embed(f.clone()),
         }
     }
 }
@@ -133,7 +181,7 @@ impl<'a, U> FullyQualified for RepeatedField<'a, U> {
         match self {
             RepeatedField::Scalar(f) => f.fully_qualified_name(),
             RepeatedField::Enum(f) => f.fully_qualified_name(),
-            RepeatedField::Message(f) => f.fully_qualified_name(),
+            RepeatedField::Embed(f) => f.fully_qualified_name(),
         }
     }
 }
@@ -164,13 +212,13 @@ impl<'a, U> From<&RepeatedEnumField<'a, U>> for RepeatedField<'a, U> {
 
 impl<'a, U> From<RepeatedEmbedField<'a, U>> for RepeatedField<'a, U> {
     fn from(f: RepeatedEmbedField<'a, U>) -> Self {
-        RepeatedField::Message(f)
+        RepeatedField::Embed(f)
     }
 }
 
 impl<'a, U> From<&RepeatedEmbedField<'a, U>> for RepeatedField<'a, U> {
     fn from(f: &RepeatedEmbedField<'a, U>) -> Self {
-        RepeatedField::Message(f.clone())
+        RepeatedField::Embed(f.clone())
     }
 }
 
@@ -218,6 +266,25 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
     }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
+    }
+
+    pub fn has_import(&self) -> bool {
+        self.file() != self.0.embed().file()
+    }
+    pub fn imports(&self) -> Option<File<'a, U>> {
+        if self.has_import() {
+            Some(self.file())
+        } else {
+            None
+        }
+    }
+
+    pub fn embed(&self) -> Message<'a, U> {
+        self.0.embed()
+    }
+
+    pub fn build_target(&self) -> bool {
+        self.0.detail.build_target()
     }
 }
 
@@ -277,6 +344,23 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
+    }
+
+    pub fn has_import(&self) -> bool {
+        self.0.has_import()
+    }
+    pub fn imports(&self) -> Option<File<'a, U>> {
+        self.0.imports()
+    }
+
+    pub fn r#enum(&self) -> Enum<'a, U> {
+        self.0.r#enum()
+    }
+    pub fn enumeration(&self) -> Enum<'a, U> {
+        self.0.enumeration()
+    }
+    pub fn build_target(&self) -> bool {
+        self.0.build_target()
     }
 }
 impl<'a, U> Clone for RepeatedEnumField<'a, U> {
@@ -340,6 +424,14 @@ impl<'a, U> RepeatedScalarField<'a, U> {
     }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
+    }
+
+    pub fn scalar(&self) -> Scalar {
+        self.0.detail.scalar()
+    }
+
+    pub fn build_target(&self) -> bool {
+        self.0.detail.build_target()
     }
 }
 

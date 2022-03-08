@@ -34,7 +34,6 @@ pub(crate) struct MessageDetail<'a, U> {
     name: Name<U>,
     is_map_entry: bool,
     descriptor: MessageDescriptor<'a>,
-    well_known_type: Option<WellKnownType>,
     fqn: String,
     util: RefCell<Rc<U>>,
     messages: MessageList<'a, U>,
@@ -64,12 +63,10 @@ impl<'a, U> Message<'a, U> {
             None
         };
 
-        let well_known_type = None;
         let msg = Message(Rc::new(MessageDetail {
             name: Name::new(desc.name(), util.clone()),
             container: container.into(),
             fqn,
-            well_known_type,
             descriptor: desc,
             util: RefCell::new(util.clone()),
 
@@ -138,8 +135,14 @@ impl<'a, U> Message<'a, U> {
         self.0.container.package()
     }
 
-    pub fn is_well_known_type(&self) -> bool {
-        self.0.well_known_type.is_some()
+    pub fn is_well_known(&self) -> bool {
+        self.0.wkt.is_some()
+    }
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        self.0.wkt.map(Into::into)
+    }
+    pub fn well_known_message(&self) -> Option<WellKnownMessage> {
+        self.0.wkt
     }
     pub fn container(&self) -> Container<'a, U> {
         self.0.container.clone().into()
@@ -203,7 +206,6 @@ impl<'a> Default for Message<'a, crate::util::Generic> {
             name: Name::default(),
             container: container.clone().into(),
             fqn: String::default(),
-            well_known_type: None,
             descriptor: Default::default(),
             util: RefCell::new(container.util()),
             is_map_entry: false,
@@ -217,6 +219,7 @@ impl<'a> Default for Message<'a, crate::util::Generic> {
             applied_extensions: Default::default(),
             defined_extensions: Default::default(),
             comments: Default::default(),
+            wkt: None,
         }))
     }
 }
@@ -306,6 +309,16 @@ impl<'a, U> WeakMessage<'a, U> {
     }
     pub fn file(&self) -> File<'a, U> {
         self.upgrade().file()
+    }
+
+    pub fn is_well_known(&self) -> bool {
+        self.upgrade().is_well_known()
+    }
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        self.upgrade().well_known_type()
+    }
+    pub fn well_known_message(&self) -> Option<WellKnownMessage> {
+        self.upgrade().well_known_message()
     }
 }
 

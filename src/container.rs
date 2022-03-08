@@ -142,19 +142,19 @@ pub(crate) enum WeakContainer<'a, U> {
 }
 
 impl<'a, U> WeakContainer<'a, U> {
-    pub(crate) fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a, U> {
         match self {
             WeakContainer::File(f) => f.package(),
             WeakContainer::Message(m) => m.package(),
         }
     }
-    pub(crate) fn build_target(&self) -> bool {
+    pub fn build_target(&self) -> bool {
         match self {
             WeakContainer::File(f) => f.build_target(),
             WeakContainer::Message(m) => m.build_target(),
         }
     }
-    pub(crate) fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a, U> {
         match self {
             WeakContainer::File(f) => f.into(),
             WeakContainer::Message(m) => m.file(),

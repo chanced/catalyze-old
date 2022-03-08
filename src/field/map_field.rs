@@ -1,8 +1,10 @@
-use std::rc::Rc;
+use std::{error::Error, rc::Rc};
 
 use crate::{
-    proto::FieldDescriptor, proto::Syntax, Comments, Enum, File, FullyQualified, Message, Name,
-    Package, ScalarField, WeakEnum, WeakMessage, WellKnownEnum, WellKnownType,
+    proto::FieldDescriptor,
+    proto::{Scalar, Syntax},
+    Comments, Enum, File, FullyQualified, Message, Name, Package, ScalarField, WeakEnum,
+    WeakMessage, WellKnownEnum, WellKnownType,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -33,6 +35,11 @@ impl<'a, U> MapFieldDetail<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.detail.name()
     }
+
+    pub fn key(&self) -> MapKey {
+        self.key
+    }
+
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
@@ -60,10 +67,6 @@ impl<'a, U> MapFieldDetail<'a, U> {
         self.detail.replace_util(util);
     }
 
-    fn well_known_type(&self) -> Option<WellKnownType> {
-        todo!()
-    }
-
     pub fn comments(&self) -> Comments<'a, U> {
         self.detail.comments()
     }
@@ -76,6 +79,10 @@ impl<'a, U> MapFieldDetail<'a, U> {
     }
     pub fn package(&self) -> Package<'a, U> {
         self.detail.package()
+    }
+
+    pub fn build_target(&self) -> bool {
+        self.detail.build_target()
     }
 }
 
@@ -104,6 +111,15 @@ impl<'a, U> MapField<'a, U> {
             MapField::Embed(f) => f.name(),
         }
     }
+
+    pub fn key(&self) -> MapKey {
+        match self {
+            MapField::Scalar(f) => f.key(),
+            MapField::Enum(f) => f.key(),
+            MapField::Embed(f) => f.key(),
+        }
+    }
+
     fn fully_qualified_name(&self) -> String {
         match self {
             MapField::Scalar(f) => f.fully_qualified_name(),
@@ -143,6 +159,15 @@ impl<'a, U> MapField<'a, U> {
             MapField::Embed(f) => f.file(),
         }
     }
+
+    pub fn build_target(&self) -> bool {
+        match self {
+            MapField::Scalar(f) => f.build_target(),
+            MapField::Enum(f) => f.build_target(),
+            MapField::Embed(f) => f.build_target(),
+        }
+    }
+
     pub fn package(&self) -> Package<'a, U> {
         match self {
             MapField::Scalar(f) => f.package(),
@@ -155,6 +180,43 @@ impl<'a, U> MapField<'a, U> {
             MapField::Scalar(f) => f.set_comments(comments),
             MapField::Enum(f) => f.set_comments(comments),
             MapField::Embed(f) => f.set_comments(comments),
+        }
+    }
+
+    pub fn has_import(&self) -> bool {
+        match self {
+            MapField::Scalar(_) => false,
+            MapField::Enum(f) => f.has_import(),
+            MapField::Embed(f) => f.has_import(),
+        }
+    }
+    pub fn imports(&self) -> Option<File<'a, U>> {
+        match self {
+            MapField::Scalar(_) => None,
+            MapField::Enum(f) => f.imports(),
+            MapField::Embed(f) => f.imports(),
+        }
+    }
+    pub fn descriptor(&self) -> FieldDescriptor {
+        match self {
+            MapField::Scalar(f) => f.descriptor(),
+            MapField::Enum(f) => f.descriptor(),
+            MapField::Embed(f) => f.descriptor(),
+        }
+    }
+
+    pub fn syntax(&self) -> Syntax {
+        match self {
+            MapField::Scalar(f) => f.syntax(),
+            MapField::Enum(f) => f.syntax(),
+            MapField::Embed(f) => f.syntax(),
+        }
+    }
+
+    pub fn scalar(&self) -> Option<Scalar> {
+        match self {
+            MapField::Scalar(f) => Some(f.scalar()),
+            _ => None,
         }
     }
 }
@@ -213,7 +275,7 @@ impl<'a, U> From<&MappedEmbedField<'a, U>> for MapField<'a, U> {
 #[derive(Debug, Clone)]
 pub struct MappedScalarFieldDetail<'a, U> {
     detail: MapFieldDetail<'a, U>,
-    scalar_field: ScalarField<'a, U>,
+    scalar: Scalar,
 }
 
 #[derive(Debug)]
@@ -266,6 +328,18 @@ impl<'a, U> MappedScalarField<'a, U> {
 
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
+    }
+
+    pub fn build_target(&self) -> bool {
+        self.0.detail.build_target()
+    }
+
+    pub fn scalar(&self) -> Scalar {
+        self.0.scalar
+    }
+
+    pub fn key(&self) -> MapKey {
+        self.0.detail.key()
     }
 }
 
@@ -344,6 +418,25 @@ impl<'a, U> MappedEmbedField<'a, U> {
     pub(crate) fn replace_util(&self, util: Rc<U>) {
         self.0.detail.replace_util(util);
     }
+
+    pub fn has_import(&self) -> bool {
+        self.file() != self.0.embed.file()
+    }
+    pub fn imports(&self) -> Option<File<'a, U>> {
+        if self.has_import() {
+            Some(self.0.embed.file())
+        } else {
+            None
+        }
+    }
+
+    pub fn build_target(&self) -> bool {
+        self.0.detail.build_target()
+    }
+
+    pub fn key(&self) -> MapKey {
+        self.0.detail.key()
+    }
 }
 
 impl<'a, U> FullyQualified for MappedEmbedField<'a, U> {
@@ -360,7 +453,7 @@ impl<'a, U> Clone for MappedEmbedField<'a, U> {
 
 #[derive(Debug, Clone)]
 pub struct MappedEnumFieldDetail<'a, U> {
-    enm: WeakEnum<'a, U>,
+    e: WeakEnum<'a, U>,
     detail: MapFieldDetail<'a, U>,
 }
 
@@ -411,23 +504,47 @@ impl<'a, U> MappedEnumField<'a, U> {
         self.r#enum()
     }
     pub fn r#enum(&self) -> Enum<'a, U> {
-        self.0.enm.clone().into()
+        self.0.e.clone().into()
     }
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.detail.comments()
     }
     pub fn well_known_type(&self) -> Option<WellKnownEnum> {
-        self.0.detail.well_known_type().map(|wkt| match wkt {
-            crate::WellKnownType::Enum(wke) => wke,
-            _ => unreachable!(),
-        })
+        self.0.e.well_known_enum()
     }
+    pub fn well_known_enum(&self) -> Option<WellKnownType> {
+        self.0.e.well_known_type()
+    }
+
+    pub fn is_well_known(&self) -> bool {
+        self.0.e.is_well_known()
+    }
+
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
     }
 
     pub(crate) fn replace_util(&self, util: Rc<U>) {
         self.0.detail.replace_util(util);
+    }
+
+    pub fn has_import(&self) -> bool {
+        return self.0.e.file() != self.file();
+    }
+    pub fn imports(&self) -> Option<File<'a, U>> {
+        if self.has_import() {
+            Some(self.0.e.file())
+        } else {
+            None
+        }
+    }
+
+    pub fn build_target(&self) -> bool {
+        self.0.detail.build_target()
+    }
+
+    pub fn key(&self) -> MapKey {
+        self.0.detail.key()
     }
 }
 

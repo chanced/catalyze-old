@@ -2,7 +2,7 @@
 
 use crate::field::{
     EmbedField, EnumField, MapField, MappedEmbedField, MappedEnumField, MappedScalarField,
-    OneofEnumField, OneofField, OneofMessageField, OneofScalarField, RepeatedEmbedField,
+    OneofEmbedField, OneofEnumField, OneofField, OneofScalarField, RepeatedEmbedField,
     RepeatedEnumField, RepeatedField, RepeatedScalarField, ScalarField,
 };
 use crate::{
@@ -138,7 +138,7 @@ pub trait Visitor<'a, U>: Sized {
     }
     fn visit_real_oneof_message_field(
         &mut self,
-        fld: OneofMessageField<'a, U>,
+        fld: OneofEmbedField<'a, U>,
     ) -> Result<(), Self::Error> {
         todo!()
     }
@@ -161,7 +161,7 @@ pub trait Visitor<'a, U>: Sized {
     }
     fn visit_synthetic_oneof_message_field(
         &mut self,
-        fld: OneofMessageField<'a, U>,
+        fld: OneofEmbedField<'a, U>,
     ) -> Result<(), Self::Error> {
         todo!()
     }

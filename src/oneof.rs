@@ -1,5 +1,6 @@
 use std::{
     cell::RefCell,
+    iter::FilterMap,
     rc::{Rc, Weak},
 };
 
@@ -61,7 +62,12 @@ impl<'a, U> Oneof<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.file().package()
     }
-
+    pub fn imports(&self) -> std::slice::Iter<File<'a, U>> {
+        self.fields()
+            .filter_map(|f| f.imports())
+            .collect::<Vec<_>>()
+            .iter()
+    }
     pub(crate) fn add_field(&self, field: Field<'a, U>) {
         self.0.fields.borrow_mut().push(field);
     }

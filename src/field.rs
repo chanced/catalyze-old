@@ -108,29 +108,32 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.file().package()
     }
+    pub fn build_target(&self) -> bool {
+        self.file().build_target()
+    }
 
     /// Returns `true` for all fields that have explicit presence.
     ///
     /// See:
     /// - https://github.com/protocolbuffers/protobuf/blob/v3.17.0/docs/field_presence.md
     /// - https://github.com/protocolbuffers/protobuf/blob/master/docs/implementing_proto3_presence.md
-    pub fn has_presence(&self) -> bool {
-        if self.in_oneof {
-            return true;
-        }
-        if self.desc.is_embed() {
-            return true;
-        }
-        if !self.is_repeated() && !self.is_map() {
-            if self.syntax.is_proto2() {
-                true
-            } else {
-                self.desc.is_marked_optional(self.syntax)
-            }
-        } else {
-            false
-        }
-    }
+    // pub fn has_presence(&self) -> bool {
+    //     if self.in_oneof {
+    //         return true;
+    //     }
+    //     if self.desc.is_embed() {
+    //         return true;
+    //     }
+    //     if !self.is_repeated() && !self.is_map() {
+    //         if self.syntax.is_proto2() {
+    //             true
+    //         } else {
+    //             self.desc.is_marked_optional(self.syntax)
+    //         }
+    //     } else {
+    //         false
+    //     }
+    // }
 }
 
 #[derive(Debug)]
@@ -152,6 +155,27 @@ impl<'a, U> Field<'a, U> {
             Field::Oneof(f) => f.name(),
             Field::Repeated(f) => f.name(),
             Field::Scalar(f) => f.name(),
+        }
+    }
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+        match self {
+            Field::Embed(f) => f.descriptor(),
+            Field::Enum(f) => f.descriptor(),
+            Field::Map(f) => f.descriptor(),
+            Field::Oneof(f) => f.descriptor(),
+            Field::Repeated(f) => f.descriptor(),
+            Field::Scalar(f) => f.descriptor(),
+        }
+    }
+
+    pub fn syntax(&self) -> Syntax {
+        match self {
+            Field::Embed(f) => f.syntax(),
+            Field::Enum(f) => f.syntax(),
+            Field::Map(f) => f.syntax(),
+            Field::Oneof(f) => f.syntax(),
+            Field::Repeated(f) => f.syntax(),
+            Field::Scalar(f) => f.syntax(),
         }
     }
 
@@ -176,24 +200,24 @@ impl<'a, U> Field<'a, U> {
             Field::Scalar(f) => f.comments(),
         }
     }
-
-    pub fn has_extern_dep(&self) -> bool {
+    pub fn has_import(&self) -> bool {
         match self {
-            Field::Embed(f) => f.has_extern_dep(),
-            Field::Enum(f) => f.has_extern_dep(),
-            Field::Map(f) => f.has_extern_dep(),
-            Field::Oneof(f) => f.has_extern_dep(),
-            Field::Repeated(f) => f.has_extern_dep(),
-            _ => false,
+            Field::Embed(f) => f.has_import(),
+            Field::Enum(f) => f.has_import(),
+            Field::Map(f) => f.has_import(),
+            Field::Oneof(f) => f.has_import(),
+            Field::Repeated(f) => f.has_import(),
+            Field::Scalar(_) => false,
         }
     }
-    pub fn extern_dep(&self) -> Option<File<'a, U>> {
+
+    pub fn imports(&self) -> Option<File<'a, U>> {
         match self {
-            Field::Embed(f) => f.extern_dep(),
-            Field::Enum(f) => f.extern_dep(),
-            Field::Map(f) => f.extern_dep(),
-            Field::Oneof(f) => f.extern_dep(),
-            Field::Repeated(f) => f.extern_dep(),
+            Field::Embed(f) => f.imports(),
+            Field::Enum(f) => f.imports(),
+            Field::Map(f) => f.imports(),
+            Field::Oneof(f) => f.imports(),
+            Field::Repeated(f) => f.imports(),
             Field::Scalar(f) => None,
         }
     }
@@ -218,7 +242,13 @@ impl<'a, U> Field<'a, U> {
         }
     }
     pub fn enumeration(&self) -> Option<Enum<'a, U>> {
-        self.r#enum()
+        match self {
+            Field::Enum(f) => Some(f.enumeration()),
+            Field::Map(f) => f.enumeration(),
+            Field::Oneof(f) => f.enumeration(),
+            Field::Repeated(f) => f.enumeration(),
+            _ => None,
+        }
     }
     pub fn embed(&self) -> Option<Message<'a, U>> {
         match self {
@@ -236,7 +266,7 @@ impl<'a, U> Field<'a, U> {
             Field::Oneof(f) => f.scalar(),
             Field::Repeated(f) => f.scalar(),
             Field::Scalar(f) => Some(f.scalar()),
-            _ => false,
+            _ => None,
         }
     }
 
@@ -246,16 +276,10 @@ impl<'a, U> Field<'a, U> {
             _ => false,
         }
     }
-    pub fn is_map(&self) -> bool {
-        match self {
-            Field::Map(_) => true,
-            _ => false,
-        }
-    }
 
     pub fn is_embed(&self) -> bool {
         match self {
-            Field::Embed(f) => f.is_embed(),
+            Field::Embed(f) => true,
             Field::Map(f) => f.is_embed(),
             Field::Oneof(f) => f.is_embed(),
             Field::Repeated(f) => f.is_embed(),
@@ -281,13 +305,13 @@ impl<'a, U> Field<'a, U> {
             _ => false,
         }
     }
-    pub fn is_well_known_type(&self) -> bool {
+    pub fn is_well_known(&self) -> bool {
         match self {
-            Field::Embed(f) => f.is_well_known_type(),
-            Field::Enum(f) => f.is_well_known_type(),
-            Field::Map(f) => f.is_well_known_type(),
-            Field::Oneof(f) => f.is_well_known_type(),
-            Field::Repeated(f) => f.is_well_known_type(),
+            Field::Embed(f) => f.is_well_known(),
+            Field::Enum(f) => f.is_well_known(),
+            Field::Map(f) => f.is_well_known(),
+            Field::Oneof(f) => f.is_well_known(),
+            Field::Repeated(f) => f.is_well_known(),
             _ => false,
         }
     }
@@ -299,16 +323,6 @@ impl<'a, U> Field<'a, U> {
             Field::Oneof(f) => f.well_known_type(),
             Field::Repeated(f) => f.well_known_type(),
             _ => None,
-        }
-    }
-    pub fn syntax(&self) -> Syntax {
-        match self {
-            Field::Embed(f) => f.syntax(),
-            Field::Enum(f) => f.syntax(),
-            Field::Map(f) => f.syntax(),
-            Field::Oneof(f) => f.syntax(),
-            Field::Repeated(f) => f.syntax(),
-            Field::Scalar(f) => f.syntax(),
         }
     }
     /// Indicates whether or not the field is labeled as a required field. This
@@ -335,12 +349,11 @@ impl<'a, U> Field<'a, U> {
     }
     pub fn is_scalar(&self) -> bool {
         match self {
-            Field::Embed(f) => f.is_scalar(),
-            Field::Enum(f) => f.is_scalar(),
             Field::Map(f) => f.is_scalar(),
             Field::Oneof(f) => f.is_scalar(),
             Field::Repeated(f) => f.is_scalar(),
             Field::Scalar(f) => f.is_scalar(),
+            _ => false
         }
     }
     pub fn is_enum(&self) -> bool {
@@ -350,10 +363,14 @@ impl<'a, U> Field<'a, U> {
             Field::Map(f) => f.is_enum(),
             Field::Oneof(f) => f.is_enum(),
             Field::Repeated(f) => f.is_enum(),
-            Field::Scalar(f) => f.is_enum(),
+            Field::Scalar(_) => false,
         }
     }
-
+    /// Returns `true` for all fields that have explicit presence.
+    ///
+    /// See:
+    /// - https://github.com/protocolbuffers/protobuf/blob/v3.17.0/docs/field_presence.md
+    /// - https://github.com/protocolbuffers/protobuf/blob/master/docs/implementing_proto3_presence.md
     pub fn has_presence(&self) -> bool {
         match self {
             Field::Embed(f) => f.has_presence(),
@@ -374,6 +391,13 @@ impl<'a, U> Field<'a, U> {
             Field::Scalar(f) => f.replace_util(util),
         }
     }
+    pub fn is_map(&self) -> bool {
+        match self {
+            Field::Map(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn file(&self) -> File<'a, U> {
         match self {
             Field::Embed(f) => f.file(),

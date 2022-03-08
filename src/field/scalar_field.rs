@@ -20,8 +20,11 @@ impl<'a, U> ScalarFieldDetail<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
-    pub fn scalar(&self) -> &Scalar {
-        &self.scalar
+    pub fn build_target(&self) -> bool {
+        self.detail.build_target()
+    }
+    pub fn scalar(&self) -> Scalar {
+        self.scalar
     }
     pub fn is_repeated(&self) -> bool {
         self.detail.is_repeated()
@@ -91,9 +94,19 @@ impl<'a, U> ScalarField<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.0.detail.package()
     }
-
+    pub fn syntax(&self) -> Syntax {
+        self.0.detail.syntax()
+    }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
+    }
+
+    pub fn build_target(&self) -> bool {
+        self.0.detail.build_target()
+    }
+
+    pub fn descriptor(&self) -> FieldDescriptor {
+        self.0.descriptor()
     }
 }
 

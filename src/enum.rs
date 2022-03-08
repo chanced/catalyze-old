@@ -86,8 +86,18 @@ impl<'a, U> Enum<'a, U> {
                 values.push(EnumValue::new(v, e.clone()));
             }
         }
-
         e
+    }
+
+    pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
+        self.0.well_known_enum()
+    }
+
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        self.0.well_known_type()
+    }
+    pub fn is_well_known(&self) -> bool {
+        self.0.is_well_known()
     }
 
     pub fn container(&self) -> Container<'a, U> {
@@ -116,16 +126,6 @@ impl<'a, U> Enum<'a, U> {
     }
     pub fn comments(&self) -> Comments<'a, U> {
         self.0.comments()
-    }
-    pub fn is_well_known(&self) -> bool {
-        self.0.well_known_type().is_some()
-    }
-
-    pub fn well_known_type(&self) -> Option<WellKnownType> {
-        self.0.well_known_type()
-    }
-    pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
-        self.0.well_known_enum()
     }
 
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
@@ -187,6 +187,9 @@ impl<'a, U> WeakEnum<'a, U> {
     }
     pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
         self.upgrade().well_known_enum()
+    }
+    pub fn is_well_known(&self) -> bool {
+        self.upgrade().is_well_known()
     }
 }
 impl<'a, U> Clone for WeakEnum<'a, U> {

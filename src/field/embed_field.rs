@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     proto::FieldDescriptor, proto::Syntax, Comments, File, FullyQualified, Message, Name, Package,
-    WeakMessage, WellKnownType,
+    WeakMessage, WellKnownMessage, WellKnownType,
 };
 
 use super::FieldDetail;
@@ -15,6 +15,9 @@ pub(crate) struct EmbedFieldDetail<'a, U> {
 impl<'a, U> EmbedFieldDetail<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.detail.name()
+    }
+    pub fn embed(&self) -> Message<'a, U> {
+        self.embed.into()
     }
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
@@ -41,17 +44,27 @@ impl<'a, U> EmbedFieldDetail<'a, U> {
     pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.detail.descriptor()
     }
-    pub fn embed(&self) -> Message<'a, U> {
-        self.embed.clone().into()
-    }
-    pub fn extern_dep(&self) -> Option<File<'a, U>> {
+
+    pub fn imports(&self) -> Option<File<'a, U>> {
         if self.embed.file() != self.detail.file() {
             Some(self.embed.file().clone())
         } else {
             None
         }
     }
-    pub fn has_extern_dep(&self) -> bool {
+    pub fn build_target(&self) -> bool {
+        self.detail.build_target()
+    }
+    pub fn is_well_known(&self) -> bool {
+        self.embed.is_well_known()
+    }
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
+        self.embed().well_known_type()
+    }
+    pub fn well_known_message(&self) -> Option<WellKnownMessage> {
+        self.embed().well_known_message()
+    }
+    pub fn has_import(&self) -> bool {
         self.embed.file() != self.detail.file()
     }
 }
@@ -81,7 +94,12 @@ impl<'a, U> EmbedField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
-
+    pub fn embed(&self) -> Message<'a, U> {
+        self.0.embed()
+    }
+    pub fn build_target(&self) -> bool {
+        self.0.build_target()
+    }
     pub fn file(&self) -> File<'a, U> {
         self.0.detail.file()
     }
@@ -99,15 +117,23 @@ impl<'a, U> EmbedField<'a, U> {
     }
 
     pub fn has_presence(&self) -> bool {
-        self.0.detail.has_presence()
+        true
     }
 
-    pub(crate) fn has_extern_dep(&self) -> bool {
-        self.0.has_extern_dep()
+    pub fn has_import(&self) -> bool {
+        self.0.has_import()
     }
 
-    pub(crate) fn extern_dep(&self) -> Option<File<'a, U>> {
-        self.0.extern_dep()
+    pub fn imports(&self) -> Option<File<'a, U>> {
+        self.0.imports()
+    }
+
+    pub fn descriptor(&self) -> FieldDescriptor {
+        self.0.descriptor()
+    }
+
+    pub fn syntax(&self) -> Syntax {
+        self.0.syntax()
     }
 }
 impl<'a, U> Clone for EmbedField<'a, U> {

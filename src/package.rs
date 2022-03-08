@@ -1,6 +1,6 @@
 use crate::iter::Iter;
 pub use crate::File;
-use crate::{FullyQualified, Name, NodeAtPath, PackageComments};
+use crate::{FullyQualified, Name, NodeAtPath, PackageComments, WELL_KNNOWN_TYPE_PACKAGE};
 
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
@@ -12,6 +12,7 @@ struct PackageDetail<'a, U> {
     fqn: String,
     util: RefCell<Rc<U>>,
     files: Rc<RefCell<Vec<File<'a, U>>>>,
+    is_wk: bool,
 }
 
 #[derive(Debug)]
@@ -30,11 +31,13 @@ impl<'a, U> Package<'a, U> {
         } else {
             format!(".{}", name)
         };
+
         Self(Rc::new(PackageDetail {
             fqn,
             name: Name::new(name, util.clone()),
             files: Rc::new(RefCell::new(vec![])),
             util: RefCell::new(util),
+            is_wk: name == WELL_KNNOWN_TYPE_PACKAGE,
         }))
     }
 
@@ -58,7 +61,7 @@ impl<'a, U> Package<'a, U> {
         Iter::from(&self.0.files)
     }
     pub fn is_well_known(&self) -> bool {
-        self.0.name.is_well_known_package()
+        self.0.is_wk
     }
     fn downgrade(&self) -> WeakPackage<'a, U> {
         WeakPackage(Rc::downgrade(&self.0))
