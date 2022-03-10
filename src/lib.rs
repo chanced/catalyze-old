@@ -1,5 +1,5 @@
 mod ast;
-pub mod codec;
+mod codec;
 mod comments;
 mod container;
 mod r#enum;
@@ -36,9 +36,9 @@ pub use node::*;
 pub use oneof::*;
 pub use package::*;
 
+pub use codec::Codec;
 pub use r#enum::*;
 pub use service::*;
 pub use source::*;
 pub use util::ToCase;
-
 pub use well_known_type::*;

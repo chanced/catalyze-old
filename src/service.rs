@@ -6,7 +6,7 @@ use std::{
 use crate::{
     iter::Iter,
     proto::{path::ServiceDescriptorPath, ServiceDescriptor},
-    Comments, File, FullyQualified, Method, Name, Node, NodeAtPath, Package, WeakFile,
+    Comments, File, FullyQualified, Method, Name, Node, NodeAtPath, Nodes, Package, WeakFile,
 };
 
 pub(crate) type ServiceList<'a, U> = Rc<RefCell<Vec<Service<'a, U>>>>;
@@ -18,6 +18,7 @@ struct ServiceDetail<'a, U> {
     methods: Rc<RefCell<Vec<Method<'a, U>>>>,
     comments: RefCell<Comments<'a, U>>,
     file: WeakFile<'a, U>,
+    util: RefCell<Rc<U>>,
 }
 
 #[derive(Debug)]
@@ -32,7 +33,8 @@ impl<'a, U> Service<'a, U> {
             fqn: fully_qualified_name,
             methods: Rc::new(RefCell::new(Vec::with_capacity(desc.methods().len()))),
             comments: RefCell::new(Comments::default()),
-            file: file.into(),
+            file: file.clone().into(),
+            util: RefCell::new(file.util()),
         }))
     }
 
@@ -57,6 +59,16 @@ impl<'a, U> Service<'a, U> {
     }
     fn downgrade(&self) -> WeakService<'a, U> {
         WeakService(Rc::downgrade(&self.0))
+    }
+
+    pub fn nodes(&self) -> Nodes<'a, U> {
+        Nodes::new(vec![self.methods().into()])
+    }
+    pub fn util(&self) -> Rc<U> {
+        self.0.util.borrow().clone()
+    }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.util.replace(util);
     }
 }
 

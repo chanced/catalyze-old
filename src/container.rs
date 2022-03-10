@@ -160,6 +160,13 @@ impl<'a, U> WeakContainer<'a, U> {
             WeakContainer::Message(m) => m.file(),
         }
     }
+
+    pub(crate) fn weak_file(&self) -> WeakFile<'a, U> {
+        match self {
+            WeakContainer::File(f) => f.clone(),
+            WeakContainer::Message(m) => m.weak_file(),
+        }
+    }
 }
 impl<'a, U> From<&File<'a, U>> for WeakContainer<'a, U> {
     fn from(f: &File<'a, U>) -> Self {

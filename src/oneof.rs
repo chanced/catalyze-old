@@ -1,14 +1,11 @@
 use std::{
     cell::RefCell,
-    iter::FilterMap,
     rc::{Rc, Weak},
 };
 
-use petgraph::visit::Walker;
-
 use crate::{
-    iter::Iter, proto::OneofDescriptor, Comments, Field, File, FullyQualified, Message, Name, Node,
-    NodeAtPath, Package, WeakMessage,
+    iter::Iter, proto::OneofDescriptor, Comments, Field, File, Files, FullyQualified, Message,
+    Name, Node, NodeAtPath, Nodes, Package, WeakFile, WeakMessage,
 };
 pub(crate) type OneofList<'a, U> = Rc<RefCell<Vec<Oneof<'a, U>>>>;
 
@@ -21,6 +18,8 @@ pub(crate) struct OneofDetail<'a, U> {
     msg: WeakMessage<'a, U>,
     is_synthetic: bool,
     comments: RefCell<Comments<'a, U>>,
+    imports: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
+    util: RefCell<Rc<U>>,
 }
 
 #[derive(Debug)]
@@ -28,20 +27,18 @@ pub struct Oneof<'a, U>(Rc<OneofDetail<'a, U>>);
 
 impl<'a, U> Oneof<'a, U> {
     pub fn new(desc: OneofDescriptor<'a>, msg: Message<'a, U>) -> Self {
-        let util = msg.util();
         let fully_qualified_name = format!("{}.{}", msg.fully_qualified_name(), desc.name());
-
-        let o = Oneof(Rc::new(OneofDetail {
-            name: Name::new(desc.name(), util.clone()),
+        Oneof(Rc::new(OneofDetail {
+            name: Name::new(desc.name(), msg.util()),
             desc,
             fqn: fully_qualified_name,
             fields: Rc::new(RefCell::new(Vec::default())),
-            msg: msg.into(),
+            msg: msg.clone().into(),
             is_synthetic: true,
             comments: RefCell::new(Comments::default()),
-        }));
-
-        o
+            imports: Rc::new(RefCell::new(Vec::default())),
+            util: RefCell::new(msg.util()),
+        }))
     }
 
     pub fn name(&self) -> Name<U> {
@@ -56,7 +53,9 @@ impl<'a, U> Oneof<'a, U> {
     pub fn message(&self) -> Message<'a, U> {
         self.0.msg.clone().into()
     }
-
+    pub fn util(&self) -> Rc<U> {
+        self.0.util.borrow().clone()
+    }
     pub fn file(&self) -> File<'a, U> {
         self.0.msg.file()
     }
@@ -64,15 +63,19 @@ impl<'a, U> Oneof<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.file().package()
     }
-    pub fn imports(&self) -> FilterMap<Iter<Field<'a, U>>, File<'a, U>> {
-        self.fields().filter_map(|f| f.imports())
+    pub fn imports(&self) -> Files<'a, U> {
+        Files::from(&self.0.imports)
     }
     pub(crate) fn add_field(&self, field: Field<'a, U>) {
-        self.0.fields.borrow_mut().push(field);
+        self.0.fields.borrow_mut().push(field.clone());
+        field
+            .imports()
+            .for_each(|i| self.0.imports.borrow_mut().push(i.into()))
     }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.comments.replace(comments);
     }
+
     fn downgrade(&self) -> WeakOneof<'a, U> {
         WeakOneof(Rc::downgrade(&self.0))
     }
@@ -82,6 +85,14 @@ impl<'a, U> Oneof<'a, U> {
     }
     pub fn is_synthetic(&self) -> bool {
         self.0.is_synthetic
+    }
+
+    pub fn nodes(&self) -> Nodes<'a, U> {
+        Nodes::empty()
+    }
+
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.util.replace(util.clone());
     }
 }
 impl<'a, U> NodeAtPath<'a, U> for Oneof<'a, U> {
@@ -127,6 +138,8 @@ impl<'a> Default for Oneof<'a, crate::util::Generic> {
             msg: msg.clone().into(),
             is_synthetic: false,
             comments: Default::default(),
+            imports: Default::default(),
+            util: RefCell::new(Rc::new(crate::util::Generic::default())),
         }))
     }
 }

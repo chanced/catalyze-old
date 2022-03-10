@@ -15,8 +15,8 @@ pub use scalar_field::*;
 
 use crate::{
     proto::{FieldDescriptor, Scalar, Syntax},
-    Comments, Enum, File, FullyQualified, Message, Name, Node, NodeAtPath, Package, WeakMessage,
-    WellKnownType,
+    Comments, Enum, File, Files, FullyQualified, Message, Name, Node, NodeAtPath, Nodes, Package,
+    WeakMessage, WellKnownType,
 };
 use std::{cell::RefCell, convert::From, rc::Rc};
 
@@ -188,14 +188,14 @@ impl<'a, U> Field<'a, U> {
         }
     }
 
-    pub fn imports(&self) -> Option<File<'a, U>> {
+    pub fn imports(&self) -> Files<'a, U> {
         match self {
             Field::Embed(f) => f.imports(),
             Field::Enum(f) => f.imports(),
             Field::Map(f) => f.imports(),
             Field::Oneof(f) => f.imports(),
             Field::Repeated(f) => f.imports(),
-            Field::Scalar(f) => None,
+            Field::Scalar(f) => Files::empty(),
         }
     }
 
@@ -394,10 +394,7 @@ impl<'a, U> Field<'a, U> {
         }
     }
     pub fn is_map(&self) -> bool {
-        match self {
-            Field::Map(_) => true,
-            _ => false,
-        }
+        matches!(self, Field::Map(_))
     }
 
     pub fn file(&self) -> File<'a, U> {
@@ -428,6 +425,21 @@ impl<'a, U> Field<'a, U> {
             Field::Oneof(f) => f.set_comments(comments),
             Field::Repeated(f) => f.set_comments(comments),
             Field::Scalar(f) => f.set_comments(comments),
+        }
+    }
+
+    pub(crate) fn nodes(&self) -> Nodes<'a, U> {
+        Nodes::empty()
+    }
+
+    pub(crate) fn util(&self) -> Rc<U> {
+        match self {
+            Field::Embed(f) => f.util(),
+            Field::Enum(f) => f.util(),
+            Field::Map(f) => f.util(),
+            Field::Oneof(f) => f.util(),
+            Field::Repeated(f) => f.util(),
+            Field::Scalar(f) => f.util(),
         }
     }
 }

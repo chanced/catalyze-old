@@ -45,6 +45,7 @@ impl<'a> FileDescriptor<'a> {
     pub fn name(&self) -> &'a str {
         self.desc.name()
     }
+
     /// e.g. "foo", "foo.bar", etc.
     pub fn package(&self) -> &'a str {
         self.desc.package()

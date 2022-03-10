@@ -1,17 +1,26 @@
-use std::{
-    cell::RefCell,
-    collections::{HashSet, VecDeque},
-    marker::PhantomData,
-    rc::Rc,
-};
+use std::{cell::RefCell, rc::Rc};
 
-use crate::{Enum, EnumList, File, Message, MessageList, Name, WeakFile};
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Iter<T> {
     nodes: Rc<RefCell<Vec<T>>>,
     idx: usize,
 }
+
+impl<T> Iter<T> {
+    pub fn empty(nodes: Vec<T>) -> Self {
+        Self {
+            nodes: Rc::new(RefCell::new(nodes)),
+            idx: 0,
+        }
+    }
+    pub fn len(&self) -> usize {
+        self.nodes.borrow().len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.nodes.borrow().is_empty()
+    }
+}
+
 impl<T> Iterator for Iter<T>
 where
     T: Clone,
@@ -22,77 +31,13 @@ where
         self.nodes.borrow().get(self.idx - 1).cloned()
     }
 }
+
 impl<T> From<&Rc<RefCell<Vec<T>>>> for Iter<T> {
     fn from(nodes: &Rc<RefCell<Vec<T>>>) -> Self {
         Iter {
             nodes: nodes.clone(),
             idx: 0,
         }
-    }
-}
-
-#[derive(Debug)]
-pub struct TransitiveImports<'a, U> {
-    queue: VecDeque<File<'a, U>>,
-    processed: HashSet<Name<U>>,
-    phantom: PhantomData<&'a U>,
-}
-impl<'a, U> TransitiveImports<'a, U> {
-    pub(crate) fn new(files: Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
-        Self {
-            queue: VecDeque::from_iter(files.borrow().iter().map(|f| f.into())),
-            processed: HashSet::new(),
-            phantom: PhantomData,
-        }
-    }
-}
-impl<'a, U> Iterator for TransitiveImports<'a, U> {
-    type Item = File<'a, U>;
-    fn next(&mut self) -> Option<Self::Item> {
-        while let Some(file) = self.queue.pop_front() {
-            if !self.processed.contains(&file.name()) {
-                self.processed.insert(file.name());
-                for d in file.imports() {
-                    self.queue.push_back(d);
-                }
-                return Some(file);
-            }
-        }
-        None
-    }
-}
-
-/// FileRefIter is an iterator that upgrades weak references to `File`s.
-pub struct FileRefIter<'a, U> {
-    files: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
-    index: usize,
-}
-impl<'a, U> From<&Rc<RefCell<Vec<WeakFile<'a, U>>>>> for FileRefIter<'a, U> {
-    fn from(files: &Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
-        FileRefIter {
-            files: files.clone(),
-            index: 0,
-        }
-    }
-}
-impl<'a, U> From<Rc<RefCell<Vec<WeakFile<'a, U>>>>> for FileRefIter<'a, U> {
-    fn from(files: Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
-        FileRefIter {
-            files: files.clone(),
-            index: 0,
-        }
-    }
-}
-
-impl<'a, U> Iterator for FileRefIter<'a, U> {
-    type Item = File<'a, U>;
-    fn next(&mut self) -> Option<Self::Item> {
-        let files = self.files.borrow();
-        if let Some(file) = files.get(self.index) {
-            self.index += 1;
-            return Some(file.into());
-        }
-        None
     }
 }
 

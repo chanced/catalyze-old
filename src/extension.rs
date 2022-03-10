@@ -1,16 +1,19 @@
 use std::{
     cell::RefCell,
+    collections::HashMap,
     rc::{Rc, Weak},
 };
 
 use crate::{
     container::{Container, WeakContainer},
     format_fqn,
+    iter::Iter,
     proto::FieldDescriptor,
-    Comments, File, FullyQualified, Name, Node, Package,
+    Comments, File, FullyQualified, Name, Node, Nodes, Package,
 };
 
 pub(crate) type ExtensionList<'a, U> = Rc<RefCell<Vec<Extension<'a, U>>>>;
+pub(crate) type ExtensionMap<'a, U> = Rc<RefCell<HashMap<String, Extension<'a, U>>>>;
 
 #[derive(Debug, Clone)]
 struct ExtensionDetail<'a, U> {
@@ -66,6 +69,16 @@ impl<'a, U> Extension<'a, U> {
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.comments.replace(comments);
     }
+
+    pub(crate) fn nodes(&self) -> Nodes<'a, U> {
+        Nodes::empty()
+    }
+    pub fn util(&self) -> Rc<U> {
+        self.0.util.borrow().clone()
+    }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.util.replace(util);
+    }
 }
 
 impl<U> FullyQualified for Extension<'_, U> {
@@ -100,5 +113,63 @@ pub(crate) struct WeakExtension<'a, U>(Weak<ExtensionDetail<'a, U>>);
 impl<'a, U> Clone for WeakExtension<'a, U> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
+    }
+}
+#[derive(Clone, Debug)]
+pub struct Extensions<'a, U> {
+    ext_map: ExtensionMap<'a, U>,
+    ext_vec: ExtensionList<'a, U>,
+}
+impl<'a, U> Extensions<'a, U> {
+    pub fn get(&self, key: &str) -> Option<Extension<'a, U>> {
+        self.ext_map.borrow().get(key).map(|e| e.clone())
+    }
+    pub fn len(&self) -> usize {
+        self.ext_map.borrow().len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.ext_map.borrow().is_empty()
+    }
+    pub fn iter(&self) -> Iter<Extension<'a, U>> {
+        Iter::from(&self.ext_vec)
+    }
+    pub fn first(&self) -> Option<Extension<'a, U>> {
+        self.ext_vec.borrow().first().cloned()
+    }
+    pub fn last(&self) -> Option<Extension<'a, U>> {
+        self.ext_vec.borrow().last().cloned()
+    }
+    pub fn get_by_index(&self, index: usize) -> Option<Extension<'a, U>> {
+        self.ext_vec.borrow().get(index).cloned()
+    }
+    pub fn contains_key(&self, key: &str) -> bool {
+        self.ext_map.borrow().contains_key(key)
+    }
+
+    pub(crate) fn insert(&self, ext: Extension<'a, U>) {
+        self.ext_vec.borrow_mut().push(ext.clone());
+        self.ext_map
+            .borrow_mut()
+            .insert(ext.fully_qualified_name(), ext.clone());
+    }
+
+    pub fn new() -> Extensions<'a, U> {
+        Self {
+            ext_map: ExtensionMap::default(),
+            ext_vec: ExtensionList::default(),
+        }
+    }
+}
+
+impl<'a, U> Default for Extensions<'a, U> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl<'a, U> IntoIterator for Extensions<'a, U> {
+    type Item = Extension<'a, U>;
+    type IntoIter = Iter<Extension<'a, U>>;
+    fn into_iter(self) -> Self::IntoIter {
+        Iter::from(&self.ext_vec)
     }
 }

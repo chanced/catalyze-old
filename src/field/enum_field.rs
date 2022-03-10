@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    file, proto::FieldDescriptor, proto::Syntax, Comments, Enum, FieldDetail, File, FullyQualified,
-    Message, Name, Package, WeakEnum, WellKnownEnum, WellKnownType,
+    file, proto::FieldDescriptor, proto::Syntax, Comments, Enum, FieldDetail, File, Files,
+    FullyQualified, Message, Name, Package, WeakEnum, WellKnownEnum, WellKnownType,
 };
 
 #[derive(Debug, Clone)]
@@ -63,11 +63,11 @@ impl<'a, U> EnumFieldDetail<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.detail.package()
     }
-    pub fn imports(&self) -> Option<File<'a, U>> {
-        if self.e.file() != self.detail.file() {
-            Some(self.e.file().clone())
+    pub fn imports(&self) -> Files<'a, U> {
+        if self.file() != self.e.file() {
+            Files::from(self.e.weak_file())
         } else {
-            None
+            Files::empty()
         }
     }
 
@@ -141,7 +141,7 @@ impl<'a, U> EnumField<'a, U> {
     pub fn has_import(&self) -> bool {
         self.0.has_import()
     }
-    pub fn imports(&self) -> Option<File<'a, U>> {
+    pub fn imports(&self) -> Files<'a, U> {
         self.0.imports()
     }
 
@@ -159,6 +159,10 @@ impl<'a, U> EnumField<'a, U> {
 
     pub(crate) fn replace_util(&self, util: Rc<U>) {
         self.0.replace_util(util)
+    }
+
+    pub fn util(&self) -> Rc<U> {
+        self.0.detail.util()
     }
 }
 

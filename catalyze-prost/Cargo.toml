@@ -10,7 +10,7 @@ anyhow = "1.0.53"
 petgraph = "0.6.0"
 lazy_static = "1.4.0"
 prost = "0.9"
-
+catalyze = { path = "../" }
 
 [build-dependencies]
 which = { version = "4.2" }

@@ -131,6 +131,10 @@ impl<'a, U> ScalarField<'a, U> {
     pub(crate) fn replace_util(&self, util: Rc<U>) {
         self.0.replace_util(util);
     }
+
+    pub fn util(&self) -> Rc<U> {
+        self.0.util()
+    }
 }
 
 impl<'a, U> FullyQualified for ScalarField<'a, U> {

@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     container::Container, format_fqn, proto::EnumValueDescriptor, Comments, Enum, File,
-    FullyQualified, Name, Node, NodeAtPath, Package, WeakEnum,
+    FullyQualified, Name, Node, NodeAtPath, Nodes, Package, WeakEnum,
 };
 
 #[derive(Debug, Clone)]
@@ -12,6 +12,7 @@ struct EnumValueDetail<'a, U> {
     desc: EnumValueDescriptor<'a>,
     e: WeakEnum<'a, U>,
     comments: RefCell<Comments<'a, U>>,
+    util: RefCell<Rc<U>>,
 }
 
 impl<'a, U> EnumValueDetail<'a, U> {
@@ -46,8 +47,9 @@ impl<'a, U> EnumValue<'a, U> {
             name: Name::new(desc.name(), e.util()),
             fqn: format_fqn(&e, desc.name()),
             desc,
-            e: e.into(),
+            e: e.clone().into(),
             comments: RefCell::new(Comments::default()),
+            util: RefCell::new(e.util()),
         }))
     }
     pub fn name(&self) -> Name<U> {
@@ -86,6 +88,16 @@ impl<'a, U> EnumValue<'a, U> {
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.set_comments(comments);
     }
+    pub fn util(&self) -> Rc<U> {
+        self.0.util.borrow().clone()
+    }
+    pub(crate) fn nodes(&self) -> Nodes<'a, U> {
+        Nodes::empty()
+    }
+
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.util.replace(util);
+    }
 }
 
 impl<'a, U> FullyQualified for EnumValue<'a, U> {
@@ -120,6 +132,7 @@ impl<'a> Default for EnumValue<'a, crate::util::Generic> {
             desc: EnumValueDescriptor::default(),
             e: e.clone().into(),
             comments: RefCell::new(Comments::default()),
+            util: RefCell::new(Rc::new(crate::util::Generic::default())),
         }))
     }
 }

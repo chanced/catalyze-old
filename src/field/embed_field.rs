@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::{
-    proto::FieldDescriptor, proto::Syntax, Comments, File, FullyQualified, Message, Name, Package,
-    WeakMessage, WellKnownMessage, WellKnownType,
+    proto::FieldDescriptor, proto::Syntax, Comments, File, Files, FullyQualified, Message, Name,
+    Package, WeakMessage, WellKnownMessage, WellKnownType,
 };
 
 use super::FieldDetail;
@@ -17,7 +17,7 @@ impl<'a, U> EmbedFieldDetail<'a, U> {
         self.detail.name()
     }
     pub fn embed(&self) -> Message<'a, U> {
-        self.embed.into()
+        self.embed.clone().into()
     }
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
@@ -45,11 +45,11 @@ impl<'a, U> EmbedFieldDetail<'a, U> {
         self.detail.descriptor()
     }
 
-    pub fn imports(&self) -> Option<File<'a, U>> {
+    pub fn imports(&self) -> Files<'a, U> {
         if self.embed.file() != self.detail.file() {
-            Some(self.embed.file().clone())
+            Files::from(self.embed.weak_file())
         } else {
-            None
+            Files::empty()
         }
     }
     pub fn build_target(&self) -> bool {
@@ -124,7 +124,7 @@ impl<'a, U> EmbedField<'a, U> {
         self.0.has_import()
     }
 
-    pub fn imports(&self) -> Option<File<'a, U>> {
+    pub fn imports(&self) -> Files<'a, U> {
         self.0.imports()
     }
 
@@ -146,6 +146,10 @@ impl<'a, U> EmbedField<'a, U> {
 
     pub(crate) fn replace_util(&self, util: Rc<U>) {
         self.0.replace_util(util)
+    }
+
+    pub fn util(&self) -> Rc<U> {
+        self.0.util()
     }
 }
 impl<'a, U> Clone for EmbedField<'a, U> {

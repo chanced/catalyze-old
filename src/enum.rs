@@ -9,8 +9,8 @@ use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
     proto::{path::EnumDescriptorPath, EnumDescriptor},
-    Comments, EnumValue, File, FullyQualified, Message, MessageList, Name, Node, NodeAtPath,
-    Package, WeakMessage, WellKnownEnum, WellKnownType,
+    Comments, EnumValue, File, FullyQualified, Message, MessageList, Name, Node, NodeAtPath, Nodes,
+    Package, WeakFile, WeakMessage, WellKnownEnum, WellKnownType,
 };
 
 pub(crate) type EnumList<'a, U> = Rc<RefCell<Vec<Enum<'a, U>>>>;
@@ -131,6 +131,14 @@ impl<'a, U> Enum<'a, U> {
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.set_comments(comments);
     }
+
+    pub(crate) fn weak_file(&self) -> WeakFile<'a, U> {
+        self.0.container.weak_file()
+    }
+
+    pub fn nodes(&self) -> Nodes<'a, U> {
+        Nodes::new(vec![self.values().into()])
+    }
 }
 
 impl<'a, U> Clone for Enum<'a, U> {
@@ -181,6 +189,9 @@ impl<'a, U> WeakEnum<'a, U> {
     }
     pub fn file(&self) -> File<'a, U> {
         self.upgrade().file()
+    }
+    pub(crate) fn weak_file(&self) -> WeakFile<'a, U> {
+        self.upgrade().weak_file()
     }
     pub fn well_known_type(&self) -> Option<WellKnownType> {
         self.upgrade().well_known_type()

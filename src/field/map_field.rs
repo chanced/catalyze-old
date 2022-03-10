@@ -3,11 +3,11 @@ use std::{error::Error, rc::Rc};
 use crate::{
     proto::FieldDescriptor,
     proto::{Scalar, Syntax},
-    Comments, Enum, File, FullyQualified, Message, Name, Package, ScalarField, WeakEnum,
+    Comments, Enum, File, Files, FullyQualified, Message, Name, Package, ScalarField, WeakEnum,
     WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MapKey {
     Int64 = 3,
     Uint64 = 4,
@@ -194,9 +194,9 @@ impl<'a, U> MapField<'a, U> {
             MapField::Embed(f) => f.has_import(),
         }
     }
-    pub fn imports(&self) -> Option<File<'a, U>> {
+    pub fn imports(&self) -> Files<'a, U> {
         match self {
-            MapField::Scalar(_) => None,
+            MapField::Scalar(_) => Files::empty(),
             MapField::Enum(f) => f.imports(),
             MapField::Embed(f) => f.imports(),
         }
@@ -279,6 +279,14 @@ impl<'a, U> MapField<'a, U> {
             MapField::Scalar(f) => f.replace_util(util),
             MapField::Enum(f) => f.replace_util(util),
             MapField::Embed(f) => f.replace_util(util),
+        }
+    }
+
+    pub fn util(&self) -> Rc<U> {
+        match self {
+            MapField::Scalar(f) => f.util(),
+            MapField::Enum(f) => f.util(),
+            MapField::Embed(f) => f.util(),
         }
     }
 }
@@ -492,11 +500,11 @@ impl<'a, U> MappedEmbedField<'a, U> {
     pub fn has_import(&self) -> bool {
         self.file() != self.0.embed.file()
     }
-    pub fn imports(&self) -> Option<File<'a, U>> {
+    pub fn imports(&self) -> Files<'a, U> {
         if self.has_import() {
-            Some(self.0.embed.file())
+            Files::from(self.0.embed.weak_file())
         } else {
-            None
+            Files::empty()
         }
     }
 
@@ -616,11 +624,11 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn has_import(&self) -> bool {
         return self.0.e.file() != self.file();
     }
-    pub fn imports(&self) -> Option<File<'a, U>> {
+    pub fn imports(&self) -> Files<'a, U> {
         if self.has_import() {
-            Some(self.0.e.file())
+            Files::from(self.0.e.weak_file())
         } else {
-            None
+            Files::empty()
         }
     }
 

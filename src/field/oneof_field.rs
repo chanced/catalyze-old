@@ -2,8 +2,8 @@ use std::rc::{Rc, Weak};
 
 use crate::{
     proto::{FieldDescriptor, Scalar, Syntax},
-    Comments, Enum, File, FullyQualified, Message, Name, Oneof, Package, WeakEnum, WeakMessage,
-    WeakOneof, WellKnownType,
+    Comments, Enum, File, Files, FullyQualified, Message, Name, Oneof, Package, WeakEnum,
+    WeakMessage, WeakOneof, WellKnownType,
 };
 
 use super::FieldDetail;
@@ -18,6 +18,9 @@ impl<'a, U> OneofFieldDetail<'a, U> {
     }
     pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.detail.descriptor()
+    }
+    pub fn util(&self) -> Rc<U> {
+        self.detail.util()
     }
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
@@ -38,7 +41,7 @@ impl<'a, U> OneofFieldDetail<'a, U> {
         self.detail.package()
     }
     pub fn oneof(&self) -> Oneof<'a, U> {
-        self.oneof.into()
+        self.oneof.clone().into()
     }
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.detail.set_comments(comments);
@@ -135,9 +138,9 @@ impl<'a, U> OneofField<'a, U> {
             OneofField::Embed(f) => f.has_import(),
         }
     }
-    pub fn imports(&self) -> Option<File<'a, U>> {
+    pub fn imports(&self) -> Files<'a, U> {
         match self {
-            OneofField::Scalar(_) => None,
+            OneofField::Scalar(_) => Files::empty(),
             OneofField::Enum(f) => f.imports(),
             OneofField::Embed(f) => f.imports(),
         }
@@ -152,6 +155,7 @@ impl<'a, U> OneofField<'a, U> {
     }
     pub fn r#enum(&self) -> Option<Enum<'a, U>> {
         match self {
+            OneofField::Enum(f) => Some(f.r#enum()),
             _ => None,
         }
     }
@@ -165,10 +169,7 @@ impl<'a, U> OneofField<'a, U> {
         }
     }
     pub fn is_scalar(&self) -> bool {
-        match self {
-            OneofField::Scalar(_) => true,
-            _ => false,
-        }
+        matches!(self, OneofField::Scalar(_))
     }
     pub fn scalar(&self) -> Option<Scalar> {
         match self {
@@ -263,6 +264,14 @@ impl<'a, U> OneofField<'a, U> {
             OneofField::Embed(f) => f.replace_util(util),
         }
     }
+
+    pub fn util(&self) -> Rc<U> {
+        match self {
+            OneofField::Scalar(f) => f.util(),
+            OneofField::Enum(f) => f.util(),
+            OneofField::Embed(f) => f.util(),
+        }
+    }
 }
 
 impl<'a, U> FullyQualified for OneofField<'a, U> {
@@ -287,6 +296,9 @@ impl<'a, U> OneofEnumField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.0.detail.name()
     }
+    pub fn util(&self) -> Rc<U> {
+        self.0.detail.util()
+    }
     pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
@@ -297,7 +309,7 @@ impl<'a, U> OneofEnumField<'a, U> {
         self.0.detail.comments()
     }
     pub fn r#enum(&self) -> Enum<'a, U> {
-        self.0.e.into()
+        self.0.e.clone().into()
     }
     pub fn enumeration(&self) -> Enum<'a, U> {
         self.r#enum()
@@ -312,13 +324,14 @@ impl<'a, U> OneofEnumField<'a, U> {
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
     }
-    pub fn imports(&self) -> Option<File<'a, U>> {
+    pub fn imports(&self) -> Files<'a, U> {
         if self.has_import() {
-            Some(self.0.e.file())
+            Files::from(self.0.e.weak_file())
         } else {
-            None
+            Files::empty()
         }
     }
+
     pub fn has_import(&self) -> bool {
         self.0.e.file() != self.file()
     }
@@ -445,6 +458,10 @@ impl<'a, U> OneofScalarField<'a, U> {
     fn replace_util(&self, util: Rc<U>) {
         self.0.detail.replace_util(util);
     }
+
+    pub fn util(&self) -> Rc<U> {
+        self.0.detail.util()
+    }
 }
 
 impl<'a, U> FullyQualified for OneofScalarField<'a, U> {
@@ -494,16 +511,16 @@ impl<'a, U> OneofEmbedField<'a, U> {
     }
 
     pub fn embed(&self) -> Message<'a, U> {
-        self.0.embed.into()
+        self.0.embed.clone().into()
     }
     pub fn has_import(&self) -> bool {
         self.0.embed.file() != self.file()
     }
-    pub fn imports(&self) -> Option<File<'a, U>> {
+    pub fn imports(&self) -> Files<'a, U> {
         if self.has_import() {
-            Some(self.0.embed.file())
+            Files::from(self.0.embed.weak_file())
         } else {
-            None
+            Files::empty()
         }
     }
     pub fn build_target(&self) -> bool {
@@ -546,6 +563,10 @@ impl<'a, U> OneofEmbedField<'a, U> {
 
     fn replace_util(&self, util: Rc<U>) {
         self.0.detail.replace_util(util);
+    }
+
+    pub fn util(&self) -> Rc<U> {
+        self.0.detail.util()
     }
 }
 

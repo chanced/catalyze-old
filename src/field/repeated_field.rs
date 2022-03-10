@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     proto::{FieldDescriptor, Scalar, Syntax},
-    Comments, EmbedFieldDetail, Enum, EnumFieldDetail, File, FullyQualified, Message, Name,
+    Comments, EmbedFieldDetail, Enum, EnumFieldDetail, File, Files, FullyQualified, Message, Name,
     Package, ScalarFieldDetail, WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
@@ -94,11 +94,11 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Scalar(_) => false,
         }
     }
-    pub fn imports(&self) -> Option<File<'a, U>> {
+    pub fn imports(&self) -> Files<'a, U> {
         match self {
             RepeatedField::Enum(f) => f.imports(),
             RepeatedField::Embed(f) => f.imports(),
-            RepeatedField::Scalar(_) => None,
+            RepeatedField::Scalar(_) => Files::empty(),
         }
     }
     pub fn build_target(&self) -> bool {
@@ -303,11 +303,11 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
     pub fn has_import(&self) -> bool {
         self.file() != self.0.embed().file()
     }
-    pub fn imports(&self) -> Option<File<'a, U>> {
+    pub fn imports(&self) -> Files<'a, U> {
         if self.has_import() {
-            Some(self.file())
+            Files::from(self.0.embed().weak_file())
         } else {
-            None
+            Files::empty()
         }
     }
 
@@ -395,7 +395,7 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn has_import(&self) -> bool {
         self.0.has_import()
     }
-    pub fn imports(&self) -> Option<File<'a, U>> {
+    pub fn imports(&self) -> Files<'a, U> {
         self.0.imports()
     }
 

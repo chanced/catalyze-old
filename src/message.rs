@@ -9,7 +9,7 @@ use crate::proto::{path::DescriptorPath, MessageDescriptor};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
     format_fqn, AllEnums, Comments, Enum, EnumList, Extension, Field, File, FullyQualified, Node,
-    NodeAtPath, Oneof, OneofList, WellKnownMessage,
+    NodeAtPath, Nodes, Oneof, OneofList, WeakFile, WellKnownMessage,
 };
 use crate::{Package, WellKnownType};
 
@@ -53,7 +53,7 @@ pub(crate) struct MessageDetail<'a, U> {
 }
 
 impl<'a, U> Message<'a, U> {
-    pub(crate) fn new(desc: MessageDescriptor<'a>, container: Container<'a, U>) -> Self {
+    pub fn new(desc: MessageDescriptor<'a>, container: Container<'a, U>) -> Self {
         let util = container.util();
         let fqn = format_fqn(&container, desc.name());
 
@@ -153,13 +153,14 @@ impl<'a, U> Message<'a, U> {
     }
 
     pub fn fields(&self) -> Iter<Field<'a, U>> {
-        todo!()
-        // Iter::from(&self.0.fields)
+        Iter::from(&self.0.fields)
     }
 
     pub fn messages(&self) -> Iter<Self> {
-        todo!();
-        // Iter::from(&self.0.messages)
+        Iter::from(&self.0.messages)
+    }
+    pub fn oneofs(&self) -> Iter<Oneof<'a, U>> {
+        Iter::from(&self.0.oneofs)
     }
 
     pub fn enums(&self) -> Iter<Enum<'a, U>> {
@@ -186,6 +187,14 @@ impl<'a, U> Message<'a, U> {
         self.0.comments.borrow().clone()
     }
 
+    pub fn nodes(&self) -> Nodes<'a, U> {
+        Nodes::new(vec![
+            self.defined_extensions().into(),
+            self.enums().into(),
+            self.messages().into(),
+        ])
+    }
+
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.comments.replace(comments);
     }
@@ -195,6 +204,10 @@ impl<'a, U> Message<'a, U> {
 
     pub(crate) fn add_dependent(&self, dependent: Message<'a, U>) {
         self.0.dependents.borrow_mut().push(dependent.into());
+    }
+
+    pub(crate) fn weak_file(&self) -> WeakFile<'a, U> {
+        self.0.container.weak_file()
     }
 }
 
@@ -310,7 +323,9 @@ impl<'a, U> WeakMessage<'a, U> {
     pub fn file(&self) -> File<'a, U> {
         self.upgrade().file()
     }
-
+    pub(crate) fn weak_file(&self) -> WeakFile<'a, U> {
+        self.upgrade().weak_file()
+    }
     pub fn is_well_known_type(&self) -> bool {
         self.upgrade().is_well_known_type()
     }

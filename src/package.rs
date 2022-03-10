@@ -1,6 +1,6 @@
 use crate::iter::Iter;
 pub use crate::File;
-use crate::{FullyQualified, Name, NodeAtPath, PackageComments, WELL_KNNOWN_TYPE_PACKAGE};
+use crate::{AllNodes, FullyQualified, Name, Nodes, WELL_KNNOWN_TYPE_PACKAGE};
 
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
@@ -26,7 +26,7 @@ impl<'a, U> Clone for Package<'a, U> {
 
 impl<'a, U> Package<'a, U> {
     pub fn new(name: &str, util: Rc<U>) -> Self {
-        let fqn = if name == "" {
+        let fqn = if name.is_empty() {
             "".to_string()
         } else {
             format!(".{}", name)
@@ -50,8 +50,18 @@ impl<'a, U> Package<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.util.borrow().clone()
     }
+    pub fn nodes(&self) -> Nodes<'a, U> {
+        Nodes::new(vec![self.files().into()])
+    }
+    pub fn all_nodes(&self) -> AllNodes<'a, U> {
+        AllNodes::new(self.into())
+    }
+
     pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.util.replace(util);
+        self.0.util.replace(util.clone());
+        for n in self.nodes() {
+            n.replace_util(util.clone())
+        }
     }
     pub(crate) fn add_file(&self, file: File<'a, U>) {
         self.0.files.borrow_mut().push(file.clone());
@@ -60,6 +70,12 @@ impl<'a, U> Package<'a, U> {
     pub fn files(&self) -> Iter<File<'a, U>> {
         Iter::from(&self.0.files)
     }
+    // pub(crate) fn add_extension(&self, extension: Extension<'a, U>) {
+    //     self.0.extensions.borrow_mut().push(extension);
+    // }
+    // pub fn extensions(&self) -> Iter<Extension<'a, U>> {
+    //     Iter::from(&self.0.extensions)
+    // }
     pub fn is_well_known_type(&self) -> bool {
         self.0.is_wk
     }

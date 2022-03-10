@@ -1,5 +1,5 @@
 use crate::container::Container;
-use crate::iter::{FileRefIter, Iter, TransitiveImports};
+use crate::iter::Iter;
 use crate::package::WeakPackage;
 
 use crate::proto::path::FileDescriptorPath;
@@ -7,12 +7,12 @@ use crate::proto::FileDescriptor;
 
 use crate::{
     AllEnums, AllMessages, Comments, Enum, EnumList, Extension, ExtensionList, FullyQualified,
-    Message, MessageList, Name, Node, NodeAtPath, Package, Service, ServiceList,
+    Message, MessageList, Name, Node, NodeAtPath, Nodes, Package, Service, ServiceList,
 };
 use std::cell::RefCell;
 
+use std::collections::{HashSet, VecDeque};
 use std::path::PathBuf;
-// use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 
 #[derive(Debug, Clone)]
@@ -20,18 +20,18 @@ struct FileDetail<'a, U> {
     desc: FileDescriptor<'a>,
     name: Name<U>,
     file_path: PathBuf,
+    fqn: String,
+    messages: MessageList<'a, U>,
+    enums: EnumList<'a, U>,
+    services: ServiceList<'a, U>,
+    defined_extensions: ExtensionList<'a, U>,
     build_target: bool,
     pkg_comments: RefCell<Comments<'a, U>>,
     comments: RefCell<Comments<'a, U>>,
     util: RefCell<Rc<U>>,
-    fqn: String,
     pkg: WeakPackage<'a, U>,
-    messages: MessageList<'a, U>,
-    enums: EnumList<'a, U>,
-    services: ServiceList<'a, U>,
     dependents: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
     dependencies: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
-    defined_extensions: ExtensionList<'a, U>,
 }
 
 #[derive(Debug)]
@@ -160,11 +160,11 @@ impl<'a, U> File<'a, U> {
         Iter::from(&self.0.defined_extensions)
     }
 
-    pub fn imports(&self) -> FileRefIter<'a, U> {
+    pub fn imports(&self) -> Files<'a, U> {
         self.0.dependencies.clone().into()
     }
 
-    pub fn dependents(&self) -> FileRefIter<'a, U> {
+    pub fn dependents(&self) -> Files<'a, U> {
         self.0.dependents.clone().into()
     }
     pub fn transitive_imports(&self) -> TransitiveImports<'a, U> {
@@ -195,6 +195,15 @@ impl<'a, U> File<'a, U> {
     }
     fn downgrade(&self) -> WeakFile<'a, U> {
         WeakFile(Rc::downgrade(&self.0))
+    }
+
+    pub fn nodes(&self) -> Nodes<'a, U> {
+        Nodes::new(vec![
+            self.enums().into(),
+            self.defined_extensions().into(),
+            self.messages().into(),
+            self.services().into(),
+        ])
     }
 }
 impl<'a, U> NodeAtPath<'a, U> for File<'a, U> {
@@ -333,5 +342,99 @@ impl<'a, U> PartialEq<File<'a, U>> for WeakFile<'a, U> {
 impl<'a, U> PartialEq for WeakFile<'a, U> {
     fn eq(&self, other: &Self) -> bool {
         self.upgrade().file_path() == other.upgrade().file_path()
+    }
+}
+
+#[derive(Debug)]
+pub struct TransitiveImports<'a, U> {
+    queue: VecDeque<File<'a, U>>,
+    processed: HashSet<Name<U>>,
+}
+impl<'a, U> TransitiveImports<'a, U> {
+    pub(crate) fn new(files: Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
+        Self {
+            queue: VecDeque::from_iter(files.borrow().iter().map(|f| f.into())),
+            processed: HashSet::new(),
+        }
+    }
+}
+impl<'a, U> Iterator for TransitiveImports<'a, U> {
+    type Item = File<'a, U>;
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(file) = self.queue.pop_front() {
+            if !self.processed.contains(&file.name()) {
+                self.processed.insert(file.name());
+                for d in file.imports() {
+                    self.queue.push_back(d);
+                }
+                return Some(file);
+            }
+        }
+        None
+    }
+}
+
+/// FileRefIter is an iterator that upgrades weak references to `File`s.
+pub struct Files<'a, U> {
+    files: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
+    index: usize,
+}
+impl<'a, U> Files<'a, U> {
+    pub fn len(&self) -> usize {
+        self.files.borrow().len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.files.borrow().is_empty()
+    }
+    pub fn empty() -> Self {
+        Self {
+            files: Rc::new(RefCell::new(Vec::new())),
+            index: 0,
+        }
+    }
+}
+
+impl<'a, U> From<&Rc<RefCell<Vec<WeakFile<'a, U>>>>> for Files<'a, U> {
+    fn from(files: &Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
+        Files {
+            files: files.clone(),
+            index: 0,
+        }
+    }
+}
+impl<'a, U> From<Rc<RefCell<Vec<WeakFile<'a, U>>>>> for Files<'a, U> {
+    fn from(files: Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
+        Files {
+            files: files.clone(),
+            index: 0,
+        }
+    }
+}
+
+impl<'a, U> From<WeakFile<'a, U>> for Files<'a, U> {
+    fn from(file: WeakFile<'a, U>) -> Self {
+        let mut files = Vec::new();
+        files.push(file);
+        Files {
+            files: Rc::new(RefCell::new(files)),
+            index: 0,
+        }
+    }
+}
+
+impl<'a, U> From<Option<WeakFile<'a, U>>> for Files<'a, U> {
+    fn from(file: Option<WeakFile<'a, U>>) -> Self {
+        file.map_or(Self::empty(), Into::into)
+    }
+}
+impl<'a, U> Iterator for Files<'a, U> {
+    type Item = File<'a, U>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let files = self.files.borrow();
+        if let Some(file) = files.get(self.index) {
+            self.index += 1;
+            return Some(file.into());
+        }
+        None
     }
 }

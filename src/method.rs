@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::proto::MethodDescriptor;
 use crate::{
-    Comments, File, FullyQualified, Name, Node, NodeAtPath, Package, Service, WeakService,
+    Comments, File, FullyQualified, Name, Node, NodeAtPath, Nodes, Package, Service, WeakService,
 };
 pub(crate) type MethodList<'a, U> = Rc<RefCell<Vec<Method<'a, U>>>>;
 
@@ -13,6 +13,7 @@ struct MethodDetail<'a, U> {
     fqn: String,
     comments: RefCell<Comments<'a, U>>,
     service: WeakService<'a, U>,
+    util: RefCell<Rc<U>>,
 }
 
 #[derive(Debug)]
@@ -47,6 +48,16 @@ impl<'a, U> Method<'a, U> {
 
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.comments.replace(comments);
+    }
+
+    pub(crate) fn nodes(&self) -> crate::Nodes<'a, U> {
+        Nodes::empty()
+    }
+    pub fn util(&self) -> Rc<U> {
+        self.0.util.borrow().clone()
+    }
+    pub(crate) fn replace_util(&self, util: Rc<U>) {
+        self.0.util.replace(util);
     }
 }
 
