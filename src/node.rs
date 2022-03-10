@@ -480,7 +480,10 @@ impl<'a, U> Iterator for AllNodes<'a, U> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(n) = self.iter.next() {
-            self.iter.push_front(n.nodes());
+            let i = n.nodes();
+            if !i.is_empty() {
+                self.iter.push_front(i);
+            }
             Some(n)
         } else {
             None
