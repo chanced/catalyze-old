@@ -70,7 +70,10 @@ impl<'a, U> Extension<'a, U> {
         self.0.comments.replace(comments);
     }
 
-    pub(crate) fn nodes(&self) -> Nodes<'a, U> {
+    pub fn nodes<'b>(&self) -> Nodes<'a, U>
+    where
+        U: 'b,
+    {
         Nodes::empty()
     }
     pub fn util(&self) -> Rc<U> {

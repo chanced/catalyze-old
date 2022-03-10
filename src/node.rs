@@ -4,6 +4,7 @@ use crate::{
     Package, Service,
 };
 use std::convert::From;
+use std::marker::PhantomData;
 use std::rc::Rc;
 use std::{collections::VecDeque, slice};
 pub(crate) trait NodeAtPath<'a, U> {
@@ -403,17 +404,20 @@ impl<'a, U> From<Iter<File<'a, U>>> for NodeIter<'a, U> {
 
 #[derive(Debug)]
 pub struct Nodes<'a, U> {
+    phantom: PhantomData<U>,
     iters: VecDeque<NodeIter<'a, U>>,
 }
 
 impl<'a, U> Nodes<'a, U> {
     pub fn new(iters: Vec<NodeIter<'a, U>>) -> Nodes<'a, U> {
         Nodes {
+            phantom: PhantomData,
             iters: iters.into(),
         }
     }
     pub fn empty() -> Nodes<'a, U> {
         Nodes {
+            phantom: PhantomData,
             iters: VecDeque::new(),
         }
     }

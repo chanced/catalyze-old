@@ -286,7 +286,6 @@ where
         OneofField::Enum(f) => v.visit_oneof_enum_field(f),
         OneofField::Embed(f) => v.visit_oneof_embed_field(f),
     }
-    Ok(())
 }
 
 pub fn visit_real_oneof_field<'a, U, V>(v: &mut V, fld: OneofField<'a, U>) -> Result<(), V::Error>
@@ -312,12 +311,23 @@ where
     Ok(())
 }
 
-pub fn visit_extension<'a, U, V>(v: &mut V, ext: Extension<'a, U>) -> Result<(), V::Error>
+pub fn visit_extension<'a, 'b, U, V>(v: &mut V, ext: Extension<'a, U>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
+    U: 'b,
 {
     for n in ext.nodes() {
         v.visit_node(n)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+    #[test]
+    fn example() {
+        let p = File::default();
+        for n in p.nodes() {}
+    }
 }
