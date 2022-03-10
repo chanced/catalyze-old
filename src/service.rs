@@ -18,7 +18,7 @@ struct ServiceDetail<'a, U> {
     methods: Rc<RefCell<Vec<Method<'a, U>>>>,
     comments: RefCell<Comments<'a, U>>,
     file: WeakFile<'a, U>,
-    util: RefCell<Rc<U>>,
+    util: Rc<U>,
 }
 
 #[derive(Debug)]
@@ -34,7 +34,7 @@ impl<'a, U> Service<'a, U> {
             methods: Rc::new(RefCell::new(Vec::with_capacity(desc.methods().len()))),
             comments: RefCell::new(Comments::default()),
             file: file.clone().into(),
-            util: RefCell::new(file.util()),
+            util: file.util(),
         }))
     }
 
@@ -65,7 +65,7 @@ impl<'a, U> Service<'a, U> {
         Nodes::new(vec![self.methods().into()])
     }
     pub fn util(&self) -> Rc<U> {
-        self.0.util.borrow().clone()
+        self.0.util.clone()
     }
 }
 

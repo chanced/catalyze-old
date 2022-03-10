@@ -22,7 +22,7 @@ struct ExtensionDetail<'a, U> {
     fqn: String,
     container: WeakContainer<'a, U>,
     comments: RefCell<Comments<'a, U>>,
-    util: RefCell<Rc<U>>,
+    util: Rc<U>,
 }
 
 #[derive(Debug)]
@@ -38,7 +38,7 @@ impl<'a, U> Extension<'a, U> {
             desc,
             container: container.into(),
             comments: RefCell::new(Comments::default()),
-            util: RefCell::new(util.clone()),
+            util,
         }));
         ext
     }
@@ -49,7 +49,7 @@ impl<'a, U> Extension<'a, U> {
         self.0.fqn.clone()
     }
     pub fn comments(&self) -> Comments<'a, U> {
-        self.0.comments.borrow().clone()
+        *self.0.comments.borrow()
     }
     pub fn file(&self) -> File<'a, U> {
         self.0.container.file()
@@ -57,9 +57,11 @@ impl<'a, U> Extension<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.file().package()
     }
-
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+        self.0.desc
+    }
     pub fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
-        if path.len() == 0 {
+        if path.is_empty() {
             Some(Node::Extension(self.clone()))
         } else {
             None
@@ -74,7 +76,7 @@ impl<'a, U> Extension<'a, U> {
         Nodes::empty()
     }
     pub fn util(&self) -> Rc<U> {
-        self.0.util.borrow().clone()
+        self.0.util.clone()
     }
 }
 
@@ -86,21 +88,6 @@ impl<U> FullyQualified for Extension<'_, U> {
 impl<'a, U> Clone for Extension<'a, U> {
     fn clone(&self) -> Self {
         Extension(self.0.clone())
-    }
-}
-
-#[cfg(test)]
-impl<'a> Default for Extension<'a, crate::util::Generic> {
-    fn default() -> Self {
-        let f = File::default();
-        Self(Rc::new(ExtensionDetail {
-            name: Name::default(),
-            desc: FieldDescriptor::default(),
-            fqn: "".to_string(),
-            container: f.clone().into(),
-            comments: RefCell::new(Comments::default()),
-            util: RefCell::new(f.util()),
-        }))
     }
 }
 
@@ -119,7 +106,7 @@ pub struct Extensions<'a, U> {
 }
 impl<'a, U> Extensions<'a, U> {
     pub fn get(&self, key: &str) -> Option<Extension<'a, U>> {
-        self.ext_map.borrow().get(key).map(|e| e.clone())
+        self.ext_map.borrow().get(key).cloned()
     }
     pub fn len(&self) -> usize {
         self.ext_map.borrow().len()
@@ -163,6 +150,7 @@ impl<'a, U> Default for Extensions<'a, U> {
         Self::new()
     }
 }
+
 impl<'a, U> IntoIterator for Extensions<'a, U> {
     type Item = Extension<'a, U>;
     type IntoIter = Iter<Extension<'a, U>>;

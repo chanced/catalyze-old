@@ -23,7 +23,7 @@ struct EnumDetail<'a, U> {
     values: Rc<RefCell<Vec<EnumValue<'a, U>>>>,
     container: WeakContainer<'a, U>,
     dependents: Rc<RefCell<Vec<WeakMessage<'a, U>>>>,
-    util: RefCell<Rc<U>>,
+    util: Rc<U>,
     descriptor: EnumDescriptor<'a>,
     wkt: Option<WellKnownEnum>,
 }
@@ -74,8 +74,8 @@ impl<'a, U> Enum<'a, U> {
             container: container.into(),
             dependents: Rc::new(RefCell::new(Vec::default())),
             fqn: fully_qualified_name,
-            util: RefCell::new(util),
-            descriptor: desc.clone(),
+            util,
+            descriptor: desc,
             comments: RefCell::new(Comments::default()),
             wkt,
         }));
@@ -110,8 +110,9 @@ impl<'a, U> Enum<'a, U> {
         self.0.name.clone()
     }
     pub fn util(&self) -> Rc<U> {
-        self.0.util.borrow().clone()
+        self.0.util.clone()
     }
+
     pub fn values(&self) -> Iter<EnumValue<'a, U>> {
         Iter::from(&self.0.values)
     }
@@ -213,24 +214,6 @@ impl<'a, U> From<Enum<'a, U>> for WeakEnum<'a, U> {
 impl<'a, U> From<&Enum<'a, U>> for WeakEnum<'a, U> {
     fn from(e: &Enum<'a, U>) -> Self {
         e.downgrade()
-    }
-}
-
-#[cfg(test)]
-impl<'a> Default for Enum<'a, crate::util::Generic> {
-    fn default() -> Self {
-        let container = Container::default();
-        Enum(Rc::new(EnumDetail {
-            name: Name::default(),
-            values: Rc::new(RefCell::new(Vec::default())),
-            container: container.clone().into(),
-            dependents: Rc::new(RefCell::new(Vec::default())),
-            fqn: "".to_string(),
-            util: RefCell::new(container.util()),
-            descriptor: EnumDescriptor::default(),
-            comments: RefCell::new(Comments::default()),
-            wkt: None,
-        }))
     }
 }
 

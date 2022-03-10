@@ -193,9 +193,9 @@ pub fn visit_message<'a, U, V>(v: &mut V, msg: Message<'a, U>) -> Result<(), V::
 where
     V: Visitor<'a, U>,
 {
-    for n in msg.nodes() {
-        visit_node(v, n)?;
-    }
+    // for n in msg.nodes() {
+    //     visit_node(v, n)?;
+    // }
     Ok(())
 }
 
@@ -204,7 +204,7 @@ where
     V: Visitor<'a, U>,
 {
     for n in enum_value.nodes() {
-        v.visit_node(n.into())?;
+        v.visit_node(n)?;
     }
     Ok(())
 }
@@ -287,31 +287,6 @@ where
         OneofField::Embed(f) => v.visit_oneof_embed_field(f),
     }
 }
-
-pub fn visit_real_oneof_field<'a, U, V>(v: &mut V, fld: OneofField<'a, U>) -> Result<(), V::Error>
-where
-    V: Visitor<'a, U>,
-{
-    for n in fld.nodes() {
-        v.visit_node(n)?;
-    }
-    Ok(())
-}
-
-pub fn visit_synthetic_oneof_field<'a, U, V>(
-    v: &mut V,
-    fld: OneofField<'a, U>,
-) -> Result<(), V::Error>
-where
-    V: Visitor<'a, U>,
-    U: 'a,
-{
-    for n in fld.nodes() {
-        v.visit_node(n)?;
-    }
-    Ok(())
-}
-
 pub fn visit_extension<'a, U, V>(v: &mut V, ext: Extension<'a, U>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
@@ -322,12 +297,13 @@ where
     Ok(())
 }
 
-#[cfg(test)]
-mod test {
-    use crate::*;
-    #[test]
-    fn example() {
-        let p = File::default();
-        for n in p.nodes() {}
-    }
-}
+// #[cfg(test)]
+// mod test {
+//     use crate::*;
+//     #[test]
+//     fn example() {
+//         let p = File::default();
+//         let m = Message::default();
+//         for n in p.nodes() {}
+//     }
+// }

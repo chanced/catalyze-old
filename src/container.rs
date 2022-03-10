@@ -76,13 +76,6 @@ impl<'a, U> Container<'a, U> {
     }
 }
 
-#[cfg(test)]
-impl<'a> Default for Container<'a, crate::util::Generic> {
-    fn default() -> Self {
-        Container::File(File::default())
-    }
-}
-
 impl<'a, U> From<File<'a, U>> for Container<'a, U> {
     fn from(f: File<'a, U>) -> Self {
         Container::File(f)

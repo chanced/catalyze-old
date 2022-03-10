@@ -72,7 +72,7 @@ impl<'a, U> Clone for ScalarFieldDetail<'a, U> {
     fn clone(&self) -> Self {
         Self {
             detail: self.detail.clone(),
-            scalar: self.scalar.clone(),
+            scalar: self.scalar,
         }
     }
 }
@@ -138,16 +138,6 @@ impl<'a, U> FullyQualified for ScalarField<'a, U> {
 impl<'a, U> Clone for ScalarField<'a, U> {
     fn clone(&self) -> Self {
         ScalarField(self.0.clone())
-    }
-}
-
-#[cfg(test)]
-impl<'a> Default for ScalarField<'a, crate::util::Generic> {
-    fn default() -> Self {
-        Self(Rc::new(ScalarFieldDetail {
-            detail: Default::default(),
-            scalar: Scalar::String,
-        }))
     }
 }
 

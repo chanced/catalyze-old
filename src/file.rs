@@ -6,8 +6,9 @@ use crate::proto::path::FileDescriptorPath;
 use crate::proto::FileDescriptor;
 
 use crate::{
-    AllEnums, AllMessages, Comments, Enum, EnumList, Extension, ExtensionList, FullyQualified,
-    Message, MessageList, Name, Node, NodeAtPath, Nodes, Package, Service, ServiceList,
+    AllEnums, AllMessages, AllNodes, Comments, Enum, EnumList, Extension, ExtensionList,
+    FullyQualified, Message, MessageList, Name, Node, NodeAtPath, Nodes, Package, Service,
+    ServiceList,
 };
 use std::cell::RefCell;
 
@@ -28,7 +29,7 @@ struct FileDetail<'a, U> {
     build_target: bool,
     pkg_comments: RefCell<Comments<'a, U>>,
     comments: RefCell<Comments<'a, U>>,
-    util: RefCell<Rc<U>>,
+    util: Rc<U>,
     pkg: WeakPackage<'a, U>,
     dependents: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
     dependencies: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
@@ -49,7 +50,7 @@ impl<'a, U> File<'a, U> {
         let file = Self(Rc::new(FileDetail {
             name,
             desc,
-            util: RefCell::new(util),
+            util,
             pkg: pkg.into(),
             build_target,
             fqn,
@@ -135,6 +136,7 @@ impl<'a, U> File<'a, U> {
     pub fn package_comments(&self) -> Comments<'a, U> {
         *self.0.pkg_comments.borrow()
     }
+
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         *self.0.comments.borrow_mut() = comments;
     }
@@ -142,7 +144,7 @@ impl<'a, U> File<'a, U> {
         *self.0.pkg_comments.borrow_mut() = comments;
     }
     pub fn util(&self) -> Rc<U> {
-        self.0.util.borrow().clone()
+        self.0.util.clone()
     }
 
     pub fn messages(&self) -> Iter<Message<'a, U>> {
@@ -194,7 +196,9 @@ impl<'a, U> File<'a, U> {
     fn downgrade(&self) -> WeakFile<'a, U> {
         WeakFile(Rc::downgrade(&self.0))
     }
-
+    pub fn all_nodes(&self) -> AllNodes<'a, U> {
+        AllNodes::new(self.into())
+    }
     pub fn nodes(&self) -> Nodes<'a, U> {
         Nodes::new(vec![
             self.enums().into(),
@@ -202,6 +206,16 @@ impl<'a, U> File<'a, U> {
             self.messages().into(),
             self.services().into(),
         ])
+    }
+    #[cfg(test)]
+    pub fn add_node(&self, n: Node<'a, U>) {
+        match n {
+            Node::Message(m) => self.0.messages.borrow_mut().push(m),
+            Node::Enum(e) => self.0.enums.borrow_mut().push(e),
+            Node::Service(s) => self.0.services.borrow_mut().push(s),
+            Node::Extension(e) => self.0.defined_extensions.borrow_mut().push(e),
+            _ => panic!("unexpected node type"),
+        }
     }
 }
 impl<'a, U> NodeAtPath<'a, U> for File<'a, U> {
@@ -259,28 +273,6 @@ impl<'a, U> FullyQualified for File<'a, U> {
     }
 }
 
-#[cfg(test)]
-impl<'a> Default for File<'a, crate::util::Generic> {
-    fn default() -> Self {
-        File(Rc::new(FileDetail {
-            build_target: false,
-            fqn: "".to_string(),
-            file_path: PathBuf::new(),
-            name: Name::default(),
-            pkg: Package::default().into(),
-            dependencies: Default::default(),
-            dependents: Default::default(),
-            messages: Default::default(),
-            enums: Default::default(),
-            services: Default::default(),
-            defined_extensions: Default::default(),
-            comments: Default::default(),
-            pkg_comments: RefCell::new(Comments::default()),
-            util: RefCell::new(Rc::new(crate::util::Generic::default())),
-            desc: FileDescriptor::default(),
-        }))
-    }
-}
 impl<'a, U> PartialEq for File<'a, U> {
     fn eq(&self, other: &Self) -> bool {
         self.file_path() == other.file_path()
@@ -411,10 +403,8 @@ impl<'a, U> From<Rc<RefCell<Vec<WeakFile<'a, U>>>>> for Files<'a, U> {
 
 impl<'a, U> From<WeakFile<'a, U>> for Files<'a, U> {
     fn from(file: WeakFile<'a, U>) -> Self {
-        let mut files = Vec::new();
-        files.push(file);
         Files {
-            files: Rc::new(RefCell::new(files)),
+            files: Rc::new(RefCell::new(vec![file])),
             index: 0,
         }
     }

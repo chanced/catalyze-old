@@ -339,15 +339,15 @@ impl<'a, U> Iterator for NodeIter<'a, U> {
         match self {
             NodeIter::Nodes(nodes) => nodes.next(),
             NodeIter::Packages(i) => i.next().cloned().map(Into::into),
-            NodeIter::Files(i) => i.next().clone().map(Into::into),
-            NodeIter::Messages(i) => i.next().clone().map(Into::into),
-            NodeIter::Oneofs(i) => i.next().clone().map(Into::into),
-            NodeIter::Enums(i) => i.next().clone().map(Into::into),
-            NodeIter::EnumValues(i) => i.next().clone().map(Into::into),
-            NodeIter::Services(i) => i.next().clone().map(Into::into),
-            NodeIter::Methods(i) => i.next().clone().map(Into::into),
-            NodeIter::Fields(i) => i.next().clone().map(Into::into),
-            NodeIter::Extensions(i) => i.next().clone().map(Into::into),
+            NodeIter::Files(i) => i.next().map(Into::into),
+            NodeIter::Messages(i) => i.next().map(Into::into),
+            NodeIter::Oneofs(i) => i.next().map(Into::into),
+            NodeIter::Enums(i) => i.next().map(Into::into),
+            NodeIter::EnumValues(i) => i.next().map(Into::into),
+            NodeIter::Services(i) => i.next().map(Into::into),
+            NodeIter::Methods(i) => i.next().map(Into::into),
+            NodeIter::Fields(i) => i.next().map(Into::into),
+            NodeIter::Extensions(i) => i.next().map(Into::into),
         }
     }
 }
@@ -481,12 +481,44 @@ impl<'a, U> Iterator for AllNodes<'a, U> {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use std::rc::Rc;
+
+    use crate::{proto::FileDescriptor, util::Generic, *};
 
     #[test]
-    fn test_all_nodes() {
-        let f = File::default();
+    fn test_nodes() {
+        let u = Rc::new(Generic {});
+        let pkg = Package::new("pkg", u);
+
+        let f = File::new(true, FileDescriptor::default(), pkg.clone());
         let m1 = Message::new(Default::default(), f.clone().into());
         let m2 = Message::new(Default::default(), f.clone().into());
+        f.add_node(m1.into());
+        f.add_node(m2.into());
+        let mut count = 0;
+        for n in f.nodes() {
+            count += 1;
+            println!("{:?}", n)
+        }
+        assert_eq!(count, 2)
+    }
+    #[test]
+    fn test_all_nodes() {
+        let u = Rc::new(Generic {});
+        let pkg = Package::new("pkg", u);
+
+        let f = File::new(true, FileDescriptor::default(), pkg.clone());
+        let m1 = Message::new(Default::default(), f.clone().into());
+        let m1e1 = Enum::new(Default::default(), m1.clone().into());
+        m1.add_node(m1e1.into());
+        let m2 = Message::new(Default::default(), f.clone().into());
+        f.add_node(m1.into());
+        f.add_node(m2.into());
+        let mut count = 0;
+        for n in f.all_nodes() {
+            count += 1;
+            println!("{:?}", n)
+        }
+        assert_eq!(count, 3)
     }
 }

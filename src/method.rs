@@ -13,7 +13,7 @@ struct MethodDetail<'a, U> {
     fqn: String,
     comments: RefCell<Comments<'a, U>>,
     service: WeakService<'a, U>,
-    util: RefCell<Rc<U>>,
+    util: Rc<U>,
 }
 
 #[derive(Debug)]
@@ -54,7 +54,7 @@ impl<'a, U> Method<'a, U> {
         Nodes::empty()
     }
     pub fn util(&self) -> Rc<U> {
-        self.0.util.borrow().clone()
+        self.0.util.clone()
     }
 }
 

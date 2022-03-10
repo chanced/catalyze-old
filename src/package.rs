@@ -10,7 +10,7 @@ use std::*;
 struct PackageDetail<'a, U> {
     name: Name<U>,
     fqn: String,
-    util: RefCell<Rc<U>>,
+    util: Rc<U>,
     files: Rc<RefCell<Vec<File<'a, U>>>>,
     is_wk: bool,
 }
@@ -36,7 +36,7 @@ impl<'a, U> Package<'a, U> {
             fqn,
             name: Name::new(name, util.clone()),
             files: Rc::new(RefCell::new(vec![])),
-            util: RefCell::new(util),
+            util,
             is_wk: name == WELL_KNNOWN_TYPE_PACKAGE,
         }))
     }
@@ -48,7 +48,7 @@ impl<'a, U> Package<'a, U> {
         self.0.name.clone()
     }
     pub fn util(&self) -> Rc<U> {
-        self.0.util.borrow().clone()
+        self.0.util.clone()
     }
     pub fn nodes(&self) -> Nodes<'a, U> {
         Nodes::new(vec![self.files().into()])
@@ -73,7 +73,7 @@ impl<'a, U> Package<'a, U> {
     pub fn is_well_known_type(&self) -> bool {
         self.0.is_wk
     }
-    fn downgrade(&self) -> WeakPackage<'a, U> {
+    pub fn downgrade(&self) -> WeakPackage<'a, U> {
         WeakPackage(Rc::downgrade(&self.0))
     }
 }
@@ -94,17 +94,10 @@ impl<'a, U> From<&WeakPackage<'a, U>> for Package<'a, U> {
     }
 }
 
-#[cfg(test)]
-impl<'a> Default for Package<'a, crate::util::Generic> {
-    fn default() -> Self {
-        Self::new("", Rc::new(crate::util::Generic::default()))
-    }
-}
-
 #[derive(Debug)]
 pub struct WeakPackage<'a, U>(Weak<PackageDetail<'a, U>>);
 impl<'a, U> WeakPackage<'a, U> {
-    fn upgrade(&self) -> Package<'a, U> {
+    pub fn upgrade(&self) -> Package<'a, U> {
         Package(self.0.upgrade().expect("Failed to upgrade weak package"))
     }
 }

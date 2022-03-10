@@ -12,7 +12,7 @@ struct EnumValueDetail<'a, U> {
     desc: EnumValueDescriptor<'a>,
     e: WeakEnum<'a, U>,
     comments: RefCell<Comments<'a, U>>,
-    util: RefCell<Rc<U>>,
+    util: Rc<U>,
 }
 
 impl<'a, U> EnumValueDetail<'a, U> {
@@ -49,7 +49,7 @@ impl<'a, U> EnumValue<'a, U> {
             desc,
             e: e.clone().into(),
             comments: RefCell::new(Comments::default()),
-            util: RefCell::new(e.util()),
+            util: e.util(),
         }))
     }
     pub fn name(&self) -> Name<U> {
@@ -89,7 +89,7 @@ impl<'a, U> EnumValue<'a, U> {
         self.0.set_comments(comments);
     }
     pub fn util(&self) -> Rc<U> {
-        self.0.util.borrow().clone()
+        self.0.util.clone()
     }
     pub(crate) fn nodes(&self) -> Nodes<'a, U> {
         Nodes::empty()
@@ -115,20 +115,5 @@ impl<'a, U> NodeAtPath<'a, U> for EnumValue<'a, U> {
         } else {
             None
         }
-    }
-}
-
-#[cfg(test)]
-impl<'a> Default for EnumValue<'a, crate::util::Generic> {
-    fn default() -> Self {
-        let e = Enum::default();
-        EnumValue(Rc::new(EnumValueDetail {
-            name: Name::new("", e.util()),
-            fqn: "".to_string(),
-            desc: EnumValueDescriptor::default(),
-            e: e.clone().into(),
-            comments: RefCell::new(Comments::default()),
-            util: RefCell::new(Rc::new(crate::util::Generic::default())),
-        }))
     }
 }

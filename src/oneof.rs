@@ -19,7 +19,7 @@ pub(crate) struct OneofDetail<'a, U> {
     is_synthetic: bool,
     comments: RefCell<Comments<'a, U>>,
     imports: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
-    util: RefCell<Rc<U>>,
+    util: Rc<U>,
 }
 
 #[derive(Debug)]
@@ -37,7 +37,7 @@ impl<'a, U> Oneof<'a, U> {
             is_synthetic: true,
             comments: RefCell::new(Comments::default()),
             imports: Rc::new(RefCell::new(Vec::default())),
-            util: RefCell::new(msg.util()),
+            util: msg.util(),
         }))
     }
 
@@ -54,7 +54,7 @@ impl<'a, U> Oneof<'a, U> {
         self.0.msg.clone().into()
     }
     pub fn util(&self) -> Rc<U> {
-        self.0.util.borrow().clone()
+        self.0.util.clone()
     }
     pub fn file(&self) -> File<'a, U> {
         self.0.msg.file()
@@ -119,24 +119,6 @@ impl<'a, U> From<&WeakOneof<'a, U>> for Oneof<'a, U> {
 impl<'a, U> FullyQualified for Oneof<'a, U> {
     fn fully_qualified_name(&self) -> String {
         self.0.fqn.clone()
-    }
-}
-
-#[cfg(test)]
-impl<'a> Default for Oneof<'a, crate::util::Generic> {
-    fn default() -> Self {
-        let msg = Message::default();
-        Oneof(Rc::new(OneofDetail {
-            name: Name::default(),
-            desc: Default::default(),
-            fqn: Default::default(),
-            fields: Default::default(),
-            msg: msg.clone().into(),
-            is_synthetic: false,
-            comments: Default::default(),
-            imports: Default::default(),
-            util: RefCell::new(Rc::new(crate::util::Generic::default())),
-        }))
     }
 }
 

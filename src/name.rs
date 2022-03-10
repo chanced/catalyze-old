@@ -14,7 +14,7 @@ use std::{fmt, ops::Add};
 
 pub struct Name<U> {
     val: String,
-    util: RefCell<Rc<U>>,
+    util: Rc<U>,
 }
 
 impl<'a, U> Clone for Name<U> {
@@ -36,11 +36,11 @@ impl<'a, U> Name<U> {
     pub fn new(val: &str, util: Rc<U>) -> Self {
         Self {
             val: val.to_owned(),
-            util: RefCell::new(util),
+            util,
         }
     }
     /// Assign returns a new `Name` with the contents of `val` and a cloned copy
-    /// of `RefCell<Rc<U>>`.
+    /// of `Rc<U>`.
     ///
     /// # Examples
     ///
@@ -58,7 +58,7 @@ impl<'a, U> Name<U> {
         }
     }
     /// Assign returns a new `Name` with the contents of `val` and a cloned copy
-    /// of `RefCell<Rc<U>>`.
+    /// of `Rc<U>`.
     ///
     /// # Examples
     ///
@@ -81,7 +81,7 @@ impl<'a, U> Name<U> {
     }
     /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
-        self.util.borrow().clone()
+        self.util.clone()
     }
 }
 
@@ -144,14 +144,14 @@ impl<'a, U> Add<Self> for Name<U> {
 impl<'a, U> Add<&str> for Name<U> {
     type Output = Self;
     fn add(self, rhs: &str) -> Self::Output {
-        Name::new(&(self.val + rhs), self.util.borrow().clone())
+        Name::new(&(self.val + rhs), self.util.clone())
     }
 }
 
 impl<'a, U> Add<String> for Name<U> {
     type Output = Self;
     fn add(self, rhs: String) -> Self::Output {
-        Name::new(&(self.val + rhs.as_str()), self.util.borrow().clone())
+        Name::new(&(self.val + rhs.as_str()), self.util.clone())
     }
 }
 
@@ -212,24 +212,24 @@ pub trait ToCamelCase: ToOwned {
 
 impl<U: ToCase> ToKebabCase for Name<U> {
     fn to_kebab_case(&self) -> Self {
-        self.util.borrow().to_kebab_case(self)
+        self.util.to_kebab_case(self)
     }
 }
 impl<U: ToCase> ToSnakeCase for Name<U> {
     fn to_snake_case(&self) -> Self {
-        self.util.borrow().to_snake_case(self)
+        self.util.to_snake_case(self)
     }
 }
 
 impl<U: ToCase> ToPascalCase for Name<U> {
     fn to_pascal_case(&self) -> Self {
-        self.util.borrow().to_pascal_case(self)
+        self.util.to_pascal_case(self)
     }
 }
 
 impl<U: ToCase> ToScreamingSnakeCase for Name<U> {
     fn to_screaming_snake_case(&self) -> Self {
-        self.util.borrow().to_screaming_snake_case(self)
+        self.util.to_screaming_snake_case(self)
     }
 }
 

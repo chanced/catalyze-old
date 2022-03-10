@@ -35,13 +35,13 @@ pub(crate) struct MessageDetail<'a, U> {
     is_map_entry: bool,
     descriptor: MessageDescriptor<'a>,
     fqn: String,
-    util: RefCell<Rc<U>>,
+    util: Rc<U>,
     messages: MessageList<'a, U>,
     enums: EnumList<'a, U>,
     fields: FieldList<'a, U>,
     oneofs: OneofList<'a, U>,
     dependents: Rc<RefCell<Vec<WeakMessage<'a, U>>>>,
-    container: WeakContainer<'a, U>,
+    container: RefCell<WeakContainer<'a, U>>,
     maps: MessageList<'a, U>,
     preserved_messages: MessageList<'a, U>,
     /// `Extension`s defined by this message.
@@ -65,10 +65,10 @@ impl<'a, U> Message<'a, U> {
 
         let msg = Message(Rc::new(MessageDetail {
             name: Name::new(desc.name(), util.clone()),
-            container: container.into(),
+            container: RefCell::new(container.into()),
             fqn,
             descriptor: desc,
-            util: RefCell::new(util.clone()),
+            util,
 
             is_map_entry: desc.options().map_entry(),
             enums: Rc::new(RefCell::new(Vec::with_capacity(desc.enums().len()))),
@@ -122,16 +122,19 @@ impl<'a, U> Message<'a, U> {
     }
     /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
-        self.0.util.borrow().clone()
+        self.0.util.clone()
     }
     pub fn build_target(&self) -> bool {
-        self.0.container.build_target()
+        self.0.container.borrow().build_target()
     }
 
     pub fn package(&self) -> Package<'a, U> {
-        self.0.container.package()
+        self.0.container.borrow().package()
     }
-
+    #[cfg(test)]
+    pub fn set_container(&self, container: Container<'a, U>) {
+        self.0.container.replace(container.into());
+    }
     pub fn is_well_known_type(&self) -> bool {
         self.0.wkt.is_some()
     }
@@ -142,11 +145,11 @@ impl<'a, U> Message<'a, U> {
         self.0.wkt
     }
     pub fn container(&self) -> Container<'a, U> {
-        self.0.container.clone().into()
+        self.0.container.borrow().clone().into()
     }
 
     pub fn file(&self) -> File<'a, U> {
-        self.0.container.file()
+        self.0.container.borrow().file()
     }
 
     pub fn fields(&self) -> Iter<Field<'a, U>> {
@@ -181,7 +184,7 @@ impl<'a, U> Message<'a, U> {
     }
 
     pub fn comments(&self) -> Comments<'a, U> {
-        self.0.comments.borrow().clone()
+        *self.0.comments.borrow()
     }
 
     pub fn nodes(&self) -> Nodes<'a, U> {
@@ -204,33 +207,19 @@ impl<'a, U> Message<'a, U> {
     }
 
     pub(crate) fn weak_file(&self) -> WeakFile<'a, U> {
-        self.0.container.weak_file()
+        self.0.container.borrow().weak_file()
     }
-}
 
-#[cfg(test)]
-impl<'a> Default for Message<'a, crate::util::Generic> {
-    fn default() -> Self {
-        let container = Container::default();
-        Message(Rc::new(MessageDetail {
-            name: Name::default(),
-            container: container.clone().into(),
-            fqn: String::default(),
-            descriptor: Default::default(),
-            util: RefCell::new(container.util()),
-            is_map_entry: false,
-            enums: Default::default(),
-            fields: Default::default(),
-            oneofs: Default::default(),
-            preserved_messages: Default::default(),
-            messages: Default::default(),
-            maps: Default::default(),
-            dependents: Default::default(),
-            applied_extensions: Default::default(),
-            defined_extensions: Default::default(),
-            comments: Default::default(),
-            wkt: None,
-        }))
+    #[cfg(test)]
+    pub fn add_node(&self, n: Node<'a, U>) {
+        match n {
+            Node::Message(m) => self.0.messages.borrow_mut().push(m),
+            Node::Enum(e) => self.0.enums.borrow_mut().push(e),
+            Node::Oneof(o) => self.0.oneofs.borrow_mut().push(o),
+            Node::Field(f) => self.0.fields.borrow_mut().push(f),
+            Node::Extension(e) => self.0.defined_extensions.borrow_mut().push(e),
+            _ => panic!("unexpected node type"),
+        }
     }
 }
 

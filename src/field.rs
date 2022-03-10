@@ -30,7 +30,7 @@ pub(crate) struct FieldDetail<'a, U> {
     syntax: Syntax,
     is_map: bool,
     in_oneof: bool,
-    util: RefCell<Rc<U>>,
+    util: Rc<U>,
     desc: FieldDescriptor<'a>,
     comments: RefCell<Comments<'a, U>>,
 }
@@ -62,7 +62,7 @@ impl<'a, U> FieldDetail<'a, U> {
     }
     /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
-        self.util.borrow().clone()
+        self.util.clone()
     }
 
     pub fn syntax(&self) -> Syntax {
@@ -76,15 +76,6 @@ impl<'a, U> FieldDetail<'a, U> {
     }
     pub fn is_repeated(&self) -> bool {
         self.desc.is_repeated()
-    }
-    pub fn is_scalar(&self) -> bool {
-        self.desc.is_scalar()
-    }
-    pub fn is_enum(&self) -> bool {
-        self.desc.is_enum()
-    }
-    pub fn is_embed(&self) -> bool {
-        self.desc.is_embed()
     }
     pub fn is_marked_optional(&self) -> bool {
         self.desc.is_marked_optional(self.syntax)
@@ -245,10 +236,7 @@ impl<'a, U> Field<'a, U> {
     }
 
     pub fn is_repeated(&self) -> bool {
-        match self {
-            Field::Repeated(_) => true,
-            _ => false,
-        }
+        matches!(self, Field::Repeated(_))
     }
 
     pub fn is_embed(&self) -> bool {
@@ -261,10 +249,7 @@ impl<'a, U> Field<'a, U> {
         }
     }
     pub fn is_in_oneof(&self) -> bool {
-        match self {
-            Field::Oneof(_) => true,
-            _ => false,
-        }
+        matches!(self, Field::Oneof(_))
     }
 
     pub fn is_in_real_oneof(&self) -> bool {
@@ -415,7 +400,7 @@ impl<'a, U> Field<'a, U> {
         }
     }
 
-    pub(crate) fn nodes(&self) -> Nodes<'a, U> {
+    pub fn nodes(&self) -> Nodes<'a, U> {
         Nodes::empty()
     }
 
@@ -463,32 +448,6 @@ impl<'a, U> FullyQualified for Field<'a, U> {
             Field::Repeated(f) => f.fully_qualified_name(),
             Field::Scalar(f) => f.fully_qualified_name(),
         }
-    }
-}
-
-#[cfg(test)]
-impl<'a> Default for FieldDetail<'a, crate::util::Generic> {
-    fn default() -> Self {
-        let msg = Message::default();
-        Self {
-            msg: msg.clone().into(),
-            name: Default::default(),
-            fqn: Default::default(),
-            syntax: Syntax::Proto3,
-            is_map: false,
-            in_oneof: false,
-            util: RefCell::new(msg.util()),
-            desc: FieldDescriptor::default(),
-            comments: Default::default(),
-        }
-    }
-}
-
-#[cfg(test)]
-impl<'a> Default for Field<'a, crate::util::Generic> {
-    fn default() -> Self {
-        let msg = Message::default();
-        Self::Scalar(ScalarField::default())
     }
 }
 
