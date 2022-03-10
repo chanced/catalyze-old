@@ -39,9 +39,6 @@ impl<'a, U> ScalarFieldDetail<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.detail.util()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.detail.util.replace(util);
-    }
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
     }
@@ -126,10 +123,6 @@ impl<'a, U> ScalarField<'a, U> {
 
     pub fn has_presence(&self) -> bool {
         self.syntax().is_proto2() || self.is_marked_optional()
-    }
-
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.replace_util(util);
     }
 
     pub fn util(&self) -> Rc<U> {

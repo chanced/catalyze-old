@@ -74,12 +74,6 @@ impl<'a, U> Container<'a, U> {
             Container::Message(m) => m.util(),
         }
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        match self {
-            Container::File(f) => f.replace_util(util),
-            Container::Message(m) => m.replace_util(util),
-        }
-    }
 }
 
 #[cfg(test)]

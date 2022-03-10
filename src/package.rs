@@ -57,12 +57,6 @@ impl<'a, U> Package<'a, U> {
         AllNodes::new(self.into())
     }
 
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.util.replace(util.clone());
-        for n in self.nodes() {
-            n.replace_util(util.clone())
-        }
-    }
     pub(crate) fn add_file(&self, file: File<'a, U>) {
         self.0.files.borrow_mut().push(file.clone());
     }

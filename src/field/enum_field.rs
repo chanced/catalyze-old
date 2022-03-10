@@ -32,9 +32,6 @@ impl<'a, U> EnumFieldDetail<'a, U> {
         self.detail.is_marked_optional()
     }
 
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.detail.util.replace(util);
-    }
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
     }
@@ -155,10 +152,6 @@ impl<'a, U> EnumField<'a, U> {
 
     pub fn is_marked_optional(&self) -> bool {
         self.0.is_marked_optional()
-    }
-
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.replace_util(util)
     }
 
     pub fn util(&self) -> Rc<U> {

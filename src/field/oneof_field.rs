@@ -57,10 +57,6 @@ impl<'a, U> OneofFieldDetail<'a, U> {
     pub fn is_in_synthetic_oneof(&self) -> bool {
         self.oneof().is_synthetic()
     }
-
-    fn replace_util(&self, util: Rc<U>) {
-        self.detail.replace_util(util)
-    }
 }
 impl<'a, U> Clone for OneofFieldDetail<'a, U> {
     fn clone(&self) -> Self {
@@ -257,14 +253,6 @@ impl<'a, U> OneofField<'a, U> {
         }
     }
 
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        match self {
-            OneofField::Scalar(f) => f.replace_util(util),
-            OneofField::Enum(f) => f.replace_util(util),
-            OneofField::Embed(f) => f.replace_util(util),
-        }
-    }
-
     pub fn util(&self) -> Rc<U> {
         match self {
             OneofField::Scalar(f) => f.util(),
@@ -370,10 +358,6 @@ impl<'a, U> OneofEnumField<'a, U> {
     pub fn has_presence(&self) -> bool {
         true
     }
-
-    fn replace_util(&self, util: Rc<U>) {
-        self.0.detail.replace_util(util);
-    }
 }
 impl<'a, U> FullyQualified for OneofEnumField<'a, U> {
     fn fully_qualified_name(&self) -> String {
@@ -453,10 +437,6 @@ impl<'a, U> OneofScalarField<'a, U> {
 
     pub fn has_presence(&self) -> bool {
         true
-    }
-
-    fn replace_util(&self, util: Rc<U>) {
-        self.0.detail.replace_util(util);
     }
 
     pub fn util(&self) -> Rc<U> {
@@ -559,10 +539,6 @@ impl<'a, U> OneofEmbedField<'a, U> {
 
     pub fn has_presence(&self) -> bool {
         true
-    }
-
-    fn replace_util(&self, util: Rc<U>) {
-        self.0.detail.replace_util(util);
     }
 
     pub fn util(&self) -> Rc<U> {

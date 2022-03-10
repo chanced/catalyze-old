@@ -94,10 +94,6 @@ impl<'a, U> EnumValue<'a, U> {
     pub(crate) fn nodes(&self) -> Nodes<'a, U> {
         Nodes::empty()
     }
-
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.util.replace(util);
-    }
 }
 
 impl<'a, U> FullyQualified for EnumValue<'a, U> {

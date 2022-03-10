@@ -102,23 +102,7 @@ impl<'a, U> Node<'a, U> {
             Node::Extension(n) => n.util(),
         }
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        for n in self.nodes() {
-            n.replace_util(util.clone())
-        }
-        match self {
-            Node::Package(n) => n.replace_util(util),
-            Node::File(n) => n.replace_util(util),
-            Node::Message(n) => n.replace_util(util),
-            Node::Oneof(n) => n.replace_util(util),
-            Node::Enum(n) => n.replace_util(util),
-            Node::EnumValue(n) => n.replace_util(util),
-            Node::Service(n) => n.replace_util(util),
-            Node::Method(n) => n.replace_util(util),
-            Node::Field(n) => n.replace_util(util),
-            Node::Extension(n) => n.replace_util(util),
-        };
-    }
+
     pub fn package(&self) -> Package<'a, U> {
         match self {
             Node::Package(p) => p.clone(),

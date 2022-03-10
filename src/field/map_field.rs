@@ -62,11 +62,6 @@ impl<'a, U> MapFieldDetail<'a, U> {
     pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.detail.descriptor()
     }
-
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.detail.replace_util(util);
-    }
-
     pub fn comments(&self) -> Comments<'a, U> {
         self.detail.comments()
     }
@@ -274,14 +269,6 @@ impl<'a, U> MapField<'a, U> {
         }
     }
 
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        match self {
-            MapField::Scalar(f) => f.replace_util(util),
-            MapField::Enum(f) => f.replace_util(util),
-            MapField::Embed(f) => f.replace_util(util),
-        }
-    }
-
     pub fn util(&self) -> Rc<U> {
         match self {
             MapField::Scalar(f) => f.util(),
@@ -376,9 +363,7 @@ impl<'a, U> MappedScalarField<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.detail.replace_util(util);
-    }
+
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
@@ -492,9 +477,6 @@ impl<'a, U> MappedEmbedField<'a, U> {
 
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
-    }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.detail.replace_util(util);
     }
 
     pub fn has_import(&self) -> bool {
@@ -615,10 +597,6 @@ impl<'a, U> MappedEnumField<'a, U> {
 
     pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
         self.0.detail.set_comments(comments);
-    }
-
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.detail.replace_util(util);
     }
 
     pub fn has_import(&self) -> bool {

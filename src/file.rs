@@ -144,9 +144,7 @@ impl<'a, U> File<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.util.borrow().clone()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.util.replace(util);
-    }
+
     pub fn messages(&self) -> Iter<Message<'a, U>> {
         Iter::from(&self.0.messages)
     }

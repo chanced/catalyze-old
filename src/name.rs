@@ -83,9 +83,6 @@ impl<'a, U> Name<U> {
     pub fn util(&self) -> Rc<U> {
         self.util.borrow().clone()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.util.replace(util);
-    }
 }
 
 impl<'a, U> PartialEq for Name<U> {

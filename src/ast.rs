@@ -5,7 +5,6 @@ use crate::Extensions;
 use crate::Source;
 use crate::{File, Package};
 
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -33,7 +32,7 @@ pub struct Ast<'a, U> {
     targets: HashMap<String, File<'a, U>>,
     packages: HashMap<String, Package<'a, U>>,
     defined_extensions: Extensions<'a, U>,
-    util: RefCell<Rc<U>>,
+    util: Rc<U>,
 }
 impl<'a, U> Ast<'a, U> {
     pub fn package(&self, name: &str) -> Option<Package<'a, U>> {
@@ -55,7 +54,7 @@ impl<'a, U: Util> Ast<'a, U> {
     pub fn new(source: &'a impl Source<'a>, util: Rc<U>) -> Result<Self, anyhow::Error> {
         let targets: HashSet<String> = source.targets().iter().cloned().collect();
         let mut ast = Self {
-            util: RefCell::new(util.clone()),
+            util: util.clone(),
             packages: HashMap::default(),
             files: HashMap::default(),
             targets: HashMap::with_capacity(source.targets().len()),
@@ -90,20 +89,27 @@ impl<'a, U: Util> Ast<'a, U> {
                 for ext in file.defined_extensions() {
                     ast.defined_extensions.insert(ext)
                 }
-                pkg.add_file(file.clone())
+                pkg.add_file(file.clone());
             }
         }
-        let util = util.init(&ast)?;
-        let util = Rc::new(util);
-        for pkg in ast.packages().values() {
-            pkg.replace_util(util.clone())
-        }
+        util.init(&ast);
         Ok(ast)
     }
-    pub(crate) fn replace_util(&mut self, util: U) {
-        self.util.replace(Rc::new(util));
-    }
     pub fn util(&self) -> Rc<U> {
-        self.util.borrow().clone()
+        self.util.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::rc::Rc;
+
+    #[test]
+    fn nodes_issue() {
+        let pkg = crate::Package::new("foo", Rc::new(crate::util::Generic {}));
+
+        for n in pkg.nodes() {
+            println!("{:?}", n);
+        }
     }
 }

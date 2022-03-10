@@ -90,10 +90,6 @@ impl<'a, U> Oneof<'a, U> {
     pub fn nodes(&self) -> Nodes<'a, U> {
         Nodes::empty()
     }
-
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.util.replace(util.clone());
-    }
 }
 impl<'a, U> NodeAtPath<'a, U> for Oneof<'a, U> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {

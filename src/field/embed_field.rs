@@ -35,9 +35,7 @@ impl<'a, U> EmbedFieldDetail<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.detail.util()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.detail.util.replace(util);
-    }
+
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
     }
@@ -142,10 +140,6 @@ impl<'a, U> EmbedField<'a, U> {
 
     pub fn well_known_type(&self) -> Option<WellKnownType> {
         self.0.well_known_type()
-    }
-
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.replace_util(util)
     }
 
     pub fn util(&self) -> Rc<U> {

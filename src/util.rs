@@ -17,5 +17,6 @@ use crate::Ast;
 
 pub trait Util: Sized {
     type Error: Error + Send + Sync + 'static;
-    fn init<'a>(&self, ast: &Ast<'a, Self>) -> Result<Self, Self::Error>;
+    // Optionally initializes this `Util`
+    fn init<'a>(&self, ast: &Ast<'a, Self>) {}
 }

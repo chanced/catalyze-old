@@ -112,9 +112,6 @@ impl<'a, U> Enum<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.util.borrow().clone()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.util.replace(util);
-    }
     pub fn values(&self) -> Iter<EnumValue<'a, U>> {
         Iter::from(&self.0.values)
     }

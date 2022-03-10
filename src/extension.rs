@@ -76,9 +76,6 @@ impl<'a, U> Extension<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.util.borrow().clone()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.util.replace(util);
-    }
 }
 
 impl<U> FullyQualified for Extension<'_, U> {

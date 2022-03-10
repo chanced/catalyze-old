@@ -159,13 +159,6 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Embed(f) => f.set_comments(comments),
         }
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        match self {
-            RepeatedField::Scalar(s) => s.replace_util(util),
-            RepeatedField::Enum(e) => e.replace_util(util),
-            RepeatedField::Embed(m) => m.replace_util(util),
-        }
-    }
 
     pub fn is_marked_required(&self) -> bool {
         match self {
@@ -284,9 +277,7 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.detail.replace_util(util);
-    }
+
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
@@ -370,9 +361,7 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.detail.replace_util(util);
-    }
+
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
@@ -466,9 +455,7 @@ impl<'a, U> RepeatedScalarField<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.detail.replace_util(util);
-    }
+
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }

@@ -64,9 +64,6 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.util.borrow().clone()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.util.replace(util);
-    }
 
     pub fn syntax(&self) -> Syntax {
         self.syntax
@@ -381,16 +378,6 @@ impl<'a, U> Field<'a, U> {
             Field::Oneof(f) => f.has_presence(),
             Field::Repeated(f) => f.has_presence(),
             Field::Scalar(f) => f.has_presence(),
-        }
-    }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        match self {
-            Field::Embed(f) => f.replace_util(util),
-            Field::Enum(f) => f.replace_util(util),
-            Field::Map(f) => f.replace_util(util),
-            Field::Oneof(f) => f.replace_util(util),
-            Field::Repeated(f) => f.replace_util(util),
-            Field::Scalar(f) => f.replace_util(util),
         }
     }
     pub fn is_map(&self) -> bool {

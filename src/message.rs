@@ -124,9 +124,6 @@ impl<'a, U> Message<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.util.borrow().clone()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.util.replace(util);
-    }
     pub fn build_target(&self) -> bool {
         self.0.container.build_target()
     }

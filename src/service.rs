@@ -67,9 +67,6 @@ impl<'a, U> Service<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.util.borrow().clone()
     }
-    pub(crate) fn replace_util(&self, util: Rc<U>) {
-        self.0.util.replace(util);
-    }
 }
 
 impl<'a, U> Clone for Service<'a, U> {
