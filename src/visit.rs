@@ -304,6 +304,7 @@ pub fn visit_synthetic_oneof_field<'a, U, V>(
 ) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
+    U: 'a,
 {
     for n in fld.nodes() {
         v.visit_node(n)?;
@@ -311,10 +312,9 @@ where
     Ok(())
 }
 
-pub fn visit_extension<'a, 'b, U, V>(v: &mut V, ext: Extension<'a, U>) -> Result<(), V::Error>
+pub fn visit_extension<'a, U, V>(v: &mut V, ext: Extension<'a, U>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
-    U: 'b,
 {
     for n in ext.nodes() {
         v.visit_node(n)?;

@@ -70,9 +70,9 @@ impl<'a, U> Extension<'a, U> {
         self.0.comments.replace(comments);
     }
 
-    pub fn nodes<'b>(&self) -> Nodes<'a, U>
+    pub fn nodes(&self) -> Nodes<'a, U>
     where
-        U: 'b,
+        U: 'a,
     {
         Nodes::empty()
     }

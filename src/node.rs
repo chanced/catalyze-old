@@ -339,15 +339,15 @@ impl<'a, U> Iterator for NodeIter<'a, U> {
         match self {
             NodeIter::Nodes(nodes) => nodes.next(),
             NodeIter::Packages(i) => i.next().cloned().map(Into::into),
-            NodeIter::Files(i) => i.next().map(Into::into),
-            NodeIter::Messages(i) => i.next().map(Into::into),
-            NodeIter::Oneofs(i) => i.next().map(Into::into),
-            NodeIter::Enums(i) => i.next().map(Into::into),
-            NodeIter::EnumValues(i) => i.next().map(Into::into),
-            NodeIter::Services(i) => i.next().map(Into::into),
-            NodeIter::Methods(i) => i.next().map(Into::into),
-            NodeIter::Fields(i) => i.next().map(Into::into),
-            NodeIter::Extensions(i) => i.next().map(Into::into),
+            NodeIter::Files(i) => i.next().clone().map(Into::into),
+            NodeIter::Messages(i) => i.next().clone().map(Into::into),
+            NodeIter::Oneofs(i) => i.next().clone().map(Into::into),
+            NodeIter::Enums(i) => i.next().clone().map(Into::into),
+            NodeIter::EnumValues(i) => i.next().clone().map(Into::into),
+            NodeIter::Services(i) => i.next().clone().map(Into::into),
+            NodeIter::Methods(i) => i.next().clone().map(Into::into),
+            NodeIter::Fields(i) => i.next().clone().map(Into::into),
+            NodeIter::Extensions(i) => i.next().clone().map(Into::into),
         }
     }
 }
