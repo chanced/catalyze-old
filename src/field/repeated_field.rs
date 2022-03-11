@@ -1,9 +1,12 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
+
+use anyhow::bail;
 
 use crate::{
     proto::{FieldDescriptor, Scalar, Syntax},
-    Comments, EmbedFieldDetail, Enum, EnumFieldDetail, File, Files, FullyQualified, Message, Name,
-    Package, ScalarFieldDetail, WellKnownEnum, WellKnownMessage, WellKnownType,
+    Comments, EmbedFieldDetail, Enum, EnumFieldDetail, Field, FieldDetail, File, Files,
+    FullyQualified, Message, Name, Node, Package, ScalarFieldDetail, Type, WeakEnum, WeakMessage,
+    WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
 /// Represents a field marked as `repeated`. The field can hold
@@ -191,6 +194,39 @@ impl<'a, U> RepeatedField<'a, U> {
     pub fn is_enum(&self) -> bool {
         matches!(self, RepeatedField::Enum(_))
     }
+
+    pub(crate) fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+        match self {
+            RepeatedField::Enum(f) => f.set_value(value),
+            RepeatedField::Embed(f) => f.set_value(value),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn value_type(&self) -> Type<'a> {
+        self.descriptor().proto_type()
+    }
+
+    pub fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
+        match detail.value_type() {
+            Type::Scalar(s) => Ok(Field::Repeated(RepeatedField::Scalar(RepeatedScalarField(
+                Rc::new(ScalarFieldDetail { detail, scalar: s }),
+            )))),
+            Type::Enum(_) => Ok(Field::Repeated(RepeatedField::Enum(RepeatedEnumField(
+                Rc::new(EnumFieldDetail {
+                    detail,
+                    enumeration: RefCell::new(WeakEnum::empty()),
+                }),
+            )))),
+            Type::Message(_) => Ok(Field::Repeated(RepeatedField::Embed(RepeatedEmbedField(
+                Rc::new(EmbedFieldDetail {
+                    detail,
+                    embed: RefCell::new(WeakMessage::empty()),
+                }),
+            )))),
+            Type::Group => bail!("Group is not supported. Use an embedded message instead."),
+        }
+    }
 }
 impl<'a, U> Clone for RepeatedField<'a, U> {
     fn clone(&self) -> Self {
@@ -323,6 +359,10 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
     pub fn well_known_message(&self) -> Option<WellKnownMessage> {
         self.0.embed().well_known_message()
     }
+
+    fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+        self.0.set_value(value)
+    }
 }
 
 impl<'a, U> Clone for RepeatedEmbedField<'a, U> {
@@ -407,6 +447,10 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn well_known_type(&self) -> Option<WellKnownType> {
         self.0.enumeration().well_known_type()
     }
+
+    fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+        self.0.set_value(value)
+    }
 }
 impl<'a, U> Clone for RepeatedEnumField<'a, U> {
     fn clone(&self) -> Self {
@@ -419,72 +463,67 @@ impl<'a, U> FullyQualified for RepeatedEnumField<'a, U> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct RepeatedScalarFieldDetail<'a, U> {
-    detail: ScalarFieldDetail<'a, U>,
-}
-
 #[derive(Debug)]
-pub struct RepeatedScalarField<'a, U>(Rc<RepeatedScalarFieldDetail<'a, U>>);
+pub struct RepeatedScalarField<'a, U>(Rc<ScalarFieldDetail<'a, U>>);
 
 impl<'a, U> RepeatedScalarField<'a, U> {
     pub fn name(&self) -> Name<U> {
-        self.0.detail.name()
+        self.0.name()
     }
     pub fn fully_qualified_name(&self) -> String {
-        self.0.detail.fully_qualified_name()
+        self.0.fully_qualified_name()
     }
 
     pub fn file(&self) -> File<'a, U> {
-        self.0.detail.file()
+        self.0.file()
     }
     pub fn package(&self) -> Package<'a, U> {
-        self.0.detail.package()
+        self.0.package()
     }
 
     pub fn is_repeated(&self) -> bool {
-        self.0.detail.is_repeated()
+        self.0.is_repeated()
     }
     pub fn is_map(&self) -> bool {
-        self.0.detail.is_map()
+        self.0.is_map()
     }
     pub fn message(&self) -> Message<'a, U> {
-        self.0.detail.message()
+        self.0.message()
     }
     /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
-        self.0.detail.util()
+        self.0.util()
     }
 
     pub fn syntax(&self) -> Syntax {
-        self.0.detail.syntax()
+        self.0.syntax()
     }
     pub fn descriptor(&self) -> FieldDescriptor<'a> {
-        self.0.detail.descriptor()
+        self.0.descriptor()
     }
     pub fn comments(&self) -> Comments<'a> {
-        self.0.detail.comments()
+        self.0.comments()
     }
     pub(crate) fn set_comments(&self, comments: Comments<'a>) {
-        self.0.detail.set_comments(comments);
+        self.0.set_comments(comments);
     }
 
     pub fn scalar(&self) -> Scalar {
-        self.0.detail.scalar()
+        self.0.scalar()
     }
 
     pub fn build_target(&self) -> bool {
-        self.0.detail.build_target()
+        self.0.build_target()
     }
 
     pub fn is_marked_required(&self) -> bool {
-        self.0.detail.is_marked_required()
+        self.0.is_marked_required()
     }
 }
 
 impl<'a, U> FullyQualified for RepeatedScalarField<'a, U> {
     fn fully_qualified_name(&self) -> String {
-        self.0.detail.fully_qualified_name()
+        self.0.fully_qualified_name()
     }
 }
 

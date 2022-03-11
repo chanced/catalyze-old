@@ -88,6 +88,7 @@ impl<'a, U> Message<'a, U> {
             comments: RefCell::new(Comments::default()),
             wkt,
         }));
+
         {
             let container = Container::Message(msg.clone());
             let mut msgs = msg.0.messages.borrow_mut();
@@ -314,6 +315,9 @@ impl<'a, U> TryFrom<Container<'a, U>> for Message<'a, U> {
 pub(crate) struct WeakMessage<'a, U>(Weak<MessageDetail<'a, U>>);
 
 impl<'a, U> WeakMessage<'a, U> {
+    pub(crate) fn empty() -> WeakMessage<'a, U> {
+        WeakMessage(Weak::new())
+    }
     pub fn build_target(&self) -> bool {
         self.upgrade().build_target()
     }

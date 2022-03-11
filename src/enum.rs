@@ -182,6 +182,9 @@ impl<'a, U> From<&WeakEnum<'a, U>> for Enum<'a, U> {
 #[derive(Debug)]
 pub(crate) struct WeakEnum<'a, U>(Weak<EnumDetail<'a, U>>);
 impl<'a, U> WeakEnum<'a, U> {
+    pub(crate) fn empty() -> Self {
+        WeakEnum(Weak::new())
+    }
     fn upgrade(&self) -> Enum<'a, U> {
         Enum(self.0.upgrade().expect("Failed to upgrade WeakEnum"))
     }

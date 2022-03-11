@@ -6,7 +6,7 @@ mod oneof_field;
 mod repeated_field;
 mod scalar_field;
 
-use anyhow::{anyhow,bail};
+use anyhow::{anyhow, bail};
 pub use embed_field::*;
 pub use enum_field::*;
 pub use map_field::*;
@@ -17,7 +17,7 @@ pub use scalar_field::*;
 use crate::{
     container::Container,
     format_fqn,
-    proto::{FieldDescriptor, Scalar, Syntax},
+    proto::{FieldDescriptor, Scalar, Syntax, Type},
     Comments, Enum, File, Files, FullyQualified, Message, Name, Node, NodeAtPath, Nodes, Oneof,
     Package, WeakMessage, WeakOneof, WellKnownType,
 };
@@ -47,7 +47,11 @@ impl<'a, U> FieldDetail<'a, U> {
         oneof: Option<Oneof<'a, U>>,
     ) -> Result<Self, anyhow::Error> {
         let name = Name::new(desc.name(), msg.util());
-        let map_entry = if msg.is_map_entry() { Some(msg) } else { None };
+        let map_entry = if msg.is_map_entry() {
+            Some(msg.clone().into())
+        } else {
+            None
+        };
         let msg = if msg.is_map_entry() {
             match msg.container() {
                 Container::Message(m) => m,
@@ -56,10 +60,11 @@ impl<'a, U> FieldDetail<'a, U> {
         } else {
             msg
         };
-
+        let fqn = format!("{}.{}", msg.fully_qualified_name(), &name);
         Ok(Self {
             name,
-            fqn: format!("{}.{}", msg.fully_qualified_name(), &name),
+            fqn,
+            map_entry,
             syntax: msg.syntax(),
             is_map: msg.is_map_entry(),
             in_oneof: oneof.is_some(),
@@ -67,7 +72,6 @@ impl<'a, U> FieldDetail<'a, U> {
             desc,
             msg: msg.clone().into(),
             comments: RefCell::new(Comments::default()),
-            map_entry: map_entry.map(Into::into),
             oneof: oneof.map(Into::into),
         })
     }
@@ -86,7 +90,10 @@ impl<'a, U> FieldDetail<'a, U> {
         self.util.clone()
     }
     pub fn map_entry(&self) -> Result<Message<'a, U>, anyhow::Error> {
-        self.map_entry.clone().map(Into::into).ok_or_else(|| anyhow!("field is not a map entry"))
+        self.map_entry
+            .clone()
+            .map(Into::into)
+            .ok_or_else(|| anyhow!("field is not a map entry"))
     }
     pub fn syntax(&self) -> Syntax {
         self.syntax
@@ -106,6 +113,9 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn is_marked_required(&self) -> bool {
         self.desc.is_marked_required(self.syntax)
     }
+    pub fn value_type(&self) -> Type {
+        self.desc.r#type()
+    }
 
     pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.comments.replace(comments);
@@ -121,6 +131,14 @@ impl<'a, U> FieldDetail<'a, U> {
     }
     pub fn build_target(&self) -> bool {
         self.file().build_target()
+    }
+    pub fn map_key(&self) -> Result<Key, anyhow::Error> {
+        let f = self
+            .map_entry()?
+            .fields()
+            .get(0)
+            .ok_or_else(|| anyhow!("key_type field not found in map entry"))?;
+        f.value_type().try_into()
     }
 }
 
@@ -159,18 +177,32 @@ impl<'a, U> Field<'a, U> {
         oneof: Option<Oneof<'a, U>>,
     ) -> Result<Field<'a, U>, anyhow::Error> {
         let detail = FieldDetail::new(desc, msg, oneof)?;
-
         if desc.proto_type().is_group() {
             bail!("Group is not supported")
         }
         if detail.is_map {
-            if detail.is_embed
+            MapField::new(detail)
+        } else if detail.is_repeated() {
+            RepeatedField::new(detail)
+        } else {
+            match detail.value_type() {
+                Type::Scalar(_) => ScalarField::new(detail),
+                Type::Enum(_) => EnumField::new(detail),
+                Type::Message(_) => EmbedField::new(detail),
+                Type::Group => bail!("Group is not supported. Use an embedded Message instead."),
+            }
         }
-
-
-        todo!()
     }
-
+    pub fn value_type(&self) -> Type {
+        match self {
+            Self::Embed(f) => f.value_type(),
+            Self::Enum(f) => f.value_type(),
+            Self::Map(f) => f.value_type(),
+            Self::Oneof(f) => f.value_type(),
+            Self::Repeated(f) => f.value_type(),
+            Self::Scalar(f) => f.value_type(),
+        }
+    }
     pub fn name(&self) -> Name<U> {
         match self {
             Field::Embed(f) => f.name(),
@@ -242,7 +274,7 @@ impl<'a, U> Field<'a, U> {
             Field::Map(f) => f.imports(),
             Field::Oneof(f) => f.imports(),
             Field::Repeated(f) => f.imports(),
-            Field::Scalar(f) => Files::empty(),
+            Field::Scalar(_) => Files::empty(),
         }
     }
 
@@ -300,7 +332,7 @@ impl<'a, U> Field<'a, U> {
 
     pub fn is_embed(&self) -> bool {
         match self {
-            Field::Embed(f) => true,
+            Field::Embed(_) => true,
             Field::Map(f) => f.is_embed(),
             Field::Oneof(f) => f.is_embed(),
             Field::Repeated(f) => f.is_embed(),
@@ -368,7 +400,7 @@ impl<'a, U> Field<'a, U> {
             Field::Map(f) => f.is_scalar(),
             Field::Oneof(f) => f.is_scalar(),
             Field::Repeated(f) => f.is_scalar(),
-            Field::Scalar(f) => true,
+            Field::Scalar(_) => true,
             _ => false,
         }
     }
@@ -381,6 +413,7 @@ impl<'a, U> Field<'a, U> {
             _ => false,
         }
     }
+
     /// Returns `true` for all fields that have explicit presence.
     ///
     /// ---
@@ -477,10 +510,31 @@ impl<'a, U> Field<'a, U> {
             Field::Map(f) => f.set_value(value),
             Field::Oneof(f) => f.set_value(value),
             Field::Repeated(f) => f.set_value(value),
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
-
+    pub(crate) fn is_obj_value(&self) -> bool {
+        match self {
+            Field::Embed(_) => true,
+            Field::Enum(_) => true,
+            Field::Map(m) => match m {
+                MapField::Enum(_) => true,
+                MapField::Embed(_) => true,
+                MapField::Scalar(_) => false,
+            },
+            Field::Oneof(o) => match o {
+                OneofField::Embed(_) => true,
+                OneofField::Enum(_) => true,
+                OneofField::Scalar(_) => false,
+            },
+            Field::Repeated(r) => match r {
+                RepeatedField::Enum(_) => true,
+                RepeatedField::Embed(_) => true,
+                RepeatedField::Scalar(_) => false,
+            },
+            Field::Scalar(_) => false,
+        }
+    }
 }
 impl<'a, U> Clone for Field<'a, U> {
     fn clone(&self) -> Self {

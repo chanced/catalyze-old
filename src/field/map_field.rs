@@ -3,14 +3,14 @@ use std::{any, cell::RefCell, error::Error, rc::Rc};
 use anyhow::{anyhow, bail};
 
 use crate::{
-    proto::FieldDescriptor,
+    proto::{FieldDescriptor, Type},
     proto::{Scalar, Syntax},
     Comments, Enum, Field, File, Files, FullyQualified, Message, Name, Node, Package, ScalarField,
     WeakEnum, WeakFile, WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum MapKey {
+pub enum Key {
     Int64 = 3,
     Uint64 = 4,
     Int32 = 5,
@@ -24,12 +24,35 @@ pub enum MapKey {
     Sint64 = 18,
 }
 
+impl<'a> TryFrom<Type<'a>> for Key {
+    type Error = anyhow::Error;
+
+    fn try_from(t: Type<'a>) -> Result<Self, Self::Error> {
+        match t {
+            Type::Scalar(s) => match s {
+                Scalar::Int64 => Ok(Key::Int64),
+                Scalar::Uint64 => Ok(Key::Uint64),
+                Scalar::Int32 => Ok(Key::Int32),
+                Scalar::Fixed64 => Ok(Key::Fixed64),
+                Scalar::Fixed32 => Ok(Key::Fixed32),
+                Scalar::String => Ok(Key::String),
+                Scalar::Uint32 => Ok(Key::Uint32),
+                Scalar::Sfixed32 => Ok(Key::Sfixed32),
+                Scalar::Sfixed64 => Ok(Key::Sfixed64),
+                Scalar::Sint32 => Ok(Key::Sint32),
+                Scalar::Sint64 => Ok(Key::Sint64),
+                _ => bail!("invalid map key type: {}", s),
+            },
+            _ => bail!("invalid map key type: {}", t),
+        }
+    }
+}
+
 use super::FieldDetail;
 
 #[derive(Debug)]
 pub(crate) struct MapFieldDetail<'a, U> {
-    key: MapKey,
-    syntax: Syntax,
+    key: Key,
     detail: FieldDetail<'a, U>,
 }
 
@@ -58,7 +81,7 @@ impl<'a, U> MapFieldDetail<'a, U> {
         self.detail.name()
     }
 
-    pub fn key(&self) -> MapKey {
+    pub fn key(&self) -> Key {
         self.key
     }
 
@@ -111,7 +134,6 @@ impl<'a, U> Clone for MapFieldDetail<'a, U> {
     fn clone(&self) -> Self {
         Self {
             key: self.key.clone(),
-            syntax: self.syntax.clone(),
             detail: self.detail.clone(),
         }
     }
@@ -133,7 +155,7 @@ impl<'a, U> MapField<'a, U> {
         }
     }
 
-    pub fn key(&self) -> MapKey {
+    pub fn key(&self) -> Key {
         match self {
             MapField::Scalar(f) => f.key(),
             MapField::Enum(f) => f.key(),
@@ -298,6 +320,46 @@ impl<'a, U> MapField<'a, U> {
             MapField::Embed(f) => f.util(),
         }
     }
+
+    pub(crate) fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+        match self {
+            MapField::Enum(f) => f.set_value(value),
+            MapField::Embed(f) => f.set_value(value),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn value_type(&self) -> crate::proto::Type {
+        self.descriptor().proto_type()
+    }
+
+    pub fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
+        if !detail.is_map() {
+            bail!("Field is not a map")
+        }
+        let key = detail.map_key()?;
+        match detail.value_type() {
+            Type::Scalar(s) => Ok(Field::Map(MapField::Scalar(MappedScalarField(Rc::new(
+                MappedScalarFieldDetail {
+                    detail: MapFieldDetail { detail, key },
+                    scalar: s,
+                },
+            ))))),
+            Type::Enum(_) => Ok(Field::Map(MapField::Enum(MappedEnumField(Rc::new(
+                MappedEnumFieldDetail {
+                    detail: MapFieldDetail { detail, key },
+                    enumeration: RefCell::new(WeakEnum::empty()),
+                },
+            ))))),
+            Type::Message(_) => Ok(Field::Map(MapField::Embed(MappedEmbedField(Rc::new(
+                MappedEmbedFieldDetail {
+                    detail: MapFieldDetail { detail, key },
+                    embed: RefCell::new(WeakMessage::empty()),
+                },
+            ))))),
+            Type::Group => bail!("group is not a map"),
+        }
+    }
 }
 impl<'a, U> Clone for MapField<'a, U> {
     fn clone(&self) -> Self {
@@ -415,7 +477,7 @@ impl<'a, U> MappedScalarField<'a, U> {
         self.0.scalar
     }
 
-    pub fn key(&self) -> MapKey {
+    pub fn key(&self) -> Key {
         self.0.detail.key()
     }
 
@@ -523,7 +585,7 @@ impl<'a, U> MappedEmbedField<'a, U> {
         self.0.detail.build_target()
     }
 
-    pub fn key(&self) -> MapKey {
+    pub fn key(&self) -> Key {
         self.0.detail.key()
     }
 
@@ -567,8 +629,14 @@ impl<'a, U> Clone for MappedEmbedField<'a, U> {
 
 #[derive(Debug, Clone)]
 pub struct MappedEnumFieldDetail<'a, U> {
-    e: WeakEnum<'a, U>,
+    enumeration: RefCell<WeakEnum<'a, U>>,
     detail: MapFieldDetail<'a, U>,
+}
+
+impl<'a, U> MappedEnumFieldDetail<'a, U> {
+    pub fn enumeration(&self) -> Enum<'a, U> {
+        self.enumeration.borrow().clone().into()
+    }
 }
 
 #[derive(Debug)]
@@ -618,20 +686,20 @@ impl<'a, U> MappedEnumField<'a, U> {
         self.r#enum()
     }
     pub fn r#enum(&self) -> Enum<'a, U> {
-        self.0.e.clone().into()
+        self.0.enumeration()
     }
     pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
     pub fn well_known_type(&self) -> Option<WellKnownType> {
-        self.0.e.well_known_type()
+        self.enumeration().well_known_type()
     }
     pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
-        self.0.e.well_known_enum()
+        self.enumeration().well_known_enum()
     }
 
     pub fn is_well_known_type(&self) -> bool {
-        self.0.e.is_well_known_type()
+        self.enumeration().is_well_known_type()
     }
 
     pub(crate) fn set_comments(&self, comments: Comments<'a>) {
@@ -639,11 +707,11 @@ impl<'a, U> MappedEnumField<'a, U> {
     }
 
     pub fn has_import(&self) -> bool {
-        return self.0.e.file() != self.file();
+        return self.enumeration().file() != self.file();
     }
     pub fn imports(&self) -> Files<'a, U> {
         if self.has_import() {
-            Files::from(self.0.e.weak_file())
+            Files::from(self.enumeration().weak_file())
         } else {
             Files::empty()
         }
@@ -653,7 +721,7 @@ impl<'a, U> MappedEnumField<'a, U> {
         self.0.detail.build_target()
     }
 
-    pub fn key(&self) -> MapKey {
+    pub fn key(&self) -> Key {
         self.0.detail.key()
     }
 
@@ -663,6 +731,16 @@ impl<'a, U> MappedEnumField<'a, U> {
 
     pub fn has_presence(&self) -> bool {
         false
+    }
+
+    fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+        match value {
+            Node::Enum(e) => {
+                self.0.enumeration.replace(e.into());
+                Ok(())
+            }
+            _ => bail!("expected Enum, received {}", value),
+        }
     }
 }
 

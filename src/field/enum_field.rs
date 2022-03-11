@@ -1,14 +1,16 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
+
+use anyhow::bail;
 
 use crate::{
-    file, proto::FieldDescriptor, proto::Syntax, Comments, Enum, FieldDetail, File, Files,
-    FullyQualified, Message, Name, Package, WeakEnum, WellKnownEnum, WellKnownType,
+    proto::FieldDescriptor, proto::Syntax, Comments, Enum, Field, FieldDetail, File, Files,
+    FullyQualified, Message, Name, Node, Package, Type, WeakEnum, WellKnownEnum, WellKnownType,
 };
 
 #[derive(Debug, Clone)]
 pub(crate) struct EnumFieldDetail<'a, U> {
     pub detail: FieldDetail<'a, U>,
-    pub e: WeakEnum<'a, U>,
+    pub enumeration: RefCell<WeakEnum<'a, U>>,
 }
 
 impl<'a, U> EnumFieldDetail<'a, U> {
@@ -39,7 +41,7 @@ impl<'a, U> EnumFieldDetail<'a, U> {
         self.detail.descriptor()
     }
     pub fn r#enum(&self) -> Enum<'a, U> {
-        self.e.clone().into()
+        self.enumeration.borrow().clone().into()
     }
     pub fn build_target(&self) -> bool {
         self.file().build_target()
@@ -61,24 +63,35 @@ impl<'a, U> EnumFieldDetail<'a, U> {
         self.detail.package()
     }
     pub fn imports(&self) -> Files<'a, U> {
-        if self.file() != self.e.file() {
-            Files::from(self.e.weak_file())
+        let e = self.r#enum();
+        if self.file() != e.file() {
+            Files::from(e.weak_file())
         } else {
             Files::empty()
         }
     }
 
     pub fn has_import(&self) -> bool {
-        self.e.file() != self.detail.file()
+        self.enumeration().file() != self.detail.file()
     }
     pub fn is_well_known_type(&self) -> bool {
-        self.e.is_well_known_type()
+        self.enumeration().is_well_known_type()
     }
     pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
-        self.e.well_known_enum()
+        self.enumeration().well_known_enum()
     }
     pub fn well_known_type(&self) -> Option<WellKnownType> {
-        self.e.well_known_type()
+        self.enumeration().well_known_type()
+    }
+
+    pub(crate) fn set_value(&self, node: Node<'a, U>) -> Result<(), anyhow::Error> {
+        match node {
+            Node::Enum(v) => {
+                self.enumeration.replace(v.into());
+                Ok(())
+            }
+            _ => bail!("expected Enum, received {}", node),
+        }
     }
 }
 
@@ -86,6 +99,18 @@ impl<'a, U> EnumFieldDetail<'a, U> {
 pub struct EnumField<'a, U>(Rc<EnumFieldDetail<'a, U>>);
 
 impl<'a, U> EnumField<'a, U> {
+    pub fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
+        if matches!(detail.value_type(), Type::Enum(_)) {
+            bail!("expected Enum, received {}", detail.value_type());
+        }
+        let e = EnumFieldDetail {
+            detail,
+            enumeration: RefCell::new(WeakEnum::empty()),
+        };
+        let f = EnumField(Rc::new(e));
+        Ok(Field::Enum(f))
+    }
+
     pub fn name(&self) -> Name<U> {
         self.0.detail.name()
     }
@@ -94,7 +119,7 @@ impl<'a, U> EnumField<'a, U> {
     }
     /// Returns the `Enum` of this `EnumField`.
     pub fn r#enum(&self) -> Enum<'a, U> {
-        self.0.e.clone().into()
+        self.0.enumeration.borrow().clone().into()
     }
 
     pub fn build_target(&self) -> bool {
@@ -156,6 +181,13 @@ impl<'a, U> EnumField<'a, U> {
 
     pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
+    }
+    pub(crate) fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+        self.0.set_value(value)
+    }
+
+    pub fn value_type(&self) -> crate::proto::Type {
+        self.descriptor().proto_type()
     }
 }
 

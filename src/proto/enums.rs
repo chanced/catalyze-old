@@ -1,3 +1,5 @@
+use std::fmt;
+
 use anyhow::bail;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -22,6 +24,17 @@ impl<'a> Type<'a> {
         matches!(self, Self::Enum(_))
     }
 }
+impl<'a> fmt::Display for Type<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::Scalar(s) => todo!(),
+            Type::Enum(_) => todo!(),
+            Type::Message(_) => todo!(),
+            Type::Group => todo!(),
+        }
+    }
+}
+
 impl<'a> From<&'a prost_types::FieldDescriptorProto> for Type<'a> {
     fn from(fd: &'a prost_types::FieldDescriptorProto) -> Self {
         let t = fd.r#type();
@@ -75,6 +88,29 @@ pub enum Scalar {
     Sint64 = 18,
 }
 
+impl fmt::Display for Scalar {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Scalar::Double => "double",
+            Scalar::Float => "float",
+            Scalar::Int64 => "int64",
+            Scalar::Uint64 => "uint64",
+            Scalar::Int32 => "int32",
+            Scalar::Fixed64 => "fixed64",
+            Scalar::Fixed32 => "fixed32",
+            Scalar::Bool => "bool",
+            Scalar::String => "string",
+            Scalar::Bytes => "bytes",
+            Scalar::Uint32 => "uint32",
+            Scalar::Enum => "enum",
+            Scalar::Sfixed32 => "sfixed32",
+            Scalar::Sfixed64 => "sfixed64",
+            Scalar::Sint32 => "sint32",
+            Scalar::Sint64 => "sint64",
+        };
+        write!(f, "{}", s)
+    }
+}
 impl TryFrom<i32> for Scalar {
     type Error = anyhow::Error;
     fn try_from(value: i32) -> Result<Self, Self::Error> {

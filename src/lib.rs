@@ -36,7 +36,7 @@ pub use name::*;
 pub use node::*;
 pub use oneof::*;
 pub use package::*;
-pub use proto::Scalar;
+pub use proto::{Scalar, Type};
 
 pub use r#enum::*;
 pub use service::*;

@@ -253,13 +253,13 @@ impl<'a> FieldDescriptor<'a> {
     ///
     /// If type_name is set, this need not be set.  If both this and type_name
     /// are set, this must be one of Enum, Message or Group.
-    pub fn proto_type(&self) -> Type {
+    pub fn proto_type(&self) -> Type<'a> {
         self.r#type()
     }
 
     /// If type_name is set, this need not be set.  If both this and type_name
     /// are set, this must be one of Enum, Message or Group.
-    pub fn r#type(&self) -> Type {
+    pub fn r#type(&self) -> Type<'a> {
         Type::from(self.desc)
     }
 

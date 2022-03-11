@@ -1,10 +1,12 @@
 use std::rc::Rc;
 
+use anyhow::bail;
+
 use super::FieldDetail;
 use crate::{
-    proto::Syntax,
     proto::{FieldDescriptor, Scalar},
-    Comments, File, FullyQualified, Message, Name, Package,
+    proto::{Syntax, Type},
+    Comments, Field, File, FullyQualified, Message, Name, Package,
 };
 
 #[derive(Debug)]
@@ -80,6 +82,16 @@ impl<'a, U> Clone for ScalarFieldDetail<'a, U> {
 pub struct ScalarField<'a, U>(Rc<ScalarFieldDetail<'a, U>>);
 
 impl<'a, U> ScalarField<'a, U> {
+    pub fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
+        match detail.value_type() {
+            Type::Scalar(s) => Ok(Field::Scalar(Self(Rc::new(ScalarFieldDetail {
+                detail,
+                scalar: s,
+            })))),
+            invalid_type => bail!("Expected Scalar value type, received {:?}", invalid_type),
+        }
+    }
+
     pub fn scalar(&self) -> Scalar {
         self.0.scalar
     }
@@ -127,6 +139,10 @@ impl<'a, U> ScalarField<'a, U> {
 
     pub fn util(&self) -> Rc<U> {
         self.0.util()
+    }
+
+    pub fn value_type(&self) -> Type<'a> {
+        self.descriptor().proto_type()
     }
 }
 

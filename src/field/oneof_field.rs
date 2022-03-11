@@ -1,8 +1,13 @@
-use std::rc::{Rc, Weak};
+use std::{
+    cell::RefCell,
+    rc::{Rc, Weak},
+};
+
+use anyhow::bail;
 
 use crate::{
     proto::{FieldDescriptor, Scalar, Syntax},
-    Comments, Enum, File, Files, FullyQualified, Message, Name, Oneof, Package, WeakEnum,
+    Comments, Enum, File, Files, FullyQualified, Message, Name, Node, Oneof, Package, WeakEnum,
     WeakMessage, WeakOneof, WellKnownType,
 };
 
@@ -260,6 +265,18 @@ impl<'a, U> OneofField<'a, U> {
             OneofField::Embed(f) => f.util(),
         }
     }
+
+    pub(crate) fn set_value(&self, value: crate::Node<'a, U>) -> Result<(), anyhow::Error> {
+        match self {
+            OneofField::Enum(f) => f.set_value(value),
+            OneofField::Embed(f) => f.set_value(value),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn value_type(&self) -> crate::proto::Type {
+        self.descriptor().proto_type()
+    }
 }
 
 impl<'a, U> FullyQualified for OneofField<'a, U> {
@@ -275,7 +292,7 @@ impl<'a, U> FullyQualified for OneofField<'a, U> {
 #[derive(Debug, Clone)]
 pub struct OneofEnumFieldDetail<'a, U> {
     detail: OneofFieldDetail<'a, U>,
-    e: WeakEnum<'a, U>,
+    e: RefCell<WeakEnum<'a, U>>,
 }
 #[derive(Debug)]
 pub struct OneofEnumField<'a, U>(Rc<OneofEnumFieldDetail<'a, U>>);
@@ -297,7 +314,7 @@ impl<'a, U> OneofEnumField<'a, U> {
         self.0.detail.comments()
     }
     pub fn r#enum(&self) -> Enum<'a, U> {
-        self.0.e.clone().into()
+        self.0.e.borrow().clone().into()
     }
     pub fn enumeration(&self) -> Enum<'a, U> {
         self.r#enum()
@@ -314,14 +331,14 @@ impl<'a, U> OneofEnumField<'a, U> {
     }
     pub fn imports(&self) -> Files<'a, U> {
         if self.has_import() {
-            Files::from(self.0.e.weak_file())
+            Files::from(self.0.e.borrow().weak_file())
         } else {
             Files::empty()
         }
     }
 
     pub fn has_import(&self) -> bool {
-        self.0.e.file() != self.file()
+        self.enumeration().file() != self.file()
     }
 
     pub fn build_target(&self) -> bool {
@@ -357,6 +374,16 @@ impl<'a, U> OneofEnumField<'a, U> {
 
     pub fn has_presence(&self) -> bool {
         true
+    }
+
+    fn set_value(&self, value: crate::Node<'a, U>) -> Result<(), anyhow::Error> {
+        match value {
+            Node::Enum(v) => {
+                self.0.e.replace(v.into());
+                Ok(())
+            }
+            _ => bail!("expected Enum, received {}", value),
+        }
     }
 }
 impl<'a, U> FullyQualified for OneofEnumField<'a, U> {
@@ -459,7 +486,7 @@ impl<'a, U> Clone for OneofScalarField<'a, U> {
 #[derive(Debug, Clone)]
 pub(crate) struct OneofMessageFieldDetail<'a, U> {
     detail: OneofFieldDetail<'a, U>,
-    embed: WeakMessage<'a, U>,
+    embed: RefCell<WeakMessage<'a, U>>,
 }
 
 #[derive(Debug)]
@@ -491,14 +518,14 @@ impl<'a, U> OneofEmbedField<'a, U> {
     }
 
     pub fn embed(&self) -> Message<'a, U> {
-        self.0.embed.clone().into()
+        self.0.embed.borrow().clone().into()
     }
     pub fn has_import(&self) -> bool {
-        self.0.embed.file() != self.file()
+        self.0.embed.borrow().file() != self.file()
     }
     pub fn imports(&self) -> Files<'a, U> {
         if self.has_import() {
-            Files::from(self.0.embed.weak_file())
+            Files::from(self.0.embed.borrow().weak_file())
         } else {
             Files::empty()
         }
@@ -531,10 +558,10 @@ impl<'a, U> OneofEmbedField<'a, U> {
     }
 
     pub fn is_well_known_type(&self) -> bool {
-        self.0.embed.is_well_known_type()
+        self.embed().is_well_known_type()
     }
     pub fn well_known_type(&self) -> Option<WellKnownType> {
-        self.0.embed.well_known_type()
+        self.embed().well_known_type()
     }
 
     pub fn has_presence(&self) -> bool {
@@ -543,6 +570,16 @@ impl<'a, U> OneofEmbedField<'a, U> {
 
     pub fn util(&self) -> Rc<U> {
         self.0.detail.util()
+    }
+
+    fn set_value(&self, value: crate::Node<'a, U>) -> Result<(), anyhow::Error> {
+        match value {
+            Node::Message(v) => {
+                self.0.embed.replace(v.into());
+                Ok(())
+            }
+            _ => bail!("expected Enum, received {}", value),
+        }
     }
 }
 

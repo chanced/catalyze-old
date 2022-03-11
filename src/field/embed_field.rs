@@ -3,8 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 use anyhow::bail;
 
 use crate::{
-    proto::FieldDescriptor, proto::Syntax, Comments, File, Files, FullyQualified, Message, Name,
-    Node, Package, WeakMessage, WellKnownMessage, WellKnownType,
+    proto::FieldDescriptor, proto::Syntax, Comments, Field, File, Files, FullyQualified, Message,
+    Name, Node, Package, WeakMessage, WellKnownMessage, WellKnownType,
 };
 
 use super::FieldDetail;
@@ -67,8 +67,14 @@ impl<'a, U> EmbedFieldDetail<'a, U> {
     pub fn has_import(&self) -> bool {
         self.embed.borrow().file() != self.detail.file()
     }
-    pub(crate) fn set_embed(&self, node: WeakMessage<'a, U>) {
-        self.embed.replace(node);
+    pub(crate) fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+        match value {
+            Node::Message(m) => {
+                self.embed.replace(m.into());
+                Ok(())
+            }
+            _ => bail!("expected Message, received {}", value),
+        }
     }
 }
 
@@ -151,14 +157,20 @@ impl<'a, U> EmbedField<'a, U> {
         self.0.util()
     }
 
-    pub(crate) fn set_value(&self, node: Node<'a, U>) -> Result<(), anyhow::Error> {
-        match node {
-            Node::Message(m) => {
-                self.0.embed.replace(m.into());
-                Ok(())
-            }
-            _ => bail!("expected Message, received {}", node),
-        }
+    pub(crate) fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+        self.0.set_value(value)
+    }
+
+    pub fn value_type(&self) -> crate::proto::Type {
+        self.0.descriptor().proto_type()
+    }
+
+    pub fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
+        let detail = Rc::new(EmbedFieldDetail {
+            detail,
+            embed: RefCell::new(WeakMessage::empty()),
+        });
+        Ok(Field::Embed(EmbedField(detail)))
     }
 }
 impl<'a, U> Clone for EmbedField<'a, U> {
