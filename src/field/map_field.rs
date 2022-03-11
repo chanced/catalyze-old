@@ -1,10 +1,12 @@
-use std::{error::Error, rc::Rc};
+use std::{any, cell::RefCell, error::Error, rc::Rc};
+
+use anyhow::{anyhow, bail};
 
 use crate::{
     proto::FieldDescriptor,
     proto::{Scalar, Syntax},
-    Comments, Enum, File, Files, FullyQualified, Message, Name, Package, ScalarField, WeakEnum,
-    WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
+    Comments, Enum, Field, File, Files, FullyQualified, Message, Name, Node, Package, ScalarField,
+    WeakEnum, WeakFile, WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -32,6 +34,26 @@ pub(crate) struct MapFieldDetail<'a, U> {
 }
 
 impl<'a, U> MapFieldDetail<'a, U> {
+    pub fn new(detail: FieldDetail<'a, U>) -> Result<Self, anyhow::Error> {
+        if detail.map_entry.is_none() {}
+        let map_entry = detail.map_entry()?;
+
+        let key = map_entry
+            .fields()
+            .get(0)
+            .ok_or_else(|| anyhow!("map entry {} is missing key field", &map_entry.name()))?;
+
+        todo!()
+    }
+
+    fn value_field(&self) -> Result<Field<'a, U>, anyhow::Error> {
+        let map_entry = self.detail.map_entry()?;
+        map_entry
+            .fields()
+            .get(1)
+            .ok_or_else(|| anyhow!("map entry {} is missing value field", &map_entry.name()))
+    }
+
     pub fn name(&self) -> Name<U> {
         self.detail.name()
     }
@@ -62,10 +84,10 @@ impl<'a, U> MapFieldDetail<'a, U> {
     pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.detail.descriptor()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.detail.comments()
     }
-    pub fn set_comments(&self, comments: Comments<'a, U>) {
+    pub fn set_comments(&self, comments: Comments<'a>) {
         self.detail.comments.replace(comments);
     }
 
@@ -143,7 +165,7 @@ impl<'a, U> MapField<'a, U> {
             _ => None,
         }
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         match self {
             MapField::Scalar(f) => f.comments(),
             MapField::Enum(f) => f.comments(),
@@ -174,7 +196,7 @@ impl<'a, U> MapField<'a, U> {
             MapField::Embed(f) => f.package(),
         }
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         match self {
             MapField::Scalar(f) => f.set_comments(comments),
             MapField::Enum(f) => f.set_comments(comments),
@@ -370,7 +392,7 @@ impl<'a, U> MappedScalarField<'a, U> {
     pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.detail.descriptor()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
 
@@ -381,7 +403,7 @@ impl<'a, U> MappedScalarField<'a, U> {
         self.0.detail.package()
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.detail.set_comments(comments);
     }
 
@@ -414,9 +436,15 @@ impl<'a, U> FullyQualified for MappedScalarField<'a, U> {
 
 #[derive(Debug)]
 pub struct MappedEmbedFieldDetail<'a, U> {
-    embed: WeakMessage<'a, U>,
+    embed: RefCell<WeakMessage<'a, U>>,
     detail: MapFieldDetail<'a, U>,
 }
+impl<'a, U> MappedEmbedFieldDetail<'a, U> {
+    pub fn embed(&self) -> WeakMessage<'a, U> {
+        self.embed.borrow().clone()
+    }
+}
+
 impl<'a, U> Clone for MappedEmbedFieldDetail<'a, U> {
     fn clone(&self) -> Self {
         Self {
@@ -436,6 +464,7 @@ impl<'a, U> MappedEmbedField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
+
     pub fn is_repeated(&self) -> bool {
         self.0.detail.is_repeated()
     }
@@ -459,13 +488,13 @@ impl<'a, U> MappedEmbedField<'a, U> {
     }
     /// Returns the embedded message.
     pub fn embed(&self) -> Message<'a, U> {
-        self.0.embed.clone().into()
+        self.0.embed().into()
     }
 
     pub fn has_presence(&self) -> bool {
         false
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
     pub fn file(&self) -> File<'a, U> {
@@ -475,16 +504,16 @@ impl<'a, U> MappedEmbedField<'a, U> {
         self.0.detail.package()
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.detail.set_comments(comments);
     }
 
     pub fn has_import(&self) -> bool {
-        self.file() != self.0.embed.file()
+        self.file() != self.0.embed().file()
     }
     pub fn imports(&self) -> Files<'a, U> {
         if self.has_import() {
-            Files::from(self.0.embed.weak_file())
+            Files::from(self.0.embed().weak_file())
         } else {
             Files::empty()
         }
@@ -503,14 +532,24 @@ impl<'a, U> MappedEmbedField<'a, U> {
     }
 
     pub fn is_well_known_type(&self) -> bool {
-        self.0.embed.is_well_known_type()
+        self.0.embed().is_well_known_type()
     }
 
     fn well_known_type(&self) -> Option<WellKnownType> {
-        self.0.embed.well_known_type()
+        self.0.embed().well_known_type()
     }
     fn well_known_message(&self) -> Option<WellKnownMessage> {
-        self.0.embed.well_known_message()
+        self.0.embed().well_known_message()
+    }
+
+    pub(crate) fn set_value(&self, node: Node<'a, U>) -> Result<(), anyhow::Error> {
+        match node {
+            Node::Message(m) => {
+                self.0.embed.replace(m.into());
+                Ok(())
+            }
+            _ => bail!("expected Message, received {}", node),
+        }
     }
 }
 
@@ -581,7 +620,7 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn r#enum(&self) -> Enum<'a, U> {
         self.0.e.clone().into()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
     pub fn well_known_type(&self) -> Option<WellKnownType> {
@@ -595,7 +634,7 @@ impl<'a, U> MappedEnumField<'a, U> {
         self.0.e.is_well_known_type()
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.detail.set_comments(comments);
     }
 

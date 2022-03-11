@@ -19,7 +19,7 @@ pub(crate) type EnumList<'a, U> = Rc<RefCell<Vec<Enum<'a, U>>>>;
 struct EnumDetail<'a, U> {
     name: Name<U>,
     fqn: String,
-    comments: RefCell<Comments<'a, U>>,
+    comments: RefCell<Comments<'a>>,
     values: Rc<RefCell<Vec<EnumValue<'a, U>>>>,
     container: WeakContainer<'a, U>,
     dependents: Rc<RefCell<Vec<WeakMessage<'a, U>>>>,
@@ -29,10 +29,10 @@ struct EnumDetail<'a, U> {
 }
 
 impl<'a, U> EnumDetail<'a, U> {
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         *self.comments.borrow()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.comments.replace(comments);
     }
     pub fn container(&self) -> Container<'a, U> {
@@ -122,11 +122,11 @@ impl<'a, U> Enum<'a, U> {
     fn downgrade(&self) -> WeakEnum<'a, U> {
         WeakEnum(Rc::downgrade(&self.0))
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.0.comments()
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.set_comments(comments);
     }
 

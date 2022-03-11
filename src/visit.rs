@@ -33,11 +33,11 @@ pub trait Visitor<'a, U>: Sized {
     }
 
     fn visit_enum_value(&mut self, val: EnumValue<'a, U>) -> Result<(), Self::Error> {
-        visit_enum_value(self, val)
+        Ok(())
     }
 
     fn visit_extension(&mut self, ext: Extension<'a, U>) -> Result<(), Self::Error> {
-        visit_extension(self, ext)
+        Ok(())
     }
 
     fn visit_oneof(&mut self, oneof: Oneof<'a, U>) -> Result<(), Self::Error> {
@@ -193,18 +193,20 @@ pub fn visit_message<'a, U, V>(v: &mut V, msg: Message<'a, U>) -> Result<(), V::
 where
     V: Visitor<'a, U>,
 {
-    // for n in msg.nodes() {
-    //     visit_node(v, n)?;
-    // }
-    Ok(())
-}
-
-pub fn visit_enum_value<'a, U, V>(v: &mut V, enum_value: EnumValue<'a, U>) -> Result<(), V::Error>
-where
-    V: Visitor<'a, U>,
-{
-    for n in enum_value.nodes() {
-        v.visit_node(n)?;
+    for ext in msg.defined_extensions() {
+        v.visit_node(ext.into())?;
+    }
+    for enm in msg.enums() {
+        v.visit_node(enm.into())?;
+    }
+    for fld in msg.fields() {
+        v.visit_node(fld.into())?;
+    }
+    for one in msg.oneofs() {
+        v.visit_node(one.into())?;
+    }
+    for emb in msg.messages() {
+        v.visit_node(emb.into())?;
     }
     Ok(())
 }
@@ -213,8 +215,8 @@ pub fn visit_service<'a, U, V>(v: &mut V, svc: Service<'a, U>) -> Result<(), V::
 where
     V: Visitor<'a, U>,
 {
-    for n in svc.nodes() {
-        v.visit_node(n)?;
+    for mth in svc.methods() {
+        v.visit_node(mth.into())?;
     }
     Ok(())
 }
@@ -223,8 +225,8 @@ pub fn visit_enum<'a, U, V>(v: &mut V, enm: Enum<'a, U>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
 {
-    for n in enm.nodes() {
-        v.visit_node(n)?;
+    for ev in enm.values() {
+        v.visit_node(ev.into())?;
     }
 
     Ok(())
@@ -286,15 +288,6 @@ where
         OneofField::Enum(f) => v.visit_oneof_enum_field(f),
         OneofField::Embed(f) => v.visit_oneof_embed_field(f),
     }
-}
-pub fn visit_extension<'a, U, V>(v: &mut V, ext: Extension<'a, U>) -> Result<(), V::Error>
-where
-    V: Visitor<'a, U>,
-{
-    for n in ext.nodes() {
-        v.visit_node(n)?;
-    }
-    Ok(())
 }
 
 // #[cfg(test)]

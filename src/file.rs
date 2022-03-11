@@ -3,7 +3,7 @@ use crate::iter::Iter;
 use crate::package::WeakPackage;
 
 use crate::proto::path::FileDescriptorPath;
-use crate::proto::FileDescriptor;
+use crate::proto::{FileDescriptor, Syntax};
 
 use crate::{
     AllEnums, AllMessages, AllNodes, Comments, Enum, EnumList, Extension, ExtensionList,
@@ -27,12 +27,13 @@ struct FileDetail<'a, U> {
     services: ServiceList<'a, U>,
     defined_extensions: ExtensionList<'a, U>,
     build_target: bool,
-    pkg_comments: RefCell<Comments<'a, U>>,
-    comments: RefCell<Comments<'a, U>>,
+    pkg_comments: RefCell<Comments<'a>>,
+    comments: RefCell<Comments<'a>>,
     util: Rc<U>,
     pkg: WeakPackage<'a, U>,
     dependents: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
     dependencies: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
+    syntax: Syntax,
 }
 
 #[derive(Debug)]
@@ -54,6 +55,7 @@ impl<'a, U> File<'a, U> {
             pkg: pkg.into(),
             build_target,
             fqn,
+            syntax: desc.syntax(),
             file_path: PathBuf::from(desc.name()),
             dependents: Rc::new(RefCell::new(Vec::new())),
             dependencies: Rc::new(RefCell::new(Vec::with_capacity(desc.dependencies().len()))),
@@ -126,21 +128,21 @@ impl<'a, U> File<'a, U> {
     pub fn build_target(&self) -> bool {
         self.0.build_target
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         *self.0.comments.borrow()
     }
     pub fn file_path(&self) -> &PathBuf {
         &self.0.file_path
     }
     /// Returns comments attached to the package in this File if any exist.
-    pub fn package_comments(&self) -> Comments<'a, U> {
+    pub fn package_comments(&self) -> Comments<'a> {
         *self.0.pkg_comments.borrow()
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         *self.0.comments.borrow_mut() = comments;
     }
-    pub(crate) fn set_package_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_package_comments(&self, comments: Comments<'a>) {
         *self.0.pkg_comments.borrow_mut() = comments;
     }
     pub fn util(&self) -> Rc<U> {
@@ -216,6 +218,10 @@ impl<'a, U> File<'a, U> {
             Node::Extension(e) => self.0.defined_extensions.borrow_mut().push(e),
             _ => panic!("unexpected node type"),
         }
+    }
+
+    pub fn syntax(&self) -> crate::proto::Syntax {
+        self.0.syntax
     }
 }
 impl<'a, U> NodeAtPath<'a, U> for File<'a, U> {

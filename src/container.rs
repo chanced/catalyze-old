@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use crate::file::WeakFile;
 use crate::iter::Iter;
+use crate::proto::Syntax;
 use crate::{
     AllEnums, AllMessages, Enum, File, FullyQualified, Message, Name, Node, Package, WeakMessage,
 };
@@ -72,6 +73,13 @@ impl<'a, U> Container<'a, U> {
         match self {
             Container::File(f) => f.util(),
             Container::Message(m) => m.util(),
+        }
+    }
+
+    pub fn syntax(&self) -> Syntax {
+        match self {
+            Container::File(f) => f.syntax(),
+            Container::Message(m) => m.syntax(),
         }
     }
 }

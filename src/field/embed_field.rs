@@ -1,8 +1,10 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
+
+use anyhow::bail;
 
 use crate::{
     proto::FieldDescriptor, proto::Syntax, Comments, File, Files, FullyQualified, Message, Name,
-    Package, WeakMessage, WellKnownMessage, WellKnownType,
+    Node, Package, WeakMessage, WellKnownMessage, WellKnownType,
 };
 
 use super::FieldDetail;
@@ -10,14 +12,14 @@ use super::FieldDetail;
 #[derive(Debug)]
 pub(crate) struct EmbedFieldDetail<'a, U> {
     pub detail: FieldDetail<'a, U>,
-    pub embed: WeakMessage<'a, U>,
+    pub embed: RefCell<WeakMessage<'a, U>>,
 }
 impl<'a, U> EmbedFieldDetail<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.detail.name()
     }
     pub fn embed(&self) -> Message<'a, U> {
-        self.embed.clone().into()
+        self.embed.borrow().clone().into()
     }
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
@@ -44,8 +46,8 @@ impl<'a, U> EmbedFieldDetail<'a, U> {
     }
 
     pub fn imports(&self) -> Files<'a, U> {
-        if self.embed.file() != self.detail.file() {
-            Files::from(self.embed.weak_file())
+        if self.embed.borrow().file() != self.detail.file() {
+            Files::from(self.embed.borrow().weak_file())
         } else {
             Files::empty()
         }
@@ -54,7 +56,7 @@ impl<'a, U> EmbedFieldDetail<'a, U> {
         self.detail.build_target()
     }
     pub fn is_well_known_type(&self) -> bool {
-        self.embed.is_well_known_type()
+        self.embed.borrow().is_well_known_type()
     }
     pub fn well_known_type(&self) -> Option<WellKnownType> {
         self.embed().well_known_type()
@@ -63,7 +65,10 @@ impl<'a, U> EmbedFieldDetail<'a, U> {
         self.embed().well_known_message()
     }
     pub fn has_import(&self) -> bool {
-        self.embed.file() != self.detail.file()
+        self.embed.borrow().file() != self.detail.file()
+    }
+    pub(crate) fn set_embed(&self, node: WeakMessage<'a, U>) {
+        self.embed.replace(node);
     }
 }
 
@@ -83,10 +88,10 @@ impl<'a, U> EmbedField<'a, U> {
     pub fn name(&self) -> Name<U> {
         self.0.detail.name.clone()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.detail.set_comments(comments);
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -144,6 +149,16 @@ impl<'a, U> EmbedField<'a, U> {
 
     pub fn util(&self) -> Rc<U> {
         self.0.util()
+    }
+
+    pub(crate) fn set_value(&self, node: Node<'a, U>) -> Result<(), anyhow::Error> {
+        match node {
+            Node::Message(m) => {
+                self.0.embed.replace(m.into());
+                Ok(())
+            }
+            _ => bail!("expected Message, received {}", node),
+        }
     }
 }
 impl<'a, U> Clone for EmbedField<'a, U> {

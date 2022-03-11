@@ -46,7 +46,7 @@ impl<'a, U> ScalarFieldDetail<'a, U> {
         self.detail.descriptor()
     }
 
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.detail.comments()
     }
     pub fn package(&self) -> Package<'a, U> {
@@ -56,7 +56,7 @@ impl<'a, U> ScalarFieldDetail<'a, U> {
         self.detail.file()
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.detail.set_comments(comments);
     }
 
@@ -89,7 +89,7 @@ impl<'a, U> ScalarField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.0.fully_qualified_name()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.0.comments()
     }
     pub fn file(&self) -> File<'a, U> {
@@ -101,7 +101,7 @@ impl<'a, U> ScalarField<'a, U> {
     pub fn syntax(&self) -> Syntax {
         self.0.syntax()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.set_comments(comments);
     }
 

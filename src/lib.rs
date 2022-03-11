@@ -23,6 +23,7 @@ pub mod util;
 pub mod visit;
 mod well_known_type;
 pub use ast::*;
+pub use codec::Codec;
 pub use comments::*;
 pub use enum_value::*;
 pub use extension::*;
@@ -35,8 +36,8 @@ pub use name::*;
 pub use node::*;
 pub use oneof::*;
 pub use package::*;
+pub use proto::Scalar;
 
-pub use codec::Codec;
 pub use r#enum::*;
 pub use service::*;
 pub use source::*;

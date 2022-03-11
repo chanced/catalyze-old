@@ -6,6 +6,7 @@ mod oneof_field;
 mod repeated_field;
 mod scalar_field;
 
+use anyhow::{anyhow,bail};
 pub use embed_field::*;
 pub use enum_field::*;
 pub use map_field::*;
@@ -14,9 +15,11 @@ pub use repeated_field::*;
 pub use scalar_field::*;
 
 use crate::{
+    container::Container,
+    format_fqn,
     proto::{FieldDescriptor, Scalar, Syntax},
-    Comments, Enum, File, Files, FullyQualified, Message, Name, Node, NodeAtPath, Nodes, Package,
-    WeakMessage, WellKnownType,
+    Comments, Enum, File, Files, FullyQualified, Message, Name, Node, NodeAtPath, Nodes, Oneof,
+    Package, WeakMessage, WeakOneof, WellKnownType,
 };
 use std::{cell::RefCell, convert::From, rc::Rc};
 
@@ -32,25 +35,43 @@ pub(crate) struct FieldDetail<'a, U> {
     in_oneof: bool,
     util: Rc<U>,
     desc: FieldDescriptor<'a>,
-    comments: RefCell<Comments<'a, U>>,
-}
-impl<'a, U> Clone for FieldDetail<'a, U> {
-    fn clone(&self) -> Self {
-        Self {
-            msg: self.msg.clone(),
-            name: self.name.clone(),
-            fqn: self.fqn.clone(),
-            syntax: self.syntax,
-            is_map: self.is_map,
-            util: self.util.clone(),
-            desc: self.desc,
-            in_oneof: self.in_oneof,
-            comments: self.comments.clone(),
-        }
-    }
+    comments: RefCell<Comments<'a>>,
+    oneof: Option<WeakOneof<'a, U>>,
+    map_entry: Option<WeakMessage<'a, U>>,
 }
 
 impl<'a, U> FieldDetail<'a, U> {
+    pub fn new(
+        desc: FieldDescriptor<'a>,
+        msg: Message<'a, U>,
+        oneof: Option<Oneof<'a, U>>,
+    ) -> Result<Self, anyhow::Error> {
+        let name = Name::new(desc.name(), msg.util());
+        let map_entry = if msg.is_map_entry() { Some(msg) } else { None };
+        let msg = if msg.is_map_entry() {
+            match msg.container() {
+                Container::Message(m) => m,
+                _ => bail!("map container must be a Message"),
+            }
+        } else {
+            msg
+        };
+
+        Ok(Self {
+            name,
+            fqn: format!("{}.{}", msg.fully_qualified_name(), &name),
+            syntax: msg.syntax(),
+            is_map: msg.is_map_entry(),
+            in_oneof: oneof.is_some(),
+            util: msg.util(),
+            desc,
+            msg: msg.clone().into(),
+            comments: RefCell::new(Comments::default()),
+            map_entry: map_entry.map(Into::into),
+            oneof: oneof.map(Into::into),
+        })
+    }
+
     pub fn name(&self) -> Name<U> {
         self.name.clone()
     }
@@ -64,7 +85,9 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.util.clone()
     }
-
+    pub fn map_entry(&self) -> Result<Message<'a, U>, anyhow::Error> {
+        self.map_entry.clone().map(Into::into).ok_or_else(|| anyhow!("field is not a map entry"))
+    }
     pub fn syntax(&self) -> Syntax {
         self.syntax
     }
@@ -84,10 +107,10 @@ impl<'a, U> FieldDetail<'a, U> {
         self.desc.is_marked_required(self.syntax)
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.comments.replace(comments);
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         *self.comments.borrow()
     }
     pub fn file(&self) -> File<'a, U> {
@@ -98,6 +121,24 @@ impl<'a, U> FieldDetail<'a, U> {
     }
     pub fn build_target(&self) -> bool {
         self.file().build_target()
+    }
+}
+
+impl<'a, U> Clone for FieldDetail<'a, U> {
+    fn clone(&self) -> Self {
+        Self {
+            msg: self.msg.clone(),
+            name: self.name.clone(),
+            fqn: self.fqn.clone(),
+            syntax: self.syntax,
+            is_map: self.is_map,
+            util: self.util.clone(),
+            desc: self.desc,
+            in_oneof: self.in_oneof,
+            comments: self.comments.clone(),
+            oneof: self.oneof.clone(),
+            map_entry: self.map_entry.clone(),
+        }
     }
 }
 
@@ -112,6 +153,24 @@ pub enum Field<'a, U> {
 }
 
 impl<'a, U> Field<'a, U> {
+    pub fn new(
+        desc: FieldDescriptor<'a>,
+        msg: Message<'a, U>,
+        oneof: Option<Oneof<'a, U>>,
+    ) -> Result<Field<'a, U>, anyhow::Error> {
+        let detail = FieldDetail::new(desc, msg, oneof)?;
+
+        if desc.proto_type().is_group() {
+            bail!("Group is not supported")
+        }
+        if detail.is_map {
+            if detail.is_embed
+        }
+
+
+        todo!()
+    }
+
     pub fn name(&self) -> Name<U> {
         match self {
             Field::Embed(f) => f.name(),
@@ -155,7 +214,7 @@ impl<'a, U> Field<'a, U> {
         }
     }
 
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         match self {
             Field::Embed(f) => f.comments(),
             Field::Enum(f) => f.comments(),
@@ -389,7 +448,7 @@ impl<'a, U> Field<'a, U> {
             Field::Scalar(f) => f.package(),
         }
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         match self {
             Field::Embed(f) => f.set_comments(comments),
             Field::Enum(f) => f.set_comments(comments),
@@ -398,10 +457,6 @@ impl<'a, U> Field<'a, U> {
             Field::Repeated(f) => f.set_comments(comments),
             Field::Scalar(f) => f.set_comments(comments),
         }
-    }
-
-    pub fn nodes(&self) -> Nodes<'a, U> {
-        Nodes::empty()
     }
 
     pub(crate) fn util(&self) -> Rc<U> {
@@ -414,6 +469,18 @@ impl<'a, U> Field<'a, U> {
             Field::Scalar(f) => f.util(),
         }
     }
+
+    pub(crate) fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+        match self {
+            Field::Embed(f) => f.set_value(value),
+            Field::Enum(f) => f.set_value(value),
+            Field::Map(f) => f.set_value(value),
+            Field::Oneof(f) => f.set_value(value),
+            Field::Repeated(f) => f.set_value(value),
+            _ => unreachable!()
+        }
+    }
+
 }
 impl<'a, U> Clone for Field<'a, U> {
     fn clone(&self) -> Self {

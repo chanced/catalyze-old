@@ -11,7 +11,7 @@ struct EnumValueDetail<'a, U> {
     fqn: String,
     desc: EnumValueDescriptor<'a>,
     e: WeakEnum<'a, U>,
-    comments: RefCell<Comments<'a, U>>,
+    comments: RefCell<Comments<'a>>,
     util: Rc<U>,
 }
 
@@ -30,10 +30,10 @@ impl<'a, U> EnumValueDetail<'a, U> {
         self.e.clone().into()
     }
 
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         *self.comments.borrow()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.comments.replace(comments);
     }
 }
@@ -82,17 +82,14 @@ impl<'a, U> EnumValue<'a, U> {
     fn fully_qualified_name(&self) -> String {
         self.0.fqn.clone()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.0.comments()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.set_comments(comments);
     }
     pub fn util(&self) -> Rc<U> {
         self.0.util.clone()
-    }
-    pub(crate) fn nodes(&self) -> Nodes<'a, U> {
-        Nodes::empty()
     }
 }
 

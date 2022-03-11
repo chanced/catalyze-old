@@ -47,11 +47,11 @@ impl<'a, U> EnumFieldDetail<'a, U> {
     pub fn enumeration(&self) -> Enum<'a, U> {
         self.r#enum()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.detail.comments()
     }
 
-    pub fn set_comments(&self, comments: Comments<'a, U>) {
+    pub fn set_comments(&self, comments: Comments<'a>) {
         self.detail.set_comments(comments)
     }
     pub fn file(&self) -> File<'a, U> {
@@ -107,7 +107,7 @@ impl<'a, U> EnumField<'a, U> {
     pub fn enumeration(&self) -> Enum<'a, U> {
         self.r#enum()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
     pub fn has_presence(&self) -> bool {
@@ -127,7 +127,7 @@ impl<'a, U> EnumField<'a, U> {
         self.0.detail.file()
     }
 
-    pub fn set_comments(&self, comments: Comments<'a, U>) {
+    pub fn set_comments(&self, comments: Comments<'a>) {
         self.0.detail.set_comments(comments);
     }
 

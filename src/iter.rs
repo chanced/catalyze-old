@@ -6,7 +6,7 @@ pub struct Iter<T> {
     idx: usize,
 }
 
-impl<T> Iter<T> {
+impl<T: Clone> Iter<T> {
     pub fn empty(nodes: Vec<T>) -> Self {
         Self {
             nodes: Rc::new(RefCell::new(nodes)),
@@ -18,6 +18,10 @@ impl<T> Iter<T> {
     }
     pub fn is_empty(&self) -> bool {
         self.nodes.borrow().is_empty()
+    }
+
+    pub fn get(&self, idx: usize) -> Option<T> {
+        self.nodes.borrow().get(idx).cloned()
     }
 }
 

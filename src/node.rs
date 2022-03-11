@@ -1,9 +1,10 @@
-use crate::Ast;
 use crate::{
     iter::Iter, Comments, Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof,
     Package, Service,
 };
+use crate::{Ast, MapField, RepeatedField};
 use std::convert::From;
+use std::fmt::{self, Display};
 use std::marker::PhantomData;
 use std::rc::Rc;
 use std::{collections::VecDeque, slice};
@@ -28,7 +29,59 @@ pub enum Node<'a, U> {
     Field(Field<'a, U>),
     Extension(Extension<'a, U>),
 }
-
+impl<'a, U> Display for Node<'a, U> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Node::Package(p) => write!(fmt, "Package({})", p.name()),
+            Node::File(f) => write!(fmt, "File({})", f.name()),
+            Node::Message(m) => write!(fmt, "Message({})", m.fully_qualified_name()),
+            Node::Oneof(o) => write!(fmt, "Oneof({})", o.fully_qualified_name()),
+            Node::Enum(e) => write!(fmt, "Enum({})", e.fully_qualified_name()),
+            Node::EnumValue(e) => write!(fmt, "EnumValue({})", e.fully_qualified_name()),
+            Node::Service(s) => write!(fmt, "Service({})", s.fully_qualified_name()),
+            Node::Method(m) => write!(fmt, "Mehtod({})", m.fully_qualified_name()),
+            Node::Field(f) => match f {
+                Field::Embed(f) => write!(fmt, "EmbedField({})", f.fully_qualified_name()),
+                Field::Enum(f) => write!(fmt, "EnumField({})", f.fully_qualified_name()),
+                Field::Map(f) => match f {
+                    MapField::Scalar(f) => {
+                        write!(fmt, "MappedScalarField({})", f.fully_qualified_name())
+                    }
+                    MapField::Enum(f) => {
+                        write!(fmt, "MappedEnumField({})", f.fully_qualified_name())
+                    }
+                    MapField::Embed(f) => {
+                        write!(fmt, "MappedEmbedField({})", f.fully_qualified_name())
+                    }
+                },
+                Field::Oneof(f) => match f {
+                    crate::OneofField::Scalar(f) => {
+                        write!(fmt, "OneofScalarField({})", f.fully_qualified_name())
+                    }
+                    crate::OneofField::Enum(f) => {
+                        write!(fmt, "OneofEnumField({})", f.fully_qualified_name())
+                    }
+                    crate::OneofField::Embed(f) => {
+                        write!(fmt, "OneofEmbedField({})", f.fully_qualified_name())
+                    }
+                },
+                Field::Repeated(f) => match f {
+                    RepeatedField::Scalar(f) => {
+                        write!(fmt, "RepeatedScalarField({})", f.fully_qualified_name())
+                    }
+                    RepeatedField::Enum(f) => {
+                        write!(fmt, "RepeatedEnumField({})", f.fully_qualified_name())
+                    }
+                    RepeatedField::Embed(f) => {
+                        write!(fmt, "RepeatedEmbedField({})", f.fully_qualified_name())
+                    }
+                },
+                Field::Scalar(f) => write!(fmt, "ScalarField({})", f.fully_qualified_name()),
+            },
+            Node::Extension(e) => write!(fmt, "Extension({})", e.fully_qualified_name()),
+        }
+    }
+}
 impl<'a, U> Node<'a, U> {
     pub fn name(&self) -> Name<U> {
         match self {
@@ -50,13 +103,9 @@ impl<'a, U> Node<'a, U> {
             Node::Package(p) => p.nodes(),
             Node::File(f) => f.nodes(),
             Node::Message(m) => m.nodes(),
-            Node::Oneof(o) => o.nodes(),
             Node::Enum(e) => e.nodes(),
-            Node::EnumValue(ev) => ev.nodes(),
             Node::Service(s) => s.nodes(),
-            Node::Method(m) => m.nodes(),
-            Node::Field(f) => f.nodes(),
-            Node::Extension(e) => e.nodes(),
+            _ => Nodes::empty(),
         }
     }
 
@@ -75,7 +124,7 @@ impl<'a, U> Node<'a, U> {
         }
     }
 
-    pub(crate) fn set_comments(&self, c: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, c: Comments<'a>) {
         match self {
             Node::Message(m) => m.set_comments(c),
             Node::Field(f) => f.set_comments(c),
@@ -404,20 +453,20 @@ impl<'a, U> From<Iter<File<'a, U>>> for NodeIter<'a, U> {
 
 #[derive(Debug)]
 pub struct Nodes<'a, U> {
-    phantom: PhantomData<U>,
+    _marker: PhantomData<Node<'a, U>>,
     iters: VecDeque<NodeIter<'a, U>>,
 }
 
 impl<'a, U> Nodes<'a, U> {
     pub fn new(iters: Vec<NodeIter<'a, U>>) -> Nodes<'a, U> {
         Nodes {
-            phantom: PhantomData,
+            _marker: PhantomData,
             iters: iters.into(),
         }
     }
     pub fn empty() -> Nodes<'a, U> {
         Nodes {
-            phantom: PhantomData,
+            _marker: PhantomData,
             iters: VecDeque::new(),
         }
     }

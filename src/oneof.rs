@@ -17,7 +17,7 @@ pub(crate) struct OneofDetail<'a, U> {
     fields: Rc<RefCell<Vec<Field<'a, U>>>>,
     msg: WeakMessage<'a, U>,
     is_synthetic: bool,
-    comments: RefCell<Comments<'a, U>>,
+    comments: RefCell<Comments<'a>>,
     imports: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
     util: Rc<U>,
 }
@@ -47,7 +47,7 @@ impl<'a, U> Oneof<'a, U> {
     pub fn fields(&self) -> Iter<Field<'a, U>> {
         Iter::from(&self.0.fields)
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         *self.0.comments.borrow()
     }
     pub fn message(&self) -> Message<'a, U> {
@@ -72,7 +72,7 @@ impl<'a, U> Oneof<'a, U> {
             .imports()
             .for_each(|i| self.0.imports.borrow_mut().push(i.into()))
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.comments.replace(comments);
     }
 
@@ -85,10 +85,6 @@ impl<'a, U> Oneof<'a, U> {
     }
     pub fn is_synthetic(&self) -> bool {
         self.0.is_synthetic
-    }
-
-    pub fn nodes(&self) -> Nodes<'a, U> {
-        Nodes::empty()
     }
 }
 impl<'a, U> NodeAtPath<'a, U> for Oneof<'a, U> {

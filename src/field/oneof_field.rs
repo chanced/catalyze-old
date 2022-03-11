@@ -28,7 +28,7 @@ impl<'a, U> OneofFieldDetail<'a, U> {
     pub fn message(&self) -> Message<'a, U> {
         self.detail.message()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.detail.comments()
     }
     pub fn syntax(&self) -> Syntax {
@@ -43,7 +43,7 @@ impl<'a, U> OneofFieldDetail<'a, U> {
     pub fn oneof(&self) -> Oneof<'a, U> {
         self.oneof.clone().into()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.detail.set_comments(comments);
     }
 
@@ -104,7 +104,7 @@ impl<'a, U> OneofField<'a, U> {
             OneofField::Embed(f) => f.message(),
         }
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         match self {
             OneofField::Scalar(f) => f.comments(),
             OneofField::Enum(f) => f.comments(),
@@ -173,7 +173,7 @@ impl<'a, U> OneofField<'a, U> {
             _ => None,
         }
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         match self {
             OneofField::Scalar(f) => f.set_comments(comments),
             OneofField::Enum(f) => f.set_comments(comments),
@@ -293,7 +293,7 @@ impl<'a, U> OneofEnumField<'a, U> {
     pub fn message(&self) -> Message<'a, U> {
         self.0.detail.message()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
     pub fn r#enum(&self) -> Enum<'a, U> {
@@ -309,7 +309,7 @@ impl<'a, U> OneofEnumField<'a, U> {
         self.0.detail.package()
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.detail.set_comments(comments);
     }
     pub fn imports(&self) -> Files<'a, U> {
@@ -394,7 +394,7 @@ impl<'a, U> OneofScalarField<'a, U> {
         self.0.detail.message()
     }
 
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
 
@@ -407,7 +407,7 @@ impl<'a, U> OneofScalarField<'a, U> {
     pub fn scalar(&self) -> Scalar {
         self.0.scalar
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.detail.set_comments(comments);
     }
 
@@ -480,7 +480,7 @@ impl<'a, U> OneofEmbedField<'a, U> {
         self.0.detail.message()
     }
 
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
     pub fn file(&self) -> File<'a, U> {
@@ -507,7 +507,7 @@ impl<'a, U> OneofEmbedField<'a, U> {
         self.file().build_target()
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.detail.set_comments(comments);
     }
 

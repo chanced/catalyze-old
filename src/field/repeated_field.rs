@@ -79,7 +79,7 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Embed(f) => f.descriptor(),
         }
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         match self {
             RepeatedField::Scalar(f) => f.comments(),
             RepeatedField::Enum(f) => f.comments(),
@@ -152,7 +152,7 @@ impl<'a, U> RepeatedField<'a, U> {
         matches!(self, RepeatedField::Embed(_))
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         match self {
             RepeatedField::Scalar(f) => f.set_comments(comments),
             RepeatedField::Enum(f) => f.set_comments(comments),
@@ -284,10 +284,10 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
     pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.detail.descriptor()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.detail.set_comments(comments);
     }
 
@@ -374,10 +374,10 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn is_marked_required(&self) -> bool {
         self.0.detail.is_marked_required()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.detail.set_comments(comments);
     }
 
@@ -462,10 +462,10 @@ impl<'a, U> RepeatedScalarField<'a, U> {
     pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.detail.descriptor()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.detail.set_comments(comments);
     }
 

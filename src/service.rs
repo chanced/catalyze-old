@@ -16,7 +16,7 @@ struct ServiceDetail<'a, U> {
     name: Name<U>,
     fqn: String,
     methods: Rc<RefCell<Vec<Method<'a, U>>>>,
-    comments: RefCell<Comments<'a, U>>,
+    comments: RefCell<Comments<'a>>,
     file: WeakFile<'a, U>,
     util: Rc<U>,
 }
@@ -38,7 +38,7 @@ impl<'a, U> Service<'a, U> {
         }))
     }
 
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         *self.0.comments.borrow()
     }
 
@@ -48,7 +48,7 @@ impl<'a, U> Service<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.file().package()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.comments.replace(comments);
     }
     pub fn methods(&self) -> Iter<Method<'a, U>> {

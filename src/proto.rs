@@ -119,7 +119,9 @@ impl<'a> MessageDescriptor<'a> {
         let fields = &self.desc.field;
         fields.into()
     }
-
+    pub fn is_map_entry(&self) -> bool {
+        self.options().is_map_entry()
+    }
     pub fn extensions(&self) -> FieldDescriptorIter<'a> {
         (&self.desc.extension).into()
     }
@@ -247,18 +249,29 @@ impl<'a> FieldDescriptor<'a> {
         Label::from(self.desc.label())
     }
 
+    /// alias for `r#type`
+    ///
+    /// If type_name is set, this need not be set.  If both this and type_name
+    /// are set, this must be one of Enum, Message or Group.
+    pub fn proto_type(&self) -> Type {
+        self.r#type()
+    }
+
     /// If type_name is set, this need not be set.  If both this and type_name
     /// are set, this must be one of Enum, Message or Group.
     pub fn r#type(&self) -> Type {
-        Type::from(self.desc.r#type())
+        Type::from(self.desc)
     }
 
     pub fn is_embed(&self) -> bool {
-        matches!(self.r#type(), Type::Message)
+        matches!(self.r#type(), Type::Message(_))
+    }
+    pub fn is_message(&self) -> bool {
+        matches!(self.r#type(), Type::Message(_))
     }
 
     pub fn is_enum(&self) -> bool {
-        matches!(self.r#type(), Type::Enum)
+        matches!(self.r#type(), Type::Enum(_))
     }
 
     pub fn is_scalar(&self) -> bool {
@@ -323,20 +336,9 @@ impl<'a> FieldDescriptor<'a> {
     pub fn is_sint64(&self) -> bool {
         matches!(self.r#type(), Type::Scalar(Scalar::Sint64))
     }
-    pub fn is_message(&self) -> bool {
-        matches!(self.r#type(), Type::Message)
-    }
 
     pub fn is_repeated(&self) -> bool {
         self.label() == Label::Repeated
-    }
-
-    /// alias for `r#type`
-    ///
-    /// If type_name is set, this need not be set.  If both this and type_name
-    /// are set, this must be one of Enum, Message or Group.
-    pub fn proto_type(&self) -> Type {
-        self.r#type()
     }
 
     /// For message and enum types, this is the name of the type.  If the name
@@ -364,8 +366,8 @@ impl<'a> FieldDescriptor<'a> {
     /// list.
     ///
     /// This field is a member of that oneof.
-    pub fn oneof_index(&self) -> i32 {
-        self.desc.oneof_index()
+    pub fn oneof_index(&self) -> Option<i32> {
+        self.desc.oneof_index
     }
 
     /// JSON name of this field. The value is set by protocol compiler. If the

@@ -2,9 +2,12 @@ use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::str::FromStr;
 
+use anyhow::bail;
+
 use crate::extension::WeakExtension;
 use crate::field::FieldList;
 use crate::iter::Iter;
+use crate::proto::Syntax;
 use crate::proto::{path::DescriptorPath, MessageDescriptor};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
@@ -48,7 +51,7 @@ pub(crate) struct MessageDetail<'a, U> {
     defined_extensions: Rc<RefCell<Vec<Extension<'a, U>>>>,
     /// `Extension`s applied to this `Message`
     applied_extensions: Rc<RefCell<Vec<WeakExtension<'a, U>>>>,
-    comments: RefCell<Comments<'a, U>>,
+    comments: RefCell<Comments<'a>>,
     wkt: Option<WellKnownMessage>,
 }
 
@@ -85,34 +88,39 @@ impl<'a, U> Message<'a, U> {
             comments: RefCell::new(Comments::default()),
             wkt,
         }));
-
-        let container = Container::Message(msg.clone());
         {
+            let container = Container::Message(msg.clone());
             let mut msgs = msg.0.messages.borrow_mut();
+            let mut maps = msg.0.maps.borrow_mut();
             for md in desc.nested_messages() {
-                let msg = Message::new(md, container.clone());
-                msgs.push(msg);
+                let m = Message::new(md, container.clone());
+                if m.is_map_entry() {
+                    maps.push(m);
+                } else {
+                    msgs.push(m);
+                }
             }
-        }
-        {
             let mut enums = msg.0.enums.borrow_mut();
             for ed in desc.enums() {
                 let e = Enum::new(ed, container.clone());
                 enums.push(e);
             }
-        }
-        {
             let mut oneofs = msg.0.oneofs.borrow_mut();
             for od in desc.oneofs() {
                 let o = Oneof::new(od, msg.clone());
                 oneofs.push(o);
             }
-        }
-        {
             let mut def_exts = msg.0.defined_extensions.borrow_mut();
             for xd in desc.extensions() {
                 let ext = Extension::new(xd, container.clone());
                 def_exts.push(ext);
+            }
+
+            let mut fields = msg.0.fields.borrow_mut();
+            for fd in desc.fields() {
+                let oneof = fd
+                    .oneof_index()
+                    .map(|i| oneofs.get(i as usize).expect("Oneof index out of bounds"));
             }
         }
         msg
@@ -124,6 +132,10 @@ impl<'a, U> Message<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.util.clone()
     }
+    pub fn map_entries(&self) -> Iter<Message<'a, U>> {
+        Iter::from(&self.0.maps)
+    }
+
     pub fn build_target(&self) -> bool {
         self.0.container.borrow().build_target()
     }
@@ -131,9 +143,8 @@ impl<'a, U> Message<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.0.container.borrow().package()
     }
-    #[cfg(test)]
-    pub fn set_container(&self, container: Container<'a, U>) {
-        self.0.container.replace(container.into());
+    pub fn is_map_entry(&self) -> bool {
+        self.0.descriptor.options().is_map_entry()
     }
     pub fn is_well_known_type(&self) -> bool {
         self.0.wkt.is_some()
@@ -147,7 +158,9 @@ impl<'a, U> Message<'a, U> {
     pub fn container(&self) -> Container<'a, U> {
         self.0.container.borrow().clone().into()
     }
-
+    pub fn syntax(&self) -> Syntax {
+        self.container().syntax()
+    }
     pub fn file(&self) -> File<'a, U> {
         self.0.container.borrow().file()
     }
@@ -183,11 +196,14 @@ impl<'a, U> Message<'a, U> {
         Iter::from(&self.0.defined_extensions)
     }
 
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         *self.0.comments.borrow()
     }
 
-    pub fn nodes(&self) -> Nodes<'a, U> {
+    pub fn nodes(&self) -> Nodes<'a, U>
+    where
+        U: 'a,
+    {
         Nodes::new(vec![
             self.defined_extensions().into(),
             self.enums().into(),
@@ -195,7 +211,7 @@ impl<'a, U> Message<'a, U> {
         ])
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.comments.replace(comments);
     }
     pub(crate) fn add_field(&self, field: Field<'a, U>) {
@@ -284,6 +300,16 @@ impl<'a, U> From<WeakMessage<'a, U>> for Message<'a, U> {
     }
 }
 
+impl<'a, U> TryFrom<Container<'a, U>> for Message<'a, U> {
+    type Error = anyhow::Error;
+    fn try_from(container: Container<'a, U>) -> Result<Self, Self::Error> {
+        match container {
+            Container::Message(m) => Ok(m),
+            _ => bail!("container is not a Message"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct WeakMessage<'a, U>(Weak<MessageDetail<'a, U>>);
 
@@ -344,13 +370,11 @@ impl<'a, U> Clone for WeakMessage<'a, U> {
 #[derive(Debug)]
 pub struct AllMessages<'a, U> {
     q: VecDeque<Message<'a, U>>,
-    phantom: PhantomData<&'a U>,
 }
 impl<'a, U> AllMessages<'a, U> {
     pub(crate) fn new(msgs: MessageList<'a, U>) -> Self {
         Self {
             q: VecDeque::from_iter(msgs.borrow().iter().cloned()),
-            phantom: PhantomData,
         }
     }
 }

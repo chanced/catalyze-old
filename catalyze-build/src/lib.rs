@@ -22,15 +22,16 @@ impl<'a, U> Visitor<'a, U> for V {
     }
 
     fn visit_enum(&mut self, enm: catalyze::Enum<'a, U>) -> Result<(), Self::Error> {
+        for n in enm.nodes() {}
         catalyze::visit::visit_enum(self, enm)
     }
 
     fn visit_enum_value(&mut self, val: catalyze::EnumValue<'a, U>) -> Result<(), Self::Error> {
-        catalyze::visit::visit_enum_value(self, val)
+        Ok(())
     }
 
     fn visit_extension(&mut self, ext: catalyze::Extension<'a, U>) -> Result<(), Self::Error> {
-        catalyze::visit::visit_extension(self, ext)
+        Ok(())
     }
 
     fn visit_oneof(&mut self, oneof: catalyze::Oneof<'a, U>) -> Result<(), Self::Error> {

@@ -21,7 +21,7 @@ struct ExtensionDetail<'a, U> {
     desc: FieldDescriptor<'a>,
     fqn: String,
     container: WeakContainer<'a, U>,
-    comments: RefCell<Comments<'a, U>>,
+    comments: RefCell<Comments<'a>>,
     util: Rc<U>,
 }
 
@@ -48,7 +48,7 @@ impl<'a, U> Extension<'a, U> {
     fn fully_qualified_name(&self) -> String {
         self.0.fqn.clone()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         *self.0.comments.borrow()
     }
     pub fn file(&self) -> File<'a, U> {
@@ -68,13 +68,10 @@ impl<'a, U> Extension<'a, U> {
         }
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.comments.replace(comments);
     }
 
-    pub fn nodes(&self) -> Nodes<'a, U> {
-        Nodes::empty()
-    }
     pub fn util(&self) -> Rc<U> {
         self.0.util.clone()
     }

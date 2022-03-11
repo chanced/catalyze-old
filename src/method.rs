@@ -11,7 +11,7 @@ struct MethodDetail<'a, U> {
     name: Name<U>,
     desc: MethodDescriptor<'a>,
     fqn: String,
-    comments: RefCell<Comments<'a, U>>,
+    comments: RefCell<Comments<'a>>,
     service: WeakService<'a, U>,
     util: Rc<U>,
 }
@@ -30,7 +30,7 @@ impl<'a, U> Method<'a, U> {
     pub fn descriptor(&self) -> MethodDescriptor<'a> {
         self.0.desc.clone()
     }
-    pub fn comments(&self) -> Comments<'a, U> {
+    pub fn comments(&self) -> Comments<'a> {
         Comments::default()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -46,13 +46,10 @@ impl<'a, U> Method<'a, U> {
         self.file().package()
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a, U>) {
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.comments.replace(comments);
     }
 
-    pub(crate) fn nodes(&self) -> crate::Nodes<'a, U> {
-        Nodes::empty()
-    }
     pub fn util(&self) -> Rc<U> {
         self.0.util.clone()
     }

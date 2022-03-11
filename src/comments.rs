@@ -3,48 +3,37 @@ use std::marker::PhantomData;
 use crate::{iter::Iter, proto::Location, File, Package};
 
 #[derive(Debug)]
-pub struct Comments<'a, U> {
-    u: PhantomData<U>,
+pub struct Comments<'a> {
     loc: Location<'a>,
 }
 
-impl<'a, U> Default for Comments<'a, U> {
+impl<'a> Default for Comments<'a> {
     fn default() -> Self {
         Comments {
             loc: Location::default(),
-            u: PhantomData,
         }
     }
 }
 
-impl<'a, U> Copy for Comments<'a, U> {}
-impl<'a, U> Clone for Comments<'a, U> {
+impl<'a> Copy for Comments<'a> {}
+impl<'a> Clone for Comments<'a> {
     fn clone(&self) -> Self {
-        Comments {
-            loc: self.loc,
-            u: PhantomData,
-        }
+        Comments { loc: self.loc }
     }
 }
-impl<'a, U> From<&Location<'a>> for Comments<'a, U> {
+impl<'a> From<&Location<'a>> for Comments<'a> {
     fn from(loc: &Location<'a>) -> Self {
-        Comments {
-            loc: *loc,
-            u: PhantomData,
-        }
+        Comments { loc: *loc }
     }
 }
 
-impl<'a, U> From<&'a prost_types::source_code_info::Location> for Comments<'a, U> {
+impl<'a> From<&'a prost_types::source_code_info::Location> for Comments<'a> {
     fn from(loc: &'a prost_types::source_code_info::Location) -> Self {
-        Comments {
-            loc: loc.into(),
-            u: PhantomData,
-        }
+        Comments { loc: loc.into() }
     }
 }
 
-impl<'a, U> Comments<'a, U> {
+impl<'a> Comments<'a> {
     /// Returns any comment immediately preceding the node, without any
     /// whitespace between it and the comment.
     pub fn leading(&self) -> &'a str {
@@ -69,12 +58,9 @@ impl<'a, U> Comments<'a, U> {
     }
 }
 
-impl<'a, U> From<Location<'a>> for Comments<'a, U> {
+impl<'a> From<Location<'a>> for Comments<'a> {
     fn from(loc: Location<'a>) -> Self {
-        Comments {
-            loc,
-            u: PhantomData,
-        }
+        Comments { loc }
     }
 }
 
@@ -90,7 +76,7 @@ impl<'a, U> PackageComments<'a, U> {
     }
 }
 impl<'a, U> Iterator for PackageComments<'a, U> {
-    type Item = (File<'a, U>, Comments<'a, U>);
+    type Item = (File<'a, U>, Comments<'a>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.files
@@ -106,7 +92,7 @@ impl<'a, U> Iterator for PackageComments<'a, U> {
 //     phantom: PhantomData<U>,
 // }
 
-// impl<'a, U> CommentsIter<'a, U> {
+// impl<'a> CommentsIter<'a, U> {
 //     pub fn len(&self) -> usize {
 //         self.iter.len()
 //     }
@@ -114,14 +100,14 @@ impl<'a, U> Iterator for PackageComments<'a, U> {
 //         self.len() == 0
 //     }
 // }
-// impl<'a, U> Iterator for CommentsIter<'a, U> {
-//     type Item = Comments<'a, U>;
+// impl<'a> Iterator for CommentsIter<'a, U> {
+//     type Item = Comments<'a>;
 
 //     fn next(&mut self) -> Option<Self::Item> {
 //         self.iter.next().map(Into::into)
 //     }
 // }
-// impl<'a, U> From<SourceCodeInfo<'a, U>> for CommentsIter<'a, U> {
+// impl<'a> From<SourceCodeInfo<'a, U>> for CommentsIter<'a, U> {
 //     fn from(info: SourceCodeInfo<'a, U>) -> Self {
 //         CommentsIter {
 //             iter: info.info.location.iter(),
@@ -129,7 +115,7 @@ impl<'a, U> Iterator for PackageComments<'a, U> {
 //         }
 //     }
 // }
-// impl<'a, U> From<&SourceCodeInfo<'a, U>> for CommentsIter<'a, U> {
+// impl<'a> From<&SourceCodeInfo<'a, U>> for CommentsIter<'a, U> {
 //     fn from(info: &SourceCodeInfo<'a, U>) -> Self {
 //         CommentsIter {
 //             iter: info.info.location.iter(),

@@ -1,16 +1,30 @@
 use anyhow::bail;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Type {
+pub enum Type<'a> {
     Scalar(Scalar),
-    Enum,    //= 14,
-    Message, //= 11,
+    Enum(&'a str),    //= 14,
+    Message(&'a str), //= 11,
     /// not supported
     Group, //  = 10,
 }
-
-impl From<prost_types::field_descriptor_proto::Type> for Type {
-    fn from(t: prost_types::field_descriptor_proto::Type) -> Self {
+impl<'a> Type<'a> {
+    pub fn is_group(&self) -> bool {
+        matches!(self, Self::Group)
+    }
+    pub fn is_scalar(&self) -> bool {
+        matches!(self, Self::Scalar(_))
+    }
+    pub fn is_message(&self) -> bool {
+        matches!(self, Self::Message(_))
+    }
+    pub fn is_enum(&self) -> bool {
+        matches!(self, Self::Enum(_))
+    }
+}
+impl<'a> From<&'a prost_types::FieldDescriptorProto> for Type<'a> {
+    fn from(fd: &'a prost_types::FieldDescriptorProto) -> Self {
+        let t = fd.r#type();
         match t {
             prost_types::field_descriptor_proto::Type::Double => Type::Scalar(Scalar::Double),
             prost_types::field_descriptor_proto::Type::Float => Type::Scalar(Scalar::Float),
@@ -27,41 +41,13 @@ impl From<prost_types::field_descriptor_proto::Type> for Type {
             prost_types::field_descriptor_proto::Type::Sfixed64 => Type::Scalar(Scalar::Sfixed64),
             prost_types::field_descriptor_proto::Type::Sint32 => Type::Scalar(Scalar::Sint32),
             prost_types::field_descriptor_proto::Type::Sint64 => Type::Scalar(Scalar::Sint64),
-            prost_types::field_descriptor_proto::Type::Enum => Type::Enum,
-            prost_types::field_descriptor_proto::Type::Message => Type::Message,
+            prost_types::field_descriptor_proto::Type::Enum => Type::Enum(fd.type_name()),
+            prost_types::field_descriptor_proto::Type::Message => Type::Message(fd.type_name()),
             prost_types::field_descriptor_proto::Type::Group => Type::Group,
         }
     }
 }
 
-impl TryFrom<Option<i32>> for Type {
-    type Error = anyhow::Error;
-    fn try_from(value: Option<i32>) -> Result<Self, Self::Error> {
-        match value {
-            Some(v) => Type::try_from(v),
-            None => bail!("Type is None"),
-        }
-    }
-}
-
-impl TryFrom<i32> for Type {
-    type Error = anyhow::Error;
-    fn try_from(value: i32) -> Result<Self, Self::Error> {
-        match value {
-            10 => Ok(Type::Group),
-            11 => Ok(Type::Message),
-            14 => Ok(Type::Enum),
-            v => {
-                let s = Scalar::try_from(v);
-                if let Ok(s) = s {
-                    Ok(Type::Scalar(s))
-                } else {
-                    bail!("Unknown Type: {}", v);
-                }
-            }
-        }
-    }
-}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Scalar {
     Double = 1,
