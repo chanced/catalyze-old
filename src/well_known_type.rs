@@ -11,7 +11,6 @@ impl std::str::FromStr for WellKnownType {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> ::std::result::Result<WellKnownType, Self::Err> {
-        type Err = anyhow::Error;
         match s {
             "Any" => Ok(WellKnownType::Message(WellKnownMessage::Any)),
             "Api" => Ok(WellKnownType::Message(WellKnownMessage::Api)),
@@ -232,7 +231,6 @@ pub enum WellKnownMessage {
 impl std::str::FromStr for WellKnownMessage {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> ::std::result::Result<WellKnownMessage, Self::Err> {
-        type Err = anyhow::Error;
         match s {
             "Any" => Ok(WellKnownMessage::Any),
             "Api" => Ok(WellKnownMessage::Api),
@@ -260,7 +258,6 @@ impl std::str::FromStr for WellKnownEnum {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> ::std::result::Result<WellKnownEnum, Self::Err> {
-        type Err = anyhow::Error;
         match s {
             "FieldCardinality" => Ok(WellKnownEnum::FieldCardinality),
             "FieldKind" => Ok(WellKnownEnum::FieldKind),

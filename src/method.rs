@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::proto::MethodDescriptor;
 use crate::{
-    Comments, File, FullyQualified, Name, Node, NodeAtPath, Nodes, Package, Service, WeakService,
+    Comments, File, FullyQualified, Name, Node, NodeAtPath, Package, Service, WeakService,
 };
 pub(crate) type MethodList<'a, U> = Rc<RefCell<Vec<Method<'a, U>>>>;
 
@@ -20,7 +20,7 @@ struct MethodDetail<'a, U> {
 pub struct Method<'a, U>(Rc<MethodDetail<'a, U>>);
 
 impl<'a, U> Method<'a, U> {
-    pub(crate) fn new(descriptor: prost_types::MethodDescriptorProto, svc: Service<'a, U>) -> Self {
+    pub(crate) fn new(_descriptor: prost_types::MethodDescriptorProto, _svc: Service<'a, U>) -> Self {
         todo!()
     }
 

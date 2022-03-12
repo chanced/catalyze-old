@@ -25,9 +25,9 @@ impl<'a> Type<'a> {
     }
 }
 impl<'a> fmt::Display for Type<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Type::Scalar(s) => todo!(),
+            Type::Scalar(_s) => todo!(),
             Type::Enum(_) => todo!(),
             Type::Message(_) => todo!(),
             Type::Group => todo!(),

@@ -180,7 +180,7 @@ impl<'a, U> RepeatedField<'a, U> {
         match self {
             RepeatedField::Enum(f) => f.is_well_known_type(),
             RepeatedField::Embed(f) => f.is_well_known_type(),
-            RepeatedField::Scalar(f) => false,
+            RepeatedField::Scalar(_f) => false,
         }
     }
 

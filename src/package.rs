@@ -1,6 +1,6 @@
 use crate::iter::Iter;
 pub use crate::File;
-use crate::{AllNodes, FullyQualified, Name, Node, Nodes, WELL_KNNOWN_TYPE_PACKAGE};
+use crate::{AllNodes, FullyQualified, Name, Nodes, WELL_KNNOWN_TYPE_PACKAGE};
 
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};

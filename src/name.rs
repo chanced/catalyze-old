@@ -1,10 +1,11 @@
-use crate::util::{Generic, ToCase};
-use crate::WELL_KNNOWN_TYPE_PACKAGE;
+#[cfg(test)]
+use crate::util::Generic;
+use crate::{ToCase, WELL_KNNOWN_TYPE_PACKAGE};
 pub use heck::{
     AsLowerCamelCase, ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase,
     ToShoutySnakeCase, ToSnakeCase, ToTitleCase, ToUpperCamelCase,
 };
-use std::cell::RefCell;
+
 use std::fmt::Write;
 use std::hash::{Hash, Hasher};
 use std::ops;
@@ -260,6 +261,8 @@ impl Default for Name<Generic> {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::RefCell;
+
     use super::*;
     use crate::util::Rust;
     #[test]

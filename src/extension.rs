@@ -9,7 +9,7 @@ use crate::{
     format_fqn,
     iter::Iter,
     proto::FieldDescriptor,
-    Comments, File, FullyQualified, Name, Node, Nodes, Package,
+    Comments, File, FullyQualified, Name, Node, Package,
 };
 
 pub(crate) type ExtensionList<'a, U> = Rc<RefCell<Vec<Extension<'a, U>>>>;

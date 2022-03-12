@@ -7,7 +7,7 @@ use std::convert::From;
 use std::fmt::{self, Display};
 use std::marker::PhantomData;
 use std::rc::Rc;
-use std::{collections::VecDeque, slice};
+use std::{collections::VecDeque};
 pub(crate) trait NodeAtPath<'a, U> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>>;
 }

@@ -62,7 +62,7 @@ impl<'a, U> MapFieldDetail<'a, U> {
         if detail.map_entry.is_none() {}
         let map_entry = detail.map_entry()?;
 
-        let key = map_entry
+        let _key = map_entry
             .fields()
             .get(0)
             .ok_or_else(|| anyhow!("map entry {} is missing key field", &map_entry.name()))?;

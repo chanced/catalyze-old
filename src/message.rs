@@ -12,7 +12,7 @@ use crate::proto::{path::DescriptorPath, MessageDescriptor};
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
     format_fqn, AllEnums, Comments, Enum, EnumList, Extension, Field, File, FullyQualified, Node,
-    NodeAtPath, Nodes, Oneof, OneofList, Type, WeakFile, WellKnownMessage,
+    NodeAtPath, Nodes, Oneof, OneofList, WeakFile, WellKnownMessage,
 };
 use crate::{Package, WellKnownType};
 

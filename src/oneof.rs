@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     iter::Iter, proto::OneofDescriptor, Comments, Field, File, Files, FullyQualified, Message,
-    Name, Node, NodeAtPath, Nodes, Package, WeakFile, WeakMessage,
+    Name, Node, NodeAtPath, Package, WeakFile, WeakMessage,
 };
 pub(crate) type OneofList<'a, U> = Rc<RefCell<Vec<Oneof<'a, U>>>>;
 

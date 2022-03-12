@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     container::Container, format_fqn, proto::EnumValueDescriptor, Comments, Enum, File,
-    FullyQualified, Name, Node, NodeAtPath, Nodes, Package, WeakEnum,
+    FullyQualified, Name, Node, NodeAtPath, Package, WeakEnum,
 };
 
 #[derive(Debug, Clone)]
