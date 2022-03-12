@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     iter::Iter, proto::OneofDescriptor, Comments, Field, File, Files, FullyQualified, Message,
-    Name, Node, NodeAtPath, Package, WeakFile, WeakMessage,
+    Name, Node, Package, WeakFile, WeakMessage,
 };
 
 #[derive(Debug, Clone)]
@@ -87,9 +87,7 @@ impl<'a, U> Oneof<'a, U> {
     pub fn is_synthetic(&self) -> bool {
         self.0.is_synthetic
     }
-}
-impl<'a, U> NodeAtPath<'a, U> for Oneof<'a, U> {
-    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         if path.is_empty() {
             Some(Node::Oneof(self.clone()))
         } else {
@@ -97,6 +95,7 @@ impl<'a, U> NodeAtPath<'a, U> for Oneof<'a, U> {
         }
     }
 }
+
 impl<'a, U> Clone for Oneof<'a, U> {
     fn clone(&self) -> Self {
         Self(self.0.clone())

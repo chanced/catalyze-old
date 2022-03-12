@@ -20,15 +20,16 @@ struct FileDetail<'a, U> {
     fqn: String,
     messages: Rc<RefCell<Vec<Message<'a, U>>>>,
     enums: Rc<RefCell<Vec<Enum<'a, U>>>>,
-    services: ServiceList<'a, U>,
-    defined_extensions: ExtensionList<'a, U>,
+    services: Rc<RefCell<Vec<Service<'a, U>>>>,
+    defined_extensions: Rc<RefCell<Vec<Extension<'a, U>>>>,
     build_target: bool,
     pkg_comments: RefCell<Comments<'a>>,
     comments: RefCell<Comments<'a>>,
     util: Rc<U>,
     pkg: WeakPackage<'a, U>,
     dependents: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
-    dependencies: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
+    imports: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
+    used_imports: Rc<RefCell<HashSet<String>>>,
     syntax: Syntax,
 }
 
@@ -58,13 +59,14 @@ impl<'a, U> File<'a, U> {
             syntax: desc.syntax(),
             file_path: PathBuf::from(desc.name()),
             dependents: Rc::new(RefCell::new(Vec::new())),
-            dependencies: Rc::new(RefCell::new(Vec::with_capacity(desc.dependencies().len()))),
+            imports: Rc::new(RefCell::new(Vec::with_capacity(desc.dependencies().len()))),
             defined_extensions: Rc::new(RefCell::new(Vec::with_capacity(desc.extensions().len()))),
             messages: Rc::new(RefCell::new(Vec::with_capacity(desc.messages().len()))),
             enums: Rc::new(RefCell::new(Vec::with_capacity(desc.enums().len()))),
             services: Rc::new(RefCell::new(Vec::with_capacity(desc.services().len()))),
             pkg_comments: RefCell::new(Comments::default()),
             comments: RefCell::new(Comments::default()),
+            used_imports: Rc::new(RefCell::new(HashSet::new())),
         }));
 
         let container: Container<'a, U> = file.clone().into();
@@ -163,14 +165,14 @@ impl<'a, U> File<'a, U> {
     }
 
     pub fn imports(&self) -> Files<'a, U> {
-        self.0.dependencies.clone().into()
+        self.0.imports.clone().into()
     }
 
     pub fn dependents(&self) -> Files<'a, U> {
         self.0.dependents.clone().into()
     }
     pub fn transitive_imports(&self) -> TransitiveImports<'a, U> {
-        TransitiveImports::new(self.0.dependencies.clone())
+        TransitiveImports::new(self.0.imports.clone())
     }
 
     /// all_messages returns an iterator of all top-level and nested messages from this
@@ -188,8 +190,15 @@ impl<'a, U> File<'a, U> {
         self.0.file_path.clone()
     }
 
-    pub(crate) fn add_dependency(&self, file: File<'a, U>) {
-        self.0.dependencies.borrow_mut().push(file.into());
+    pub(crate) fn add_import(&self, file: File<'a, U>) {
+        self.0.imports.borrow_mut().push(file.into());
+    }
+
+    pub(crate) fn mark_import_as_used(&self, file: File<'a, U>) {
+        self.0
+            .used_imports
+            .borrow_mut()
+            .insert(file.fully_qualified_name());
     }
 
     pub(crate) fn add_dependent(&self, file: File<'a, U>) {
@@ -209,6 +218,18 @@ impl<'a, U> File<'a, U> {
             self.defined_extensions().into(),
         ])
     }
+
+    pub fn unused_imports(&self) -> Vec<File<'a, U>> {
+        let used_imports = self.0.used_imports.borrow();
+        let mut unused_imports = Vec::new();
+        for file in self.0.imports.borrow().iter() {
+            if !used_imports.contains(&file.fully_qualified_name()) {
+                unused_imports.push(file.into());
+            }
+        }
+        unused_imports
+    }
+
     #[cfg(test)]
     pub fn add_node(&self, n: Node<'a, U>) {
         match n {

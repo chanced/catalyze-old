@@ -8,7 +8,7 @@ use super::KeywordCase;
 
 impl ToCase for Rust {
     fn to_snake_case(&self, name: &Name<Self>) -> Name<Self> {
-        // https://doc.rust-lang.org/reference/keywords.html.
+        // <https://doc.rust-lang.org/reference/keywords.html.>
         match name.as_str() {
                     // 2015 strict keywords.
                     | "as" | "break" | "const" | "continue" | "else" | "enum" | "false"

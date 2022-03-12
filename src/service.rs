@@ -6,10 +6,8 @@ use std::{
 use crate::{
     iter::Iter,
     proto::{ServiceDescriptor, ServiceDescriptorPath},
-    Comments, File, FullyQualified, Method, Name, Node, NodeAtPath, Nodes, Package, WeakFile,
+    Comments, File, FullyQualified, Method, Name, Node, Nodes, Package, WeakFile,
 };
-
-pub(crate) type ServiceList<'a, U> = Rc<RefCell<Vec<Service<'a, U>>>>;
 
 #[derive(Debug, Clone)]
 struct ServiceDetail<'a, U> {
@@ -28,14 +26,22 @@ impl<'a, U> Service<'a, U> {
     pub(crate) fn new(desc: ServiceDescriptor<'a>, file: File<'a, U>) -> Self {
         let util = file.util();
         let fully_qualified_name = format!("{}.{}", file.fully_qualified_name(), desc.name());
-        Service(Rc::new(ServiceDetail {
+        let svc = Service(Rc::new(ServiceDetail {
             name: Name::new(desc.name(), util),
             fqn: fully_qualified_name,
             methods: Rc::new(RefCell::new(Vec::with_capacity(desc.methods().len()))),
             comments: RefCell::new(Comments::default()),
             file: file.clone().into(),
             util: file.util(),
-        }))
+        }));
+
+        for method in desc.methods() {
+            svc.0
+                .methods
+                .borrow_mut()
+                .push(Method::new(method, svc.clone()));
+        }
+        svc
     }
 
     pub fn comments(&self) -> Comments<'a> {
@@ -67,16 +73,8 @@ impl<'a, U> Service<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.util.clone()
     }
-}
 
-impl<'a, U> Clone for Service<'a, U> {
-    fn clone(&self) -> Self {
-        Service(self.0.clone())
-    }
-}
-
-impl<'a, U> NodeAtPath<'a, U> for Service<'a, U> {
-    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         if path.is_empty() {
             return Some(Node::Service(self.clone()));
         }
@@ -94,6 +92,13 @@ impl<'a, U> NodeAtPath<'a, U> for Service<'a, U> {
             })
     }
 }
+
+impl<'a, U> Clone for Service<'a, U> {
+    fn clone(&self) -> Self {
+        Service(self.0.clone())
+    }
+}
+
 impl<'a, U> From<WeakService<'a, U>> for Service<'a, U> {
     fn from(weak: WeakService<'a, U>) -> Self {
         weak.upgrade()

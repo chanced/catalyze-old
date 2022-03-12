@@ -14,7 +14,7 @@
 //!     1. The `PROTOC_INCLUDE` environment variable.
 //!     2. The bundled Protobuf include directory.
 //!
-//! Copied from https://github.com/tokio-rs/prost/blob/master/prost-build/build.rs
+//! Copied from <https://github.com/tokio-rs/prost/blob/master/prost-build/build.rs>
 //! See PROST_LICENSE for license information.
 //!
 use std::env;

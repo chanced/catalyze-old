@@ -54,23 +54,23 @@ pub enum WellKnownMessage {
     /// Any contains an arbitrary serialized message along with a URL that
     /// describes the type of the serialized message.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Any
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Any>
     Any,
     /// Api is a light-weight descriptor for a protocol buffer service.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Api
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Api>
     Api,
     /// Wrapper message for bool.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.BoolValue
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.BoolValue>
     BoolValue,
     /// Wrapper message for bytes.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#bytesvalue
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#bytesvalue>
     BytesValue,
     /// Wrapper message for double.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#doublevalue
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#doublevalue>
     DoubleValue,
     /// A Duration represents a signed, fixed-length span of time represented as
     /// a count of seconds and fractions of seconds at nanosecond resolution. It
@@ -79,7 +79,7 @@ pub enum WellKnownMessage {
     /// is a Duration and it can be added or subtracted from a Timestamp. Range
     /// is approximately +-10,000 years.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#duration
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#duration>
     Duration,
     /// A generic empty message that you can re-use to avoid defining duplicated
     /// empty messages in your APIs. A typical example is to use it as the
@@ -90,19 +90,19 @@ pub enum WellKnownMessage {
     ///     rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);
     /// }
     /// ```
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#empty
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#empty>
     Empty,
     /// Enum type definition.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#enum
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#enum>
     Enum,
     /// Enum value definition.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#enumvalue
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#enumvalue>
     EnumValue,
     /// A single field of a message type.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#field
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#field>
     Field,
     FieldKind,
     /// FieldMask represents a set of symbolic field paths, for example:
@@ -110,27 +110,27 @@ pub enum WellKnownMessage {
     /// paths: "f.a"
     /// paths: "f.b.d"
     /// ```
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#fieldmask
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#fieldmask>
     FieldMask,
     /// Wrapper message for float.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#floatvalue
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#floatvalue>
     FloatValue,
     /// Wrapper message for int32.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#int32value
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#int32value>
     Int32Value,
     /// Wrapper message for int64.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#int64value
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#int64value>
     Int64Value,
     /// ListValue is a wrapper around a repeated field of values.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#listvalue
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#listvalue>
     ListValue,
     /// Method represents a method of an api.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#method
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#method>
     Method,
     /// Declares an API to be included in this API. The including API must
     /// redeclare all the methods from the included API, but documentation and
@@ -167,21 +167,21 @@ pub enum WellKnownMessage {
     ///   }
     /// }
     /// ```
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Mixin
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Mixin>
     Mixin,
     /// A protocol buffer option, which can be attached to a message, field,
     /// enumeration, etc.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#option
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#option>
     Option,
     /// SourceContext represents information about the source of a protobuf
     /// element, like the file in which it is defined.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#sourcecontext
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#sourcecontext>
     SourceContext,
     /// Wrapper message for string.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#stringvalue
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#stringvalue>
     StringValue,
     /// Struct represents a structured data value, consisting of fields which
     /// map to dynamically typed values. In some languages, Struct might be
@@ -190,7 +190,7 @@ pub enum WellKnownMessage {
     /// that representation are described together with the proto support for
     /// the language.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#struct
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#struct>
     Struct,
     /// A Timestamp represents a point in time independent of any time zone or
     /// calendar, represented as seconds and fractions of seconds at nanosecond
@@ -201,28 +201,28 @@ pub enum WellKnownMessage {
     /// interpretation. Range is from 0001-01-01T00:00:00Z to
     /// 9999-12-31T23:59:59.999999999Z. By restricting to that range, we ensure
     /// that we can convert to and from RFC 3339 date strings. See
-    /// https://www.ietf.org/rfc/rfc3339.txt.
+    /// <https://www.ietf.org/rfc/rfc3339.txt.>
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#timestamp
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#timestamp>
     Timestamp,
     /// A protocol buffer message type.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#type
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#type>
     Type,
     /// Wrapper message for uint32.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#uint32value
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#uint32value>
     UInt32Value,
     /// Wrapper message for uint64.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#uint64value
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#uint64value>
     UInt64Value,
     /// Value represents a dynamically typed value which can be either null, a
     /// number, a string, a boolean, a recursive struct value, or a list of
     /// values. A producer of value is expected to set one of that variants,
     /// absence of any variant indicates an error.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#value
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#value>
     Value,
 }
 

@@ -82,6 +82,13 @@ impl<'a, U> Container<'a, U> {
             Container::Message(m) => m.syntax(),
         }
     }
+
+    pub(crate) fn register_import(&self, arg: File<'a, U>) {
+        match self {
+            Container::File(f) => f.mark_import_as_used(arg),
+            Container::Message(m) => m.register_import(arg),
+        }
+    }
 }
 
 impl<'a, U> From<File<'a, U>> for Container<'a, U> {

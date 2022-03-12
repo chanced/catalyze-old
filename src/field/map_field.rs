@@ -434,6 +434,14 @@ impl<'a, U> MapField<'a, U> {
             MapField::Embed(f) => f.is_packed(),
         }
     }
+
+    pub fn message(&self) -> Message<'a, U> {
+        match self {
+            MapField::Scalar(f) => f.message(),
+            MapField::Enum(f) => f.message(),
+            MapField::Embed(f) => f.message(),
+        }
+    }
 }
 impl<'a, U> Clone for MapField<'a, U> {
     fn clone(&self) -> Self {

@@ -218,6 +218,10 @@ impl<'a, U> ScalarField<'a, U> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
+
+    pub fn message(&self) -> Message<'a, U> {
+        self.0.message()
+    }
 }
 
 impl<'a, U> FullyQualified for ScalarField<'a, U> {

@@ -101,7 +101,6 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
 
         for fd in source.files() {
             let fd: FileDescriptor<'a> = fd.into();
-            let mut imports = Vec::new();
 
             let pkg = {
                 let name = fd.package();
@@ -121,7 +120,7 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
                     .file(d)
                     .ok_or_else(|| anyhow!("dependency {} has not been hydrated", d))?;
 
-                file.add_dependency(dep.clone());
+                file.add_import(dep.clone());
                 dep.add_dependent(file.clone());
 
                 if build_target {
@@ -133,23 +132,70 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
                 }
                 pkg.add_file(file.clone());
             }
+            ast.nodes
+                .insert(file.name().to_string(), file.clone().into());
 
-            for node in file.nodes() {
-                ast.nodes.insert(node.fully_qualified_name(), node);
-            }
-            for msg in file.all_messages() {
-                for field in msg.obj_fields() {
+            for node in file.all_nodes() {
+                ast.nodes.insert(node.fully_qualified_name(), node.clone());
+                if let Node::Method(mth) = node.clone() {
+                    if !mth.output_type().is_empty() {
+                        let output = ast.node(mth.output_type()).ok_or_else(|| {
+                            anyhow!(
+                                "method {} has an invalid output type {}",
+                                mth.fully_qualified_name(),
+                                mth.output_type()
+                            )
+                        })?;
+
+                        if let Node::Message(output) = output {
+                            mth.set_output(output);
+                        } else {
+                            bail!(
+                                "method {} has an invalid output type {}",
+                                mth.fully_qualified_name(),
+                                mth.output_type()
+                            )
+                        }
+                    }
+                    if !mth.input_type().is_empty() {
+                        let input = ast.node(mth.output_type()).ok_or_else(|| {
+                            anyhow!(
+                                "method {} has an invalid output type {}",
+                                mth.fully_qualified_name(),
+                                mth.output_type()
+                            )
+                        })?;
+                        if let Node::Message(input) = input {
+                            mth.set_input(input);
+                        } else {
+                            bail!(
+                                "method {} has an invalid input type {}",
+                                mth.fully_qualified_name(),
+                                mth.output_type()
+                            )
+                        }
+                    }
+                }
+
+                if let Node::Field(field) = node.clone() {
                     match field.value_type() {
                         Type::Enum(path) | Type::Message(path) => {
+                            let msg = field.message();
                             let node = ast
                                 .nodes
                                 .get(path)
                                 .cloned()
-                                .ok_or_else(|| anyhow!("enum {} not found", path))?;
+                                .ok_or_else(|| anyhow!("Node {} not found", path))?;
                             node.add_dependent(msg.clone());
-                            field.set_value(node)?;
+                            field.set_value(node.clone())?;
+                            let node_file = match node {
+                                Node::Message(m) => m.file(),
+                                Node::Enum(e) => e.file(),
+                                _ => bail!("Node {} is not a message or enum", path),
+                            };
+                            msg.register_import(node_file)
                         }
-                        _ => unreachable!(),
+                        _ => continue,
                     }
                 }
             }

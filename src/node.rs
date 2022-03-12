@@ -2,15 +2,12 @@ use crate::{
     iter::Iter, Comments, Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof,
     Package, Service,
 };
-use crate::{AllMessages, Ast, MapField, RepeatedField};
+use crate::{Ast, MapField, RepeatedField};
 use std::collections::VecDeque;
 use std::convert::From;
 use std::fmt::{self, Display};
 use std::marker::PhantomData;
 use std::rc::Rc;
-pub(crate) trait NodeAtPath<'a, U> {
-    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>>;
-}
 
 pub trait FullyQualified {
     fn fully_qualified_name(&self) -> String;
@@ -175,10 +172,7 @@ impl<'a, U> Node<'a, U> {
             _ => unreachable!(),
         }
     }
-}
-
-impl<'a, U> NodeAtPath<'a, U> for Node<'a, U> {
-    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         match self {
             Node::File(f) => f.node_at_path(path),
             Node::Message(m) => m.node_at_path(path),
@@ -227,9 +221,6 @@ impl<'a, U> Clone for Node<'a, U> {
     }
 }
 
-pub(crate) fn format_fqn<N: FullyQualified>(n: &N, name: &str) -> String {
-    format!("{}.{}", n.fully_qualified_name(), name)
-}
 impl<'a, U> From<File<'a, U>> for Node<'a, U> {
     fn from(file: File<'a, U>) -> Self {
         Node::File(file)

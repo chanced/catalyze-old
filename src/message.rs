@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::marker::PhantomData;
 use std::rc::{Rc, Weak};
 use std::str::FromStr;
 
@@ -10,13 +11,13 @@ use crate::iter::Iter;
 use crate::Syntax;
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
-    format_fqn, AllEnums, Comments, Enum, Extension, Field, File, FullyQualified, Node, NodeAtPath,
-    Nodes, Oneof, WeakFile, WellKnownMessage,
+    AllEnums, Comments, Enum, Extension, Field, File, FullyQualified, Node, Nodes, Oneof, WeakFile,
+    WellKnownMessage,
 };
 use crate::{DescriptorPath, MessageDescriptor};
 use crate::{Package, WellKnownType};
 
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 #[derive(Debug)]
 /// Message describes a proto message. Messages can be contained in either
@@ -46,6 +47,7 @@ pub(crate) struct MessageDetail<'a, U> {
     synthetic_oneofs: Rc<RefCell<Vec<Oneof<'a, U>>>>,
     dependents: Rc<RefCell<Vec<WeakMessage<'a, U>>>>,
     imports: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
+    import_set: Rc<RefCell<HashSet<String>>>,
     container: RefCell<WeakContainer<'a, U>>,
     maps: Rc<RefCell<Vec<Message<'a, U>>>>,
     /// `Extension`s defined by this message.
@@ -53,7 +55,6 @@ pub(crate) struct MessageDetail<'a, U> {
     /// `Extension`s applied to this `Message`
     applied_extensions: Rc<RefCell<Vec<WeakExtension<'a, U>>>>,
     comments: RefCell<Comments<'a>>,
-    obj_fields: Rc<RefCell<Vec<Field<'a, U>>>>,
     wkt: Option<WellKnownMessage>,
 }
 
@@ -63,7 +64,7 @@ impl<'a, U> Message<'a, U> {
         container: Container<'a, U>,
     ) -> Result<Self, anyhow::Error> {
         let util = container.util();
-        let fqn = format_fqn(&container, desc.name());
+        let fqn = format!("{}.{}", container.fully_qualified_name(), desc.name());
 
         let wkt = if container.package().is_well_known_type() {
             WellKnownMessage::from_str(desc.name()).ok()
@@ -90,7 +91,7 @@ impl<'a, U> Message<'a, U> {
             defined_extensions: Rc::new(RefCell::new(Vec::with_capacity(desc.extensions().len()))),
             comments: RefCell::new(Comments::default()),
             imports: Rc::new(RefCell::new(Vec::new())),
-            obj_fields: Rc::new(RefCell::new(Vec::new())),
+            import_set: Rc::new(RefCell::new(HashSet::new())),
         }));
 
         {
@@ -138,9 +139,7 @@ impl<'a, U> Message<'a, U> {
                 if let Some(oneof) = oneof {
                     oneof.add_field(f.clone());
                 }
-                if f.is_obj_value() {
-                    msg.0.obj_fields.borrow_mut().push(f.clone());
-                }
+
                 fields.push(f);
             }
         }
@@ -156,7 +155,9 @@ impl<'a, U> Message<'a, U> {
     pub fn map_entries(&self) -> Iter<Message<'a, U>> {
         Iter::from(&self.0.maps)
     }
-
+    pub fn dependents(&self) -> Dependents<'a, U> {
+        self.0.dependents.clone().into()
+    }
     pub fn build_target(&self) -> bool {
         self.0.container.borrow().build_target()
     }
@@ -250,38 +251,21 @@ impl<'a, U> Message<'a, U> {
             .push(extension.into());
     }
 
-    pub(crate) fn add_import(&self, file: File<'a, U>) {
+    pub(crate) fn register_import(&self, file: File<'a, U>) {
+        let mut set = self.0.import_set.borrow_mut();
+        if set.contains(&file.name().to_string()) {
+            return;
+        }
+        self.container().register_import(file.clone());
+        set.insert(file.name().to_string());
         self.0.imports.borrow_mut().push(file.into());
     }
+
     pub(crate) fn weak_file(&self) -> WeakFile<'a, U> {
         self.0.container.borrow().weak_file()
     }
 
-    pub(crate) fn obj_fields(&self) -> Iter<Field<'a, U>> {
-        Iter::from(&self.0.obj_fields)
-    }
-
-    #[cfg(test)]
-    pub fn add_node(&self, n: Node<'a, U>) {
-        match n {
-            Node::Message(m) => self.0.messages.borrow_mut().push(m),
-            Node::Enum(e) => self.0.enums.borrow_mut().push(e),
-            Node::Oneof(o) => self.0.oneofs.borrow_mut().push(o),
-            Node::Field(f) => self.0.fields.borrow_mut().push(f),
-            Node::Extension(e) => self.0.defined_extensions.borrow_mut().push(e),
-            _ => panic!("unexpected node type"),
-        }
-    }
-}
-
-impl<'a, U> FullyQualified for Message<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
-    }
-}
-
-impl<'a, U> NodeAtPath<'a, U> for Message<'a, U> {
-    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         let msg = self.clone();
         if path.is_empty() {
             return Some(Node::Message(msg));
@@ -322,7 +306,26 @@ impl<'a, U> NodeAtPath<'a, U> for Message<'a, U> {
             node.and_then(|n| n.node_at_path(&path[2..]))
         })
     }
+
+    #[cfg(test)]
+    pub fn add_node(&self, n: Node<'a, U>) {
+        match n {
+            Node::Message(m) => self.0.messages.borrow_mut().push(m),
+            Node::Enum(e) => self.0.enums.borrow_mut().push(e),
+            Node::Oneof(o) => self.0.oneofs.borrow_mut().push(o),
+            Node::Field(f) => self.0.fields.borrow_mut().push(f),
+            Node::Extension(e) => self.0.defined_extensions.borrow_mut().push(e),
+            _ => panic!("unexpected node type"),
+        }
+    }
 }
+
+impl<'a, U> FullyQualified for Message<'a, U> {
+    fn fully_qualified_name(&self) -> String {
+        self.0.fqn.clone()
+    }
+}
+
 impl<'a, U> From<&WeakMessage<'a, U>> for Message<'a, U> {
     fn from(weak: &WeakMessage<'a, U>) -> Self {
         Message(weak.0.upgrade().unwrap())
@@ -426,6 +429,36 @@ impl<'a, U> Iterator for AllMessages<'a, U> {
             Some(msg)
         } else {
             None
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Dependents<'a, U, T = Message<'a, U>> {
+    vec: Rc<RefCell<Vec<WeakMessage<'a, U>>>>,
+    idx: usize,
+    _marker: PhantomData<T>,
+}
+
+impl<'a, U> Iterator for Dependents<'a, U> {
+    type Item = Message<'a, U>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.idx < self.vec.borrow().len() {
+            let msg = self.vec.borrow()[self.idx].upgrade();
+            self.idx += 1;
+            Some(msg)
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, U> From<Rc<RefCell<Vec<WeakMessage<'a, U>>>>> for Dependents<'a, U> {
+    fn from(vec: Rc<RefCell<Vec<WeakMessage<'a, U>>>>) -> Self {
+        Self {
+            vec,
+            idx: 0,
+            _marker: PhantomData,
         }
     }
 }

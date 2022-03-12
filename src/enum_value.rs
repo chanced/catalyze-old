@@ -1,8 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    container::Container, format_fqn, proto::EnumValueDescriptor, Comments, Enum, File,
-    FullyQualified, Name, Node, Package, WeakEnum,
+    container::Container, proto::EnumValueDescriptor, Comments, Enum, File, FullyQualified, Name,
+    Node, Package, WeakEnum,
 };
 
 #[derive(Debug, Clone)]
@@ -43,9 +43,10 @@ pub struct EnumValue<'a, U>(Rc<EnumValueDetail<'a, U>>);
 
 impl<'a, U> EnumValue<'a, U> {
     pub(crate) fn new(desc: EnumValueDescriptor<'a>, e: Enum<'a, U>) -> Self {
+        let fqn = format!("{}.{}", e.fully_qualified_name(), desc.name());
         EnumValue(Rc::new(EnumValueDetail {
+            fqn,
             name: Name::new(desc.name(), e.util()),
-            fqn: format_fqn(&e, desc.name()),
             desc,
             e: e.clone().into(),
             comments: RefCell::new(Comments::default()),

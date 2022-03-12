@@ -9,8 +9,8 @@ use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
     proto::{EnumDescriptor, EnumDescriptorPath},
-    Comments, EnumValue, File, FullyQualified, Message, Name, Node, Nodes, Package, WeakFile,
-    WeakMessage, WellKnownEnum, WellKnownType,
+    Comments, Dependents, EnumValue, File, FullyQualified, Message, Name, Node, Nodes, Package,
+    WeakFile, WeakMessage, WellKnownEnum, WellKnownType,
 };
 
 #[derive(Debug, Clone)]
@@ -140,7 +140,9 @@ impl<'a, U> Enum<'a, U> {
     pub fn nodes(&self) -> Nodes<'a, U> {
         Nodes::new(vec![self.values().into()])
     }
-
+    pub fn dependents(&self) -> Dependents<'a, U> {
+        self.0.dependents.clone().into()
+    }
     pub(crate) fn add_dependent(&self, dep: Message<'a, U>) {
         self.0.dependents.borrow_mut().push(dep.into());
     }

@@ -6,14 +6,10 @@ use std::{
 
 use crate::{
     container::{Container, WeakContainer},
-    format_fqn,
     iter::Iter,
     proto::FieldDescriptor,
     Comments, File, FullyQualified, Name, Node, Package,
 };
-
-pub(crate) type ExtensionList<'a, U> = Rc<RefCell<Vec<Extension<'a, U>>>>;
-pub(crate) type ExtensionMap<'a, U> = Rc<RefCell<HashMap<String, Extension<'a, U>>>>;
 
 #[derive(Debug, Clone)]
 struct ExtensionDetail<'a, U> {
@@ -31,7 +27,7 @@ pub struct Extension<'a, U>(Rc<ExtensionDetail<'a, U>>);
 impl<'a, U> Extension<'a, U> {
     pub(crate) fn new(desc: FieldDescriptor<'a>, container: Container<'a, U>) -> Self {
         let util = container.util();
-        let fqn = format_fqn(&container, desc.name());
+        let fqn = format!("{}.{}", container.fully_qualified_name(), desc.name());
         let ext = Self(Rc::new(ExtensionDetail {
             fqn,
             name: Name::new(desc.name(), util.clone()),
@@ -116,8 +112,8 @@ impl<'a, U> Clone for WeakExtension<'a, U> {
 
 #[derive(Clone, Debug)]
 pub struct Extensions<'a, U> {
-    ext_map: ExtensionMap<'a, U>,
-    ext_vec: ExtensionList<'a, U>,
+    ext_map: Rc<RefCell<HashMap<String, Extension<'a, U>>>>,
+    ext_vec: Rc<RefCell<Vec<Extension<'a, U>>>>,
 }
 impl<'a, U> Extensions<'a, U> {
     pub fn get(&self, key: &str) -> Option<Extension<'a, U>> {
@@ -154,8 +150,8 @@ impl<'a, U> Extensions<'a, U> {
 
     pub fn new() -> Extensions<'a, U> {
         Self {
-            ext_map: ExtensionMap::default(),
-            ext_vec: ExtensionList::default(),
+            ext_map: Default::default(),
+            ext_vec: Default::default(),
         }
     }
 }

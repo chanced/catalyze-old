@@ -200,6 +200,16 @@ impl<'a, U> Field<'a, U> {
             }
         }
     }
+    pub fn message(&self) -> Message<'a, U> {
+        match self {
+            Self::Embed(f) => f.message(),
+            Self::Enum(f) => f.message(),
+            Self::Map(f) => f.message(),
+            Self::Oneof(f) => f.message(),
+            Self::Repeated(f) => f.message(),
+            Self::Scalar(f) => f.message(),
+        }
+    }
     pub fn value_type(&self) -> Type<'a> {
         match self {
             Self::Embed(f) => f.value_type(),
@@ -452,8 +462,8 @@ impl<'a, U> Field<'a, U> {
     /// Maps                                         | N/A        |
     ///
     /// See:
-    /// - https://github.com/protocolbuffers/protobuf/blob/v3.17.0/docs/field_presence.md
-    /// - https://github.com/protocolbuffers/protobuf/blob/master/docs/implementing_proto3_presence.md
+    /// - <https://github.com/protocolbuffers/protobuf/blob/v3.17.0/docs/field_presence.md>
+    /// - <https://github.com/protocolbuffers/protobuf/blob/master/docs/implementing_proto3_presence.md>
     pub fn has_presence(&self) -> bool {
         match self {
             Field::Embed(f) => f.has_presence(),
@@ -529,28 +539,28 @@ impl<'a, U> Field<'a, U> {
         }
     }
 
-    pub(crate) fn is_obj_value(&self) -> bool {
-        match self {
-            Field::Embed(_) => true,
-            Field::Enum(_) => true,
-            Field::Map(m) => match m {
-                MapField::Enum(_) => true,
-                MapField::Embed(_) => true,
-                MapField::Scalar(_) => false,
-            },
-            Field::Oneof(o) => match o {
-                OneofField::Embed(_) => true,
-                OneofField::Enum(_) => true,
-                OneofField::Scalar(_) => false,
-            },
-            Field::Repeated(r) => match r {
-                RepeatedField::Enum(_) => true,
-                RepeatedField::Embed(_) => true,
-                RepeatedField::Scalar(_) => false,
-            },
-            Field::Scalar(_) => false,
-        }
-    }
+    // pub(crate) fn is_obj_value(&self) -> bool {
+    //     match self {
+    //         Field::Embed(_) => true,
+    //         Field::Enum(_) => true,
+    //         Field::Map(m) => match m {
+    //             MapField::Enum(_) => true,
+    //             MapField::Embed(_) => true,
+    //             MapField::Scalar(_) => false,
+    //         },
+    //         Field::Oneof(o) => match o {
+    //             OneofField::Embed(_) => true,
+    //             OneofField::Enum(_) => true,
+    //             OneofField::Scalar(_) => false,
+    //         },
+    //         Field::Repeated(r) => match r {
+    //             RepeatedField::Enum(_) => true,
+    //             RepeatedField::Embed(_) => true,
+    //             RepeatedField::Scalar(_) => false,
+    //         },
+    //         Field::Scalar(_) => false,
+    //     }
+    // }
 
     /// The ctype option instructs the C++ code generator to use a different
     /// representation of the field than it normally would.  See the specific
