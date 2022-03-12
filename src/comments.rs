@@ -1,18 +1,8 @@
-use std::marker::PhantomData;
-
 use crate::{iter::Iter, proto::Location, File, Package};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Comments<'a> {
     loc: Location<'a>,
-}
-
-impl<'a> Default for Comments<'a> {
-    fn default() -> Self {
-        Comments {
-            loc: Location::default(),
-        }
-    }
 }
 
 impl<'a> Copy for Comments<'a> {}

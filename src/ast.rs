@@ -27,6 +27,7 @@ use anyhow::anyhow;
 #[derive(Debug)]
 pub(crate) struct AstDetail<'a, U> {
     files: HashMap<String, File<'a, U>>,
+    file_list: Rc<RefCell<Vec<File<'a, U>>>>,
     targets: HashMap<String, File<'a, U>>,
     packages: HashMap<String, Package<'a, U>>,
     package_list: Rc<RefCell<Vec<Package<'a, U>>>>,
@@ -34,31 +35,53 @@ pub(crate) struct AstDetail<'a, U> {
     nodes: HashMap<String, Node<'a, U>>,
     util: Rc<U>,
 }
+impl<'a, U> AstDetail<'a, U> {
+    pub fn package(&self, name: &str) -> Option<Package<'a, U>> {
+        self.packages.get(name).cloned()
+    }
+    pub fn file(&self, name: &str) -> Option<File<'a, U>> {
+        self.files.get(name).cloned()
+    }
 
+    pub fn files(&self) -> Iter<File<'a, U>> {
+        Iter::from(&self.file_list)
+    }
+    pub fn packages(&self) -> Iter<Package<'a, U>> {
+        Iter::from(&self.package_list)
+    }
+    pub fn node(&self, key: &str) -> Option<Node<'a, U>> {
+        self.nodes.get(key).cloned()
+    }
+}
+#[derive(Debug)]
 pub struct Ast<'a, U>(Rc<AstDetail<'a, U>>);
-
 impl<'a, U> Ast<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.util.clone()
     }
     pub fn package(&self, name: &str) -> Option<Package<'a, U>> {
-        self.0.packages.get(name).cloned()
+        self.0.package(name)
     }
     pub fn file(&self, name: &str) -> Option<File<'a, U>> {
-        self.0.files.get(name).cloned()
+        self.0.file(name)
     }
 
-    pub fn files(&self) -> &HashMap<String, File<'a, U>> {
-        &self.0.files
+    pub fn files(&self) -> Iter<File<'a, U>> {
+        self.0.files()
     }
     pub fn packages(&self) -> Iter<Package<'a, U>> {
-        Iter::from(&self.0.package_list)
+        self.0.packages()
     }
     pub fn node(&self, key: &str) -> Option<Node<'a, U>> {
-        self.0.nodes.get(key).cloned()
+        self.0.node(key)
     }
     pub fn all_nodes(&self) -> AllNodes<'a, U> {
         AllNodes::from(self)
+    }
+}
+impl<'a, U> Clone for Ast<'a, U> {
+    fn clone(&self) -> Self {
+        Ast(self.0.clone())
     }
 }
 impl<'a, U: Util + 'a> Ast<'a, U> {
@@ -68,6 +91,7 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
             util: util.clone(),
             packages: HashMap::default(),
             files: HashMap::default(),
+            file_list: Rc::new(RefCell::new(Vec::new())),
             targets: HashMap::with_capacity(source.targets().len()),
             defined_extensions: Extensions::new(),
             nodes: HashMap::default(),
@@ -128,7 +152,7 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
             }
         }
         let ast = Ast(Rc::new(ast));
-        util.init(ast);
+        util.init(ast.clone());
         Ok(ast)
     }
 }
