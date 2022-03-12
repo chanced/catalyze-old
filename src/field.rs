@@ -16,10 +16,9 @@ pub use scalar_field::*;
 
 use crate::{
     container::Container,
-    format_fqn,
     proto::{FieldDescriptor, Scalar, Syntax, Type},
-    Comments, Enum, File, Files, FullyQualified, Message, Name, Node, NodeAtPath, Nodes, Oneof,
-    Package, WeakMessage, WeakOneof, WellKnownType,
+    Comments, Enum, File, Files, FullyQualified, Message, Name, Node, NodeAtPath, Oneof, Package,
+    WeakMessage, WeakOneof, WellKnownType,
 };
 use std::{cell::RefCell, convert::From, rc::Rc};
 
@@ -48,7 +47,7 @@ impl<'a, U> FieldDetail<'a, U> {
     ) -> Result<Self, anyhow::Error> {
         let name = Name::new(desc.name(), msg.util());
         let map_entry = if msg.is_map_entry() {
-            Some(msg.clone().into())
+            Some(msg.clone())
         } else {
             None
         };
@@ -60,11 +59,12 @@ impl<'a, U> FieldDetail<'a, U> {
         } else {
             msg
         };
+
         let fqn = format!("{}.{}", msg.fully_qualified_name(), &name);
         Ok(Self {
             name,
             fqn,
-            map_entry,
+            map_entry: map_entry.map(Into::into),
             syntax: msg.syntax(),
             is_map: msg.is_map_entry(),
             in_oneof: oneof.is_some(),
@@ -140,6 +140,13 @@ impl<'a, U> FieldDetail<'a, U> {
             .ok_or_else(|| anyhow!("key_type field not found in map entry"))?;
         f.value_type().try_into()
     }
+
+    pub fn map_value(&self) -> Result<Field<'a, U>, anyhow::Error> {
+        self.map_entry()?
+            .fields()
+            .get(1)
+            .ok_or_else(|| anyhow!("value_type field not found in map entry"))
+    }
 }
 
 impl<'a, U> Clone for FieldDetail<'a, U> {
@@ -176,12 +183,14 @@ impl<'a, U> Field<'a, U> {
         msg: Message<'a, U>,
         oneof: Option<Oneof<'a, U>>,
     ) -> Result<Field<'a, U>, anyhow::Error> {
-        let detail = FieldDetail::new(desc, msg, oneof)?;
+        let detail = FieldDetail::new(desc, msg, oneof.clone())?;
         if desc.proto_type().is_group() {
             bail!("Group is not supported")
         }
         if detail.is_map {
             MapField::new(detail)
+        } else if oneof.is_some() {
+            OneofField::new(detail, oneof.unwrap())
         } else if detail.is_repeated() {
             RepeatedField::new(detail)
         } else {
@@ -193,7 +202,7 @@ impl<'a, U> Field<'a, U> {
             }
         }
     }
-    pub fn value_type(&self) -> Type {
+    pub fn value_type(&self) -> Type<'a> {
         match self {
             Self::Embed(f) => f.value_type(),
             Self::Enum(f) => f.value_type(),
@@ -406,7 +415,7 @@ impl<'a, U> Field<'a, U> {
     }
     pub fn is_enum(&self) -> bool {
         match self {
-            Field::Enum(f) => true,
+            Field::Enum(_) => true,
             Field::Map(f) => f.is_enum(),
             Field::Oneof(f) => f.is_enum(),
             Field::Repeated(f) => f.is_enum(),

@@ -1,3 +1,5 @@
+use anyhow::bail;
+
 use crate::container::Container;
 use crate::iter::Iter;
 use crate::package::WeakPackage;
@@ -5,11 +7,7 @@ use crate::package::WeakPackage;
 use crate::proto::path::FileDescriptorPath;
 use crate::proto::{FileDescriptor, Syntax};
 
-use crate::{
-    AllEnums, AllMessages, AllNodes, Comments, Enum, EnumList, Extension, ExtensionList,
-    FullyQualified, Message, MessageList, Name, Node, NodeAtPath, Nodes, Package, Service,
-    ServiceList,
-};
+use crate::*;
 use std::cell::RefCell;
 
 use std::collections::{HashSet, VecDeque};
@@ -40,7 +38,11 @@ struct FileDetail<'a, U> {
 pub struct File<'a, U>(Rc<FileDetail<'a, U>>);
 
 impl<'a, U> File<'a, U> {
-    pub(crate) fn new(build_target: bool, desc: FileDescriptor<'a>, pkg: Package<'a, U>) -> Self {
+    pub(crate) fn new(
+        build_target: bool,
+        desc: FileDescriptor<'a>,
+        pkg: Package<'a, U>,
+    ) -> Result<Self, anyhow::Error> {
         let util = pkg.util();
         let name = Name::new(desc.name(), util.clone());
         let fqn = match desc.package() {
@@ -71,11 +73,8 @@ impl<'a, U> File<'a, U> {
         {
             let mut msgs = file.0.messages.borrow_mut();
             for md in desc.messages() {
-                let msg = Message::new(md, container.clone());
-
-                // TODO: handle map & oneof sitautions
-                todo!();
-                // msgs.push(msg);
+                let msg = Message::new(md, container.clone())?;
+                msgs.push(msg);
             }
         }
         {
@@ -117,7 +116,7 @@ impl<'a, U> File<'a, U> {
             }
         }
 
-        file
+        Ok(file)
     }
     pub fn name(&self) -> Name<U> {
         self.0.name.clone()

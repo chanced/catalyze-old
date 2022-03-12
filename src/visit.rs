@@ -174,18 +174,21 @@ pub fn visit_file<'a, U, V>(v: &mut V, f: File<'a, U>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
 {
-    for msg in f.messages() {
-        v.visit_node(msg.into())?;
+    for node in f.nodes() {
+        v.visit_node(node)?;
     }
-    for enm in f.enums() {
-        v.visit_node(enm.into())?;
-    }
-    for svc in f.services() {
-        v.visit_node(svc.into())?;
-    }
-    for ext in f.defined_extensions() {
-        v.visit_node(ext.into())?;
-    }
+    // for msg in f.messages() {
+    //     v.visit_node(msg.into())?;
+    // }
+    // for enm in f.enums() {
+    //     v.visit_node(enm.into())?;
+    // }
+    // for svc in f.services() {
+    //     v.visit_node(svc.into())?;
+    // }
+    // for ext in f.defined_extensions() {
+    //     v.visit_node(ext.into())?;
+    // }
     Ok(())
 }
 
@@ -193,21 +196,24 @@ pub fn visit_message<'a, U, V>(v: &mut V, msg: Message<'a, U>) -> Result<(), V::
 where
     V: Visitor<'a, U>,
 {
-    for ext in msg.defined_extensions() {
-        v.visit_node(ext.into())?;
+    for n in msg.nodes() {
+        v.visit_node(n)?;
     }
-    for enm in msg.enums() {
-        v.visit_node(enm.into())?;
-    }
-    for fld in msg.fields() {
-        v.visit_node(fld.into())?;
-    }
-    for one in msg.oneofs() {
-        v.visit_node(one.into())?;
-    }
-    for emb in msg.messages() {
-        v.visit_node(emb.into())?;
-    }
+    // for ext in msg.defined_extensions() {
+    //     v.visit_node(ext.into())?;
+    // }
+    // for enm in msg.enums() {
+    //     v.visit_node(enm.into())?;
+    // }
+    // for fld in msg.fields() {
+    //     v.visit_node(fld.into())?;
+    // }
+    // for one in msg.oneofs() {
+    //     v.visit_node(one.into())?;
+    // }
+    // for emb in msg.messages() {
+    //     v.visit_node(emb.into())?;
+    // }
     Ok(())
 }
 
@@ -225,9 +231,12 @@ pub fn visit_enum<'a, U, V>(v: &mut V, enm: Enum<'a, U>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
 {
-    for ev in enm.values() {
-        v.visit_node(ev.into())?;
+    for node in enm.nodes() {
+        v.visit_node(node)?;
     }
+    // for ev in enm.values() {
+    //     v.visit_node(ev.into())?;
+    // }
 
     Ok(())
 }

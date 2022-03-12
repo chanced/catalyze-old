@@ -1,12 +1,13 @@
-use std::{any, cell::RefCell, error::Error, rc::Rc};
+#![allow(clippy::new_ret_no_self)]
+use std::{cell::RefCell, rc::Rc};
 
 use anyhow::{anyhow, bail};
 
 use crate::{
     proto::{FieldDescriptor, Type},
     proto::{Scalar, Syntax},
-    Comments, Enum, Field, File, Files, FullyQualified, Message, Name, Node, Package, ScalarField,
-    WeakEnum, WeakFile, WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
+    Comments, Enum, Field, File, Files, FullyQualified, Message, Name, Node, Package, WeakEnum,
+    WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -133,7 +134,7 @@ impl<'a, U> MapFieldDetail<'a, U> {
 impl<'a, U> Clone for MapFieldDetail<'a, U> {
     fn clone(&self) -> Self {
         Self {
-            key: self.key.clone(),
+            key: self.key,
             detail: self.detail.clone(),
         }
     }
@@ -163,7 +164,7 @@ impl<'a, U> MapField<'a, U> {
         }
     }
 
-    fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> String {
         match self {
             MapField::Scalar(f) => f.fully_qualified_name(),
             MapField::Enum(f) => f.fully_qualified_name(),
@@ -272,17 +273,14 @@ impl<'a, U> MapField<'a, U> {
     }
 
     pub fn is_embed(&self) -> bool {
-        match self {
-            MapField::Embed(_) => true,
-            _ => false,
-        }
+        matches!(self, MapField::Embed(_))
     }
 
     pub fn is_well_known_type(&self) -> bool {
         match self {
             MapField::Enum(f) => f.is_well_known_type(),
             MapField::Embed(f) => f.is_well_known_type(),
-            MapField::Scalar(f) => false,
+            MapField::Scalar(_) => false,
         }
     }
 
@@ -295,10 +293,7 @@ impl<'a, U> MapField<'a, U> {
     }
 
     pub fn is_scalar(&self) -> bool {
-        match self {
-            MapField::Scalar(_) => true,
-            _ => false,
-        }
+        matches!(self, MapField::Scalar(_))
     }
 
     pub fn is_enum(&self) -> bool {
@@ -329,11 +324,15 @@ impl<'a, U> MapField<'a, U> {
         }
     }
 
-    pub fn value_type(&self) -> crate::proto::Type {
-        self.descriptor().proto_type()
+    pub fn value_type(&self) -> Type<'a> {
+        match self {
+            MapField::Scalar(_) => self.descriptor().proto_type(),
+            MapField::Enum(e) => e.value_type(),
+            MapField::Embed(e) => e.value_type(),
+        }
     }
 
-    pub fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
+    pub(crate) fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
         if !detail.is_map() {
             bail!("Field is not a map")
         }
@@ -502,8 +501,11 @@ pub struct MappedEmbedFieldDetail<'a, U> {
     detail: MapFieldDetail<'a, U>,
 }
 impl<'a, U> MappedEmbedFieldDetail<'a, U> {
-    pub fn embed(&self) -> WeakMessage<'a, U> {
+    pub(crate) fn embed(&self) -> WeakMessage<'a, U> {
         self.embed.borrow().clone()
+    }
+    pub(crate) fn value_type(&self) -> Type<'a> {
+        self.detail.value_field().unwrap().value_type()
     }
 }
 
@@ -597,10 +599,10 @@ impl<'a, U> MappedEmbedField<'a, U> {
         self.0.embed().is_well_known_type()
     }
 
-    fn well_known_type(&self) -> Option<WellKnownType> {
+    pub fn well_known_type(&self) -> Option<WellKnownType> {
         self.0.embed().well_known_type()
     }
-    fn well_known_message(&self) -> Option<WellKnownMessage> {
+    pub fn well_known_message(&self) -> Option<WellKnownMessage> {
         self.0.embed().well_known_message()
     }
 
@@ -612,6 +614,10 @@ impl<'a, U> MappedEmbedField<'a, U> {
             }
             _ => bail!("expected Message, received {}", node),
         }
+    }
+
+    pub(crate) fn value_type(&self) -> Type<'a> {
+        self.0.value_type()
     }
 }
 
@@ -636,6 +642,9 @@ pub struct MappedEnumFieldDetail<'a, U> {
 impl<'a, U> MappedEnumFieldDetail<'a, U> {
     pub fn enumeration(&self) -> Enum<'a, U> {
         self.enumeration.borrow().clone().into()
+    }
+    pub(crate) fn value_type(&self) -> Type<'a> {
+        self.detail.value_field().unwrap().value_type()
     }
 }
 
@@ -741,6 +750,10 @@ impl<'a, U> MappedEnumField<'a, U> {
             }
             _ => bail!("expected Enum, received {}", value),
         }
+    }
+
+    fn value_type(&self) -> Type<'a> {
+        self.0.value_type()
     }
 }
 

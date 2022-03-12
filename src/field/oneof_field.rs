@@ -1,14 +1,13 @@
-use std::{
-    cell::RefCell,
-    rc::{Rc, Weak},
-};
+#![allow(clippy::new_ret_no_self)]
+
+use std::{cell::RefCell, rc::Rc};
 
 use anyhow::bail;
 
 use crate::{
     proto::{FieldDescriptor, Scalar, Syntax},
-    Comments, Enum, File, Files, FullyQualified, Message, Name, Node, Oneof, Package, WeakEnum,
-    WeakMessage, WeakOneof, WellKnownType,
+    Comments, Enum, Field, File, Files, FullyQualified, Message, Name, Node, Oneof, Package, Type,
+    WeakEnum, WeakMessage, WeakOneof, WellKnownType,
 };
 
 use super::FieldDetail;
@@ -274,8 +273,44 @@ impl<'a, U> OneofField<'a, U> {
         }
     }
 
-    pub fn value_type(&self) -> crate::proto::Type {
+    pub fn value_type(&self) -> Type<'a> {
         self.descriptor().proto_type()
+    }
+
+    pub(crate) fn new(
+        detail: FieldDetail<'a, U>,
+        oneof: Oneof<'a, U>,
+    ) -> Result<crate::Field<'a, U>, anyhow::Error> {
+        match detail.value_type() {
+            Type::Scalar(scalar) => Ok(Field::Oneof(OneofField::Scalar(OneofScalarField(
+                Rc::new(OneofScalarFieldDetail {
+                    scalar,
+                    detail: OneofFieldDetail {
+                        detail,
+                        oneof: oneof.into(),
+                    },
+                }),
+            )))),
+            Type::Enum(_) => Ok(Field::Oneof(OneofField::Enum(OneofEnumField(Rc::new(
+                OneofEnumFieldDetail {
+                    detail: OneofFieldDetail {
+                        detail,
+                        oneof: oneof.into(),
+                    },
+                    enumeration: RefCell::new(WeakEnum::empty()),
+                },
+            ))))),
+            Type::Message(_) => Ok(Field::Oneof(OneofField::Embed(OneofEmbedField(Rc::new(
+                OneofEmbedFieldDetail {
+                    detail: OneofFieldDetail {
+                        detail,
+                        oneof: oneof.into(),
+                    },
+                    embed: RefCell::new(WeakMessage::empty()),
+                },
+            ))))),
+            Type::Group => bail!("Group is not supported. Use an embedded Message instead."),
+        }
     }
 }
 
@@ -292,7 +327,7 @@ impl<'a, U> FullyQualified for OneofField<'a, U> {
 #[derive(Debug, Clone)]
 pub struct OneofEnumFieldDetail<'a, U> {
     detail: OneofFieldDetail<'a, U>,
-    e: RefCell<WeakEnum<'a, U>>,
+    enumeration: RefCell<WeakEnum<'a, U>>,
 }
 #[derive(Debug)]
 pub struct OneofEnumField<'a, U>(Rc<OneofEnumFieldDetail<'a, U>>);
@@ -314,7 +349,7 @@ impl<'a, U> OneofEnumField<'a, U> {
         self.0.detail.comments()
     }
     pub fn r#enum(&self) -> Enum<'a, U> {
-        self.0.e.borrow().clone().into()
+        self.0.enumeration.borrow().clone().into()
     }
     pub fn enumeration(&self) -> Enum<'a, U> {
         self.r#enum()
@@ -331,7 +366,7 @@ impl<'a, U> OneofEnumField<'a, U> {
     }
     pub fn imports(&self) -> Files<'a, U> {
         if self.has_import() {
-            Files::from(self.0.e.borrow().weak_file())
+            Files::from(self.0.enumeration.borrow().weak_file())
         } else {
             Files::empty()
         }
@@ -379,7 +414,7 @@ impl<'a, U> OneofEnumField<'a, U> {
     fn set_value(&self, value: crate::Node<'a, U>) -> Result<(), anyhow::Error> {
         match value {
             Node::Enum(v) => {
-                self.0.e.replace(v.into());
+                self.0.enumeration.replace(v.into());
                 Ok(())
             }
             _ => bail!("expected Enum, received {}", value),
@@ -484,13 +519,13 @@ impl<'a, U> Clone for OneofScalarField<'a, U> {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct OneofMessageFieldDetail<'a, U> {
+pub(crate) struct OneofEmbedFieldDetail<'a, U> {
     detail: OneofFieldDetail<'a, U>,
     embed: RefCell<WeakMessage<'a, U>>,
 }
 
 #[derive(Debug)]
-pub struct OneofEmbedField<'a, U>(Rc<OneofMessageFieldDetail<'a, U>>);
+pub struct OneofEmbedField<'a, U>(Rc<OneofEmbedFieldDetail<'a, U>>);
 impl<'a, U> Clone for OneofEmbedField<'a, U> {
     fn clone(&self) -> Self {
         Self(self.0.clone())

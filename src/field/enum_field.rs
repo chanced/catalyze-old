@@ -99,7 +99,7 @@ impl<'a, U> EnumFieldDetail<'a, U> {
 pub struct EnumField<'a, U>(Rc<EnumFieldDetail<'a, U>>);
 
 impl<'a, U> EnumField<'a, U> {
-    pub fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
+    pub(crate) fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
         if matches!(detail.value_type(), Type::Enum(_)) {
             bail!("expected Enum, received {}", detail.value_type());
         }
@@ -186,7 +186,7 @@ impl<'a, U> EnumField<'a, U> {
         self.0.set_value(value)
     }
 
-    pub fn value_type(&self) -> crate::proto::Type {
+    pub fn value_type(&self) -> Type<'a> {
         self.descriptor().proto_type()
     }
 }

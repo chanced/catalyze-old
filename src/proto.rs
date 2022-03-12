@@ -10,8 +10,6 @@ use std::{
     slice, vec,
 };
 
-use crate::WellKnownType;
-
 use self::path::FileDescriptorPath;
 
 lazy_static::lazy_static! {
@@ -125,7 +123,6 @@ impl<'a> MessageDescriptor<'a> {
     pub fn extensions(&self) -> FieldDescriptorIter<'a> {
         (&self.desc.extension).into()
     }
-
     pub fn nested_messages(&self) -> MessageDescriptorIter<'a> {
         (&self.desc.nested_type).into()
     }

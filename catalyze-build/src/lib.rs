@@ -22,7 +22,7 @@ impl<'a, U> Visitor<'a, U> for V {
     }
 
     fn visit_enum(&mut self, enm: catalyze::Enum<'a, U>) -> Result<(), Self::Error> {
-        for n in enm.nodes() {}
+        // for n in enm.nodes() {}
         catalyze::visit::visit_enum(self, enm)
     }
 

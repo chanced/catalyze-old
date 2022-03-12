@@ -1,3 +1,4 @@
+#![allow(clippy::new_ret_no_self)]
 use std::rc::Rc;
 
 use anyhow::bail;
@@ -16,6 +17,10 @@ pub(crate) struct ScalarFieldDetail<'a, U> {
 }
 
 impl<'a, U> ScalarFieldDetail<'a, U> {
+    pub(crate) fn new(detail: FieldDetail<'a, U>, scalar: Scalar) -> Self {
+        Self { detail, scalar }
+    }
+
     pub fn name(&self) -> Name<U> {
         self.detail.name()
     }
@@ -82,7 +87,7 @@ impl<'a, U> Clone for ScalarFieldDetail<'a, U> {
 pub struct ScalarField<'a, U>(Rc<ScalarFieldDetail<'a, U>>);
 
 impl<'a, U> ScalarField<'a, U> {
-    pub fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
+    pub(crate) fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
         match detail.value_type() {
             Type::Scalar(s) => Ok(Field::Scalar(Self(Rc::new(ScalarFieldDetail {
                 detail,

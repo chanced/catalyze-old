@@ -1,6 +1,6 @@
 use crate::iter::Iter;
 pub use crate::File;
-use crate::{AllNodes, FullyQualified, Name, Nodes, WELL_KNNOWN_TYPE_PACKAGE};
+use crate::{AllNodes, FullyQualified, Name, Node, Nodes, WELL_KNNOWN_TYPE_PACKAGE};
 
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
@@ -54,7 +54,7 @@ impl<'a, U> Package<'a, U> {
         Nodes::new(vec![self.files().into()])
     }
     pub fn all_nodes(&self) -> AllNodes<'a, U> {
-        AllNodes::new(self.into())
+        AllNodes::new(self.clone().into())
     }
 
     pub(crate) fn add_file(&self, file: File<'a, U>) {

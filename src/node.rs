@@ -219,7 +219,7 @@ impl<'a, U> Clone for Node<'a, U> {
     }
 }
 
-pub(crate) fn format_fqn<'a, N: FullyQualified>(n: &N, name: &str) -> String {
+pub(crate) fn format_fqn<N: FullyQualified>(n: &N, name: &str) -> String {
     format!("{}.{}", n.fully_qualified_name(), name)
 }
 impl<'a, U> From<File<'a, U>> for Node<'a, U> {
@@ -348,10 +348,10 @@ impl<'a, U> From<&Extension<'a, U>> for Node<'a, U> {
 //     Field(Field<'a, U>),
 //     Extension(Extension<'a, U>),
 
-#[derive(Debug)]
-pub enum NodeIter<'a, U> {
+#[derive(Debug, Clone)]
+pub enum NodeIter<'a, U, T = Node<'a, U>> {
     Nodes(Nodes<'a, U>),
-    Packages(slice::Iter<'a, Package<'a, U>>),
+    Packages(Iter<Package<'a, U>>),
     Files(Iter<File<'a, U>>),
     Messages(Iter<Message<'a, U>>),
     Oneofs(Iter<Oneof<'a, U>>),
@@ -361,8 +361,9 @@ pub enum NodeIter<'a, U> {
     Methods(Iter<Method<'a, U>>),
     Fields(Iter<Field<'a, U>>),
     Extensions(Iter<Extension<'a, U>>),
+    _Phantom(PhantomData<T>),
 }
-impl<'a, U> NodeIter<'a, U> {
+impl<'a, U, T> NodeIter<'a, U, T> {
     pub fn len(&self) -> usize {
         match self {
             NodeIter::Nodes(nodes) => nodes.len(),
@@ -376,18 +377,19 @@ impl<'a, U> NodeIter<'a, U> {
             NodeIter::Fields(i) => i.len(),
             NodeIter::Extensions(i) => i.len(),
             NodeIter::Packages(i) => i.len(),
+            NodeIter::_Phantom(_) => unreachable!(),
         }
     }
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 }
-impl<'a, U> Iterator for NodeIter<'a, U> {
+impl<'a, U> Iterator for NodeIter<'a, U, Node<'a, U>> {
     type Item = Node<'a, U>;
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             NodeIter::Nodes(nodes) => nodes.next(),
-            NodeIter::Packages(i) => i.next().cloned().map(Into::into),
+            NodeIter::Packages(i) => i.next().map(Into::into),
             NodeIter::Files(i) => i.next().map(Into::into),
             NodeIter::Messages(i) => i.next().map(Into::into),
             NodeIter::Oneofs(i) => i.next().map(Into::into),
@@ -397,6 +399,7 @@ impl<'a, U> Iterator for NodeIter<'a, U> {
             NodeIter::Methods(i) => i.next().map(Into::into),
             NodeIter::Fields(i) => i.next().map(Into::into),
             NodeIter::Extensions(i) => i.next().map(Into::into),
+            NodeIter::_Phantom(_) => unreachable!(),
         }
     }
 }
@@ -405,6 +408,7 @@ impl<'a, U> From<Nodes<'a, U>> for NodeIter<'a, U> {
         NodeIter::Nodes(i)
     }
 }
+
 impl<'a, U> From<Iter<Message<'a, U>>> for NodeIter<'a, U> {
     fn from(i: Iter<Message<'a, U>>) -> Self {
         NodeIter::Messages(i)
@@ -451,9 +455,9 @@ impl<'a, U> From<Iter<File<'a, U>>> for NodeIter<'a, U> {
     }
 }
 
-#[derive(Debug)]
-pub struct Nodes<'a, U> {
-    _marker: PhantomData<Node<'a, U>>,
+#[derive(Debug, Clone)]
+pub struct Nodes<'a, U, T = Node<'a, U>> {
+    _marker: PhantomData<T>,
     iters: VecDeque<NodeIter<'a, U>>,
 }
 
@@ -485,7 +489,7 @@ impl<'a, U> Nodes<'a, U> {
     }
 }
 
-impl<'a, U> Iterator for Nodes<'a, U> {
+impl<'a, U> Iterator for Nodes<'a, U, Node<'a, U>> {
     type Item = Node<'a, U>;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -502,13 +506,20 @@ impl<'a, U> Iterator for Nodes<'a, U> {
     }
 }
 
-pub struct AllNodes<'a, U> {
+pub struct AllNodes<'a, U, T = Node<'a, U>> {
     iter: Nodes<'a, U>,
+    _marker: PhantomData<T>,
 }
 
-impl<'a, U> AllNodes<'a, U> {
-    pub fn new(node: Node<'a, U>) -> AllNodes<'a, U> {
-        AllNodes { iter: node.nodes() }
+impl<'a, U> AllNodes<'a, U, Node<'a, U>> {
+    pub fn new(node: Node<'a, U>) -> AllNodes<'a, U, Node<'a, U>> {
+        AllNodes {
+            iter: node.nodes(),
+            _marker: PhantomData,
+        }
+    }
+    pub fn push_back(&mut self, nodes: Nodes<'a, U>) {
+        self.iter.push_back(nodes);
     }
 }
 
@@ -527,6 +538,23 @@ impl<'a, U> Iterator for AllNodes<'a, U> {
         }
     }
 }
+impl<'a, U> From<Nodes<'a, U>> for AllNodes<'a, U> {
+    fn from(i: Nodes<'a, U>) -> Self {
+        AllNodes {
+            iter: i,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<'a, U> From<&Ast<'a, U>> for AllNodes<'a, U> {
+    fn from(ast: &Ast<'a, U>) -> Self {
+        AllNodes {
+            iter: Nodes::new(vec![NodeIter::Packages(ast.packages())]),
+            _marker: PhantomData,
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -539,9 +567,9 @@ mod tests {
         let u = Rc::new(Generic {});
         let pkg = Package::new("pkg", u);
 
-        let f = File::new(true, FileDescriptor::default(), pkg.clone());
-        let m1 = Message::new(Default::default(), f.clone().into());
-        let m2 = Message::new(Default::default(), f.clone().into());
+        let f = File::new(true, FileDescriptor::default(), pkg.clone()).unwrap();
+        let m1 = Message::new(Default::default(), f.clone().into()).unwrap();
+        let m2 = Message::new(Default::default(), f.clone().into()).unwrap();
         f.add_node(m1.into());
         f.add_node(m2.into());
         let mut count = 0;
@@ -556,11 +584,11 @@ mod tests {
         let u = Rc::new(Generic {});
         let pkg = Package::new("pkg", u);
 
-        let f = File::new(true, FileDescriptor::default(), pkg.clone());
-        let m1 = Message::new(Default::default(), f.clone().into());
+        let f = File::new(true, FileDescriptor::default(), pkg.clone()).unwrap();
+        let m1 = Message::new(Default::default(), f.clone().into()).unwrap();
         let m1e1 = Enum::new(Default::default(), m1.clone().into());
         m1.add_node(m1e1.into());
-        let m2 = Message::new(Default::default(), f.clone().into());
+        let m2 = Message::new(Default::default(), f.clone().into()).unwrap();
         f.add_node(m1.into());
         f.add_node(m2.into());
         let mut count = 0;

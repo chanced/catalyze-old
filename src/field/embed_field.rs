@@ -4,7 +4,7 @@ use anyhow::bail;
 
 use crate::{
     proto::FieldDescriptor, proto::Syntax, Comments, Field, File, Files, FullyQualified, Message,
-    Name, Node, Package, WeakMessage, WellKnownMessage, WellKnownType,
+    Name, Node, Package, Type, WeakMessage, WellKnownMessage, WellKnownType,
 };
 
 use super::FieldDetail;
@@ -161,11 +161,11 @@ impl<'a, U> EmbedField<'a, U> {
         self.0.set_value(value)
     }
 
-    pub fn value_type(&self) -> crate::proto::Type {
+    pub fn value_type(&self) -> Type<'a> {
         self.0.descriptor().proto_type()
     }
 
-    pub fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
+    pub(crate) fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
         let detail = Rc::new(EmbedFieldDetail {
             detail,
             embed: RefCell::new(WeakMessage::empty()),

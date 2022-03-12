@@ -1,3 +1,4 @@
+#![allow(clippy::new_ret_no_self)]
 use std::{cell::RefCell, rc::Rc};
 
 use anyhow::bail;
@@ -207,10 +208,10 @@ impl<'a, U> RepeatedField<'a, U> {
         self.descriptor().proto_type()
     }
 
-    pub fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
+    pub(crate) fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
         match detail.value_type() {
             Type::Scalar(s) => Ok(Field::Repeated(RepeatedField::Scalar(RepeatedScalarField(
-                Rc::new(ScalarFieldDetail { detail, scalar: s }),
+                Rc::new(ScalarFieldDetail::new(detail, s)),
             )))),
             Type::Enum(_) => Ok(Field::Repeated(RepeatedField::Enum(RepeatedEnumField(
                 Rc::new(EnumFieldDetail {
