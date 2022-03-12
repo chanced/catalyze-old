@@ -25,7 +25,7 @@ use anyhow::anyhow;
 /// Ast encapsulates the entirety of the input CodeGeneratorRequest from protoc,
 /// parsed to build the Node graph used by catalyze.
 #[derive(Debug)]
-pub struct Ast<'a, U> {
+pub(crate) struct AstDetail<'a, U> {
     files: HashMap<String, File<'a, U>>,
     targets: HashMap<String, File<'a, U>>,
     packages: HashMap<String, Package<'a, U>>,
@@ -34,25 +34,28 @@ pub struct Ast<'a, U> {
     nodes: HashMap<String, Node<'a, U>>,
     util: Rc<U>,
 }
+
+pub struct Ast<'a, U>(Rc<AstDetail<'a, U>>);
+
 impl<'a, U> Ast<'a, U> {
     pub fn util(&self) -> Rc<U> {
-        self.util.clone()
+        self.0.util.clone()
     }
     pub fn package(&self, name: &str) -> Option<Package<'a, U>> {
-        self.packages.get(name).cloned()
+        self.0.packages.get(name).cloned()
     }
     pub fn file(&self, name: &str) -> Option<File<'a, U>> {
-        self.files.get(name).cloned()
+        self.0.files.get(name).cloned()
     }
 
     pub fn files(&self) -> &HashMap<String, File<'a, U>> {
-        &self.files
+        &self.0.files
     }
     pub fn packages(&self) -> Iter<Package<'a, U>> {
-        Iter::from(&self.package_list)
+        Iter::from(&self.0.package_list)
     }
     pub fn node(&self, key: &str) -> Option<Node<'a, U>> {
-        self.nodes.get(key).cloned()
+        self.0.nodes.get(key).cloned()
     }
     pub fn all_nodes(&self) -> AllNodes<'a, U> {
         AllNodes::from(self)
@@ -61,7 +64,7 @@ impl<'a, U> Ast<'a, U> {
 impl<'a, U: Util + 'a> Ast<'a, U> {
     pub fn new(source: &'a impl Source<'a>, util: Rc<U>) -> Result<Self, anyhow::Error> {
         let targets: HashSet<String> = source.targets().iter().cloned().collect();
-        let mut ast = Self {
+        let mut ast = AstDetail {
             util: util.clone(),
             packages: HashMap::default(),
             files: HashMap::default(),
@@ -124,7 +127,8 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
                 }
             }
         }
-        util.init(&ast);
+        let ast = Ast(Rc::new(ast));
+        util.init(ast);
         Ok(ast)
     }
 }
