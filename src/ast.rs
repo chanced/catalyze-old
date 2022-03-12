@@ -14,6 +14,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use anyhow::anyhow;
+use anyhow::bail;
 
 // protoc
 // --include_imports
@@ -100,6 +101,8 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
 
         for fd in source.files() {
             let fd: FileDescriptor<'a> = fd.into();
+            let mut imports = Vec::new();
+
             let pkg = {
                 let name = fd.package();
                 ast.packages
@@ -134,7 +137,6 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
             for node in file.nodes() {
                 ast.nodes.insert(node.fully_qualified_name(), node);
             }
-
             for msg in file.all_messages() {
                 for field in msg.obj_fields() {
                     match field.value_type() {
@@ -148,6 +150,38 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
                             field.set_value(node)?;
                         }
                         _ => unreachable!(),
+                    }
+                }
+            }
+        }
+        for file in ast.files() {
+            for ext in file.defined_extensions() {
+                let extendee = ast
+                    .node(ext.descriptor().extendee())
+                    .ok_or_else(|| anyhow!("extendee {} not found", ext.descriptor().extendee()))?;
+
+                if let Node::Message(m) = extendee {
+                    m.add_applied_extension(ext.clone());
+                } else {
+                    bail!(
+                        "unexpected extendee type. Expected Message, received {}",
+                        extendee
+                    )
+                }
+            }
+            for msg in file.all_messages() {
+                for ext in msg.defined_extensions() {
+                    let extendee = ast.node(ext.descriptor().extendee()).ok_or_else(|| {
+                        anyhow!("extendee {} not found", ext.descriptor().extendee())
+                    })?;
+
+                    if let Node::Message(m) = extendee {
+                        m.add_applied_extension(ext.clone());
+                    } else {
+                        bail!(
+                            "unexpected extendee type. Expected Message, received {}",
+                            extendee
+                        )
                     }
                 }
             }

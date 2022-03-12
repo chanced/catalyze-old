@@ -17,8 +17,8 @@ pub use scalar_field::*;
 use crate::{
     container::Container,
     proto::{FieldDescriptor, Scalar, Syntax, Type},
-    Comments, Enum, File, Files, FullyQualified, Message, Name, Node, NodeAtPath, Oneof, Package,
-    WeakMessage, WeakOneof, WellKnownType,
+    CType, Comments, Enum, File, Files, FullyQualified, JsType, Message, Name, Node, Oneof,
+    Package, UninterpretedOptions, WeakMessage, WeakOneof, WellKnownType,
 };
 use std::{cell::RefCell, convert::From, rc::Rc};
 
@@ -520,6 +520,15 @@ impl<'a, U> Field<'a, U> {
             _ => unreachable!(),
         }
     }
+
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+        if path.is_empty() {
+            Some(self.into())
+        } else {
+            None
+        }
+    }
+
     pub(crate) fn is_obj_value(&self) -> bool {
         match self {
             Field::Embed(_) => true,
@@ -542,6 +551,114 @@ impl<'a, U> Field<'a, U> {
             Field::Scalar(_) => false,
         }
     }
+
+    /// The ctype option instructs the C++ code generator to use a different
+    /// representation of the field than it normally would.  See the specific
+    /// options below.  This option is not yet implemented in the open source
+    /// release -- sorry, we'll try to include it in a future version!
+    pub fn ctype(&self) -> CType {
+        self.descriptor().options().ctype()
+    }
+    /// The packed option can be enabled for repeated primitive fields to enable
+    /// a more efficient representation on the wire. Rather than repeatedly
+    /// writing the tag and type for each element, the entire array is encoded as
+    /// a single length-delimited blob. In proto3, only explicit setting it to
+    /// false will avoid using packed encoding.
+    pub fn is_packed(&self) -> bool {
+        match self {
+            Field::Embed(f) => f.is_packed(),
+            Field::Enum(f) => f.is_packed(),
+            Field::Map(f) => f.is_packed(),
+            Field::Oneof(f) => f.is_packed(),
+            Field::Repeated(f) => f.is_packed(),
+            Field::Scalar(f) => f.is_packed(),
+        }
+    }
+    /// The jstype option determines the JavaScript type used for values of the
+    /// field.  The option is permitted only for 64 bit integral and fixed types
+    /// (int64, uint64, sint64, fixed64, sfixed64).  A field with jstype JS_STRING
+    /// is represented as JavaScript string, which avoids loss of precision that
+    /// can happen when a large value is converted to a floating point JavaScript.
+    /// Specifying JS_NUMBER for the jstype causes the generated JavaScript code to
+    /// use the JavaScript "number" type.  The behavior of the default option
+    /// JS_NORMAL is implementation dependent.
+    ///
+    /// This option is an enum to permit additional types to be added, e.g.
+    /// goog.math.Integer.
+    pub fn jstype(&self) -> JsType {
+        match self {
+            Field::Embed(f) => f.jstype(),
+            Field::Enum(f) => f.jstype(),
+            Field::Map(f) => f.jstype(),
+            Field::Oneof(f) => f.jstype(),
+            Field::Repeated(f) => f.jstype(),
+            Field::Scalar(f) => f.jstype(),
+        }
+    }
+    /// Should this field be parsed lazily?  Lazy applies only to message-type
+    /// fields.  It means that when the outer message is initially parsed, the
+    /// inner message's contents will not be parsed but instead stored in encoded
+    /// form.  The inner message will actually be parsed when it is first accessed.
+    ///
+    /// This is only a hint.  Implementations are free to choose whether to use
+    /// eager or lazy parsing regardless of the value of this option.  However,
+    /// setting this option true suggests that the protocol author believes that
+    /// using lazy parsing on this field is worth the additional bookkeeping
+    /// overhead typically needed to implement it.
+    ///
+    /// This option does not affect the public interface of any generated code;
+    /// all method signatures remain the same.  Furthermore, thread-safety of the
+    /// interface is not affected by this option; const methods remain safe to
+    /// call from multiple threads concurrently, while non-const methods continue
+    /// to require exclusive access.
+    ///
+    ///
+    /// Note that implementations may choose not to check required fields within
+    /// a lazy sub-message.  That is, calling IsInitialized() on the outer message
+    /// may return true even if the inner message has missing required fields.
+    /// This is necessary because otherwise the inner message would have to be
+    /// parsed in order to perform the check, defeating the purpose of lazy
+    /// parsing.  An implementation which chooses not to check required fields
+    /// must be consistent about it.  That is, for any particular sub-message, the
+    /// implementation must either *always* check its required fields, or *never*
+    /// check its required fields, regardless of whether or not the message has
+    /// been parsed.
+    pub fn is_lazy(&self) -> bool {
+        match self {
+            Field::Embed(f) => f.is_lazy(),
+            Field::Enum(f) => f.is_lazy(),
+            Field::Map(f) => f.is_lazy(),
+            Field::Oneof(f) => f.is_lazy(),
+            Field::Repeated(f) => f.is_lazy(),
+            Field::Scalar(f) => f.is_lazy(),
+        }
+    }
+    /// Is this field deprecated?
+    /// Depending on the target platform, this can emit Deprecated annotations
+    /// for accessors, or it will be completely ignored; in the very least, this
+    /// is a formalization for deprecating fields.
+    pub fn is_deprecated(&self) -> bool {
+        match self {
+            Field::Embed(f) => f.is_deprecated(),
+            Field::Enum(f) => f.is_deprecated(),
+            Field::Map(f) => f.is_deprecated(),
+            Field::Oneof(f) => f.is_deprecated(),
+            Field::Repeated(f) => f.is_deprecated(),
+            Field::Scalar(f) => f.is_deprecated(),
+        }
+    }
+
+    /// Options the parser does not recognize.
+    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+        match self {
+            Field::Embed(f) => f.uninterpreted_options(),
+            Field::Enum(f) => f.uninterpreted_options(),
+            Field::Map(f) => f.uninterpreted_options(),
+            Field::Oneof(f) => f.uninterpreted_options(),
+            Field::Repeated(f) => f.uninterpreted_options(),
+            Field::Scalar(f) => f.uninterpreted_options(),
+        }
+    }
 }
 impl<'a, U> Clone for Field<'a, U> {
     fn clone(&self) -> Self {
@@ -552,16 +669,6 @@ impl<'a, U> Clone for Field<'a, U> {
             Self::Oneof(f) => Self::Oneof(f.clone()),
             Self::Repeated(f) => Self::Repeated(f.clone()),
             Self::Scalar(f) => Self::Scalar(f.clone()),
-        }
-    }
-}
-
-impl<'a, U> NodeAtPath<'a, U> for Field<'a, U> {
-    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
-        if path.is_empty() {
-            Some(self.into())
-        } else {
-            None
         }
     }
 }

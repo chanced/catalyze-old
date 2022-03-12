@@ -125,19 +125,48 @@ pub trait Visitor<'a, U>: Sized {
     fn visit_oneof_field(&mut self, fld: OneofField<'a, U>) -> Result<(), Self::Error> {
         visit_oneof_field(self, fld)
     }
-    fn visit_oneof_scalar_field(
+
+    fn visit_real_oneof_field(&mut self, fld: OneofField<'a, U>) -> Result<(), Self::Error> {
+        visit_real_oneof_field(self, fld)
+    }
+
+    fn visit_real_oneof_scalar_field(
         &mut self,
         fld: OneofScalarField<'a, U>,
     ) -> Result<(), Self::Error> {
         Ok(())
     }
-    fn visit_oneof_embed_field(&mut self, fld: OneofEmbedField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_real_oneof_enum_field(
+        &mut self,
+        fld: OneofEnumField<'a, U>,
+    ) -> Result<(), Self::Error> {
         Ok(())
     }
-    fn visit_oneof_enum_field(&mut self, fld: OneofEnumField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_real_oneof_embed_field(
+        &mut self,
+        fld: OneofEmbedField<'a, U>,
+    ) -> Result<(), Self::Error> {
         Ok(())
     }
-    fn visit_real_oneof_field(&mut self, fld: OneofField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_synthetic_oneof_field(&mut self, fld: OneofField<'a, U>) -> Result<(), Self::Error> {
+        visit_synthetic_oneof_field(self, fld)
+    }
+    fn visit_synthetic_oneof_scalar_field(
+        &mut self,
+        fld: OneofScalarField<'a, U>,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn visit_synthetic_oneof_enum_field(
+        &mut self,
+        fld: OneofEnumField<'a, U>,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn visit_synthetic_oneof_embed_field(
+        &mut self,
+        fld: OneofEmbedField<'a, U>,
+    ) -> Result<(), Self::Error> {
         Ok(())
     }
 }
@@ -287,15 +316,38 @@ where
         RepeatedField::Embed(f) => v.visit_repeated_embed_field(f),
     }
 }
-
 pub fn visit_oneof_field<'a, U, V>(v: &mut V, fld: OneofField<'a, U>) -> Result<(), V::Error>
 where
     V: Visitor<'a, U>,
 {
+    if fld.is_in_real_oneof() {
+        v.visit_real_oneof_field(fld)
+    } else {
+        v.visit_synthetic_oneof_field(fld)
+    }
+}
+
+pub fn visit_real_oneof_field<'a, U, V>(v: &mut V, fld: OneofField<'a, U>) -> Result<(), V::Error>
+where
+    V: Visitor<'a, U>,
+{
     match fld {
-        OneofField::Scalar(f) => v.visit_oneof_scalar_field(f),
-        OneofField::Enum(f) => v.visit_oneof_enum_field(f),
-        OneofField::Embed(f) => v.visit_oneof_embed_field(f),
+        OneofField::Scalar(f) => v.visit_real_oneof_scalar_field(f),
+        OneofField::Enum(f) => v.visit_real_oneof_enum_field(f),
+        OneofField::Embed(f) => v.visit_real_oneof_embed_field(f),
+    }
+}
+pub fn visit_synthetic_oneof_field<'a, U, V>(
+    v: &mut V,
+    fld: OneofField<'a, U>,
+) -> Result<(), V::Error>
+where
+    V: Visitor<'a, U>,
+{
+    match fld {
+        OneofField::Scalar(f) => v.visit_synthetic_oneof_scalar_field(f),
+        OneofField::Enum(f) => v.visit_synthetic_oneof_enum_field(f),
+        OneofField::Embed(f) => v.visit_synthetic_oneof_embed_field(f),
     }
 }
 

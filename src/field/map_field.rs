@@ -6,8 +6,8 @@ use anyhow::{anyhow, bail};
 use crate::{
     proto::{FieldDescriptor, Type},
     proto::{Scalar, Syntax},
-    Comments, Enum, Field, File, Files, FullyQualified, Message, Name, Node, Package, WeakEnum,
-    WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
+    Comments, Enum, Field, File, Files, FullyQualified, JsType, Message, Name, Node, Package,
+    UninterpretedOptions, WeakEnum, WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -347,6 +347,93 @@ impl<'a, U> MapField<'a, U> {
             Type::Group => bail!("group is not a map"),
         }
     }
+    /// The jstype option determines the JavaScript type used for values of the
+    /// field.  The option is permitted only for 64 bit integral and fixed types
+    /// (int64, uint64, sint64, fixed64, sfixed64).  A field with jstype JS_STRING
+    /// is represented as JavaScript string, which avoids loss of precision that
+    /// can happen when a large value is converted to a floating point JavaScript.
+    /// Specifying JS_NUMBER for the jstype causes the generated JavaScript code to
+    /// use the JavaScript "number" type.  The behavior of the default option
+    /// JS_NORMAL is implementation dependent.
+    ///
+    /// This option is an enum to permit additional types to be added, e.g.
+    /// goog.math.Integer.
+    pub fn jstype(&self) -> JsType {
+        match self {
+            MapField::Scalar(f) => f.jstype(),
+            MapField::Enum(f) => f.jstype(),
+            MapField::Embed(f) => f.jstype(),
+        }
+    }
+
+    /// Should this field be parsed lazily?  Lazy applies only to message-type
+    /// fields.  It means that when the outer message is initially parsed, the
+    /// inner message's contents will not be parsed but instead stored in encoded
+    /// form.  The inner message will actually be parsed when it is first accessed.
+    ///
+    /// This is only a hint.  Implementations are free to choose whether to use
+    /// eager or lazy parsing regardless of the value of this option.  However,
+    /// setting this option true suggests that the protocol author believes that
+    /// using lazy parsing on this field is worth the additional bookkeeping
+    /// overhead typically needed to implement it.
+    ///
+    /// This option does not affect the public interface of any generated code;
+    /// all method signatures remain the same.  Furthermore, thread-safety of the
+    /// interface is not affected by this option; const methods remain safe to
+    /// call from multiple threads concurrently, while non-const methods continue
+    /// to require exclusive access.
+    ///
+    ///
+    /// Note that implementations may choose not to check required fields within
+    /// a lazy sub-message.  That is, calling IsInitialized() on the outer message
+    /// may return true even if the inner message has missing required fields.
+    /// This is necessary because otherwise the inner message would have to be
+    /// parsed in order to perform the check, defeating the purpose of lazy
+    /// parsing.  An implementation which chooses not to check required fields
+    /// must be consistent about it.  That is, for any particular sub-message, the
+    /// implementation must either *always* check its required fields, or *never*
+    /// check its required fields, regardless of whether or not the message has
+    /// been parsed.
+    pub fn is_lazy(&self) -> bool {
+        match self {
+            MapField::Scalar(f) => f.is_lazy(),
+            MapField::Enum(f) => f.is_lazy(),
+            MapField::Embed(f) => f.is_lazy(),
+        }
+    }
+
+    /// Is this field deprecated?
+    /// Depending on the target platform, this can emit Deprecated annotations
+    /// for accessors, or it will be completely ignored; in the very least, this
+    /// is a formalization for deprecating fields.
+    pub fn is_deprecated(&self) -> bool {
+        match self {
+            MapField::Scalar(f) => f.is_deprecated(),
+            MapField::Enum(f) => f.is_deprecated(),
+            MapField::Embed(f) => f.is_deprecated(),
+        }
+    }
+
+    /// Options the parser does not recognize.
+    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+        match self {
+            MapField::Scalar(f) => f.uninterpreted_options(),
+            MapField::Enum(f) => f.uninterpreted_options(),
+            MapField::Embed(f) => f.uninterpreted_options(),
+        }
+    }
+    /// The packed option can be enabled for repeated primitive fields to enable
+    /// a more efficient representation on the wire. Rather than repeatedly
+    /// writing the tag and type for each element, the entire array is encoded as
+    /// a single length-delimited blob. In proto3, only explicit setting it to
+    /// false will avoid using packed encoding.
+    pub fn is_packed(&self) -> bool {
+        match self {
+            MapField::Scalar(f) => f.is_packed(),
+            MapField::Enum(f) => f.is_packed(),
+            MapField::Embed(f) => f.is_packed(),
+        }
+    }
 }
 impl<'a, U> Clone for MapField<'a, U> {
     fn clone(&self) -> Self {
@@ -475,6 +562,73 @@ impl<'a, U> MappedScalarField<'a, U> {
     pub fn has_presence(&self) -> bool {
         false
     }
+    /// The jstype option determines the JavaScript type used for values of the
+    /// field.  The option is permitted only for 64 bit integral and fixed types
+    /// (int64, uint64, sint64, fixed64, sfixed64).  A field with jstype JS_STRING
+    /// is represented as JavaScript string, which avoids loss of precision that
+    /// can happen when a large value is converted to a floating point JavaScript.
+    /// Specifying JS_NUMBER for the jstype causes the generated JavaScript code to
+    /// use the JavaScript "number" type.  The behavior of the default option
+    /// JS_NORMAL is implementation dependent.
+    ///
+    /// This option is an enum to permit additional types to be added, e.g.
+    /// goog.math.Integer.
+    pub fn jstype(&self) -> JsType {
+        self.descriptor().options().jstype()
+    }
+    /// The packed option can be enabled for repeated primitive fields to enable
+    /// a more efficient representation on the wire. Rather than repeatedly
+    /// writing the tag and type for each element, the entire array is encoded as
+    /// a single length-delimited blob. In proto3, only explicit setting it to
+    /// false will avoid using packed encoding.
+    pub fn is_packed(&self) -> bool {
+        self.descriptor().options().packed()
+    }
+
+    /// Should this field be parsed lazily?  Lazy applies only to message-type
+    /// fields.  It means that when the outer message is initially parsed, the
+    /// inner message's contents will not be parsed but instead stored in encoded
+    /// form.  The inner message will actually be parsed when it is first accessed.
+    ///
+    /// This is only a hint.  Implementations are free to choose whether to use
+    /// eager or lazy parsing regardless of the value of this option.  However,
+    /// setting this option true suggests that the protocol author believes that
+    /// using lazy parsing on this field is worth the additional bookkeeping
+    /// overhead typically needed to implement it.
+    ///
+    /// This option does not affect the public interface of any generated code;
+    /// all method signatures remain the same.  Furthermore, thread-safety of the
+    /// interface is not affected by this option; const methods remain safe to
+    /// call from multiple threads concurrently, while non-const methods continue
+    /// to require exclusive access.
+    ///
+    ///
+    /// Note that implementations may choose not to check required fields within
+    /// a lazy sub-message.  That is, calling IsInitialized() on the outer message
+    /// may return true even if the inner message has missing required fields.
+    /// This is necessary because otherwise the inner message would have to be
+    /// parsed in order to perform the check, defeating the purpose of lazy
+    /// parsing.  An implementation which chooses not to check required fields
+    /// must be consistent about it.  That is, for any particular sub-message, the
+    /// implementation must either *always* check its required fields, or *never*
+    /// check its required fields, regardless of whether or not the message has
+    /// been parsed.
+    pub fn is_lazy(&self) -> bool {
+        self.descriptor().options().is_lazy()
+    }
+
+    /// Is this field deprecated?
+    /// Depending on the target platform, this can emit Deprecated annotations
+    /// for accessors, or it will be completely ignored; in the very least, this
+    /// is a formalization for deprecating fields.
+    pub fn is_deprecated(&self) -> bool {
+        self.descriptor().options().is_deprecated()
+    }
+
+    /// Options the parser does not recognize.
+    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+        self.descriptor().options().uninterpreted_options()
+    }
 }
 
 impl<'a, U> FullyQualified for MappedScalarField<'a, U> {
@@ -594,6 +748,21 @@ impl<'a, U> MappedEmbedField<'a, U> {
         self.0.embed().well_known_message()
     }
 
+    /// The jstype option determines the JavaScript type used for values of the
+    /// field.  The option is permitted only for 64 bit integral and fixed types
+    /// (int64, uint64, sint64, fixed64, sfixed64).  A field with jstype JS_STRING
+    /// is represented as JavaScript string, which avoids loss of precision that
+    /// can happen when a large value is converted to a floating point JavaScript.
+    /// Specifying JS_NUMBER for the jstype causes the generated JavaScript code to
+    /// use the JavaScript "number" type.  The behavior of the default option
+    /// JS_NORMAL is implementation dependent.
+    ///
+    /// This option is an enum to permit additional types to be added, e.g.
+    /// goog.math.Integer.
+    pub fn jstype(&self) -> JsType {
+        self.descriptor().options().jstype()
+    }
+
     pub(crate) fn set_value(&self, node: Node<'a, U>) -> Result<(), anyhow::Error> {
         match node {
             Node::Message(m) => {
@@ -606,6 +775,60 @@ impl<'a, U> MappedEmbedField<'a, U> {
 
     pub(crate) fn value_type(&self) -> Type<'a> {
         self.0.value_type()
+    }
+
+    /// The packed option can be enabled for repeated primitive fields to enable
+    /// a more efficient representation on the wire. Rather than repeatedly
+    /// writing the tag and type for each element, the entire array is encoded as
+    /// a single length-delimited blob. In proto3, only explicit setting it to
+    /// false will avoid using packed encoding.
+    pub fn is_packed(&self) -> bool {
+        self.descriptor().options().packed()
+    }
+
+    /// Should this field be parsed lazily?  Lazy applies only to message-type
+    /// fields.  It means that when the outer message is initially parsed, the
+    /// inner message's contents will not be parsed but instead stored in encoded
+    /// form.  The inner message will actually be parsed when it is first accessed.
+    ///
+    /// This is only a hint.  Implementations are free to choose whether to use
+    /// eager or lazy parsing regardless of the value of this option.  However,
+    /// setting this option true suggests that the protocol author believes that
+    /// using lazy parsing on this field is worth the additional bookkeeping
+    /// overhead typically needed to implement it.
+    ///
+    /// This option does not affect the public interface of any generated code;
+    /// all method signatures remain the same.  Furthermore, thread-safety of the
+    /// interface is not affected by this option; const methods remain safe to
+    /// call from multiple threads concurrently, while non-const methods continue
+    /// to require exclusive access.
+    ///
+    ///
+    /// Note that implementations may choose not to check required fields within
+    /// a lazy sub-message.  That is, calling IsInitialized() on the outer message
+    /// may return true even if the inner message has missing required fields.
+    /// This is necessary because otherwise the inner message would have to be
+    /// parsed in order to perform the check, defeating the purpose of lazy
+    /// parsing.  An implementation which chooses not to check required fields
+    /// must be consistent about it.  That is, for any particular sub-message, the
+    /// implementation must either *always* check its required fields, or *never*
+    /// check its required fields, regardless of whether or not the message has
+    /// been parsed.
+    pub fn is_lazy(&self) -> bool {
+        self.descriptor().options().is_lazy()
+    }
+
+    /// Is this field deprecated?
+    /// Depending on the target platform, this can emit Deprecated annotations
+    /// for accessors, or it will be completely ignored; in the very least, this
+    /// is a formalization for deprecating fields.
+    pub fn is_deprecated(&self) -> bool {
+        self.descriptor().options().is_deprecated()
+    }
+
+    /// Options the parser does not recognize.
+    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+        self.descriptor().options().uninterpreted_options()
     }
 }
 
@@ -729,7 +952,20 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn has_presence(&self) -> bool {
         false
     }
-
+    /// The jstype option determines the JavaScript type used for values of the
+    /// field.  The option is permitted only for 64 bit integral and fixed types
+    /// (int64, uint64, sint64, fixed64, sfixed64).  A field with jstype JS_STRING
+    /// is represented as JavaScript string, which avoids loss of precision that
+    /// can happen when a large value is converted to a floating point JavaScript.
+    /// Specifying JS_NUMBER for the jstype causes the generated JavaScript code to
+    /// use the JavaScript "number" type.  The behavior of the default option
+    /// JS_NORMAL is implementation dependent.
+    ///
+    /// This option is an enum to permit additional types to be added, e.g.
+    /// goog.math.Integer.
+    pub fn jstype(&self) -> JsType {
+        self.descriptor().options().jstype()
+    }
     fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
         match value {
             Node::Enum(e) => {
@@ -742,6 +978,60 @@ impl<'a, U> MappedEnumField<'a, U> {
 
     fn value_type(&self) -> Type<'a> {
         self.0.value_type()
+    }
+
+    /// The packed option can be enabled for repeated primitive fields to enable
+    /// a more efficient representation on the wire. Rather than repeatedly
+    /// writing the tag and type for each element, the entire array is encoded as
+    /// a single length-delimited blob. In proto3, only explicit setting it to
+    /// false will avoid using packed encoding.
+    pub fn is_packed(&self) -> bool {
+        self.descriptor().options().packed()
+    }
+
+    /// Should this field be parsed lazily?  Lazy applies only to message-type
+    /// fields.  It means that when the outer message is initially parsed, the
+    /// inner message's contents will not be parsed but instead stored in encoded
+    /// form.  The inner message will actually be parsed when it is first accessed.
+    ///
+    /// This is only a hint.  Implementations are free to choose whether to use
+    /// eager or lazy parsing regardless of the value of this option.  However,
+    /// setting this option true suggests that the protocol author believes that
+    /// using lazy parsing on this field is worth the additional bookkeeping
+    /// overhead typically needed to implement it.
+    ///
+    /// This option does not affect the public interface of any generated code;
+    /// all method signatures remain the same.  Furthermore, thread-safety of the
+    /// interface is not affected by this option; const methods remain safe to
+    /// call from multiple threads concurrently, while non-const methods continue
+    /// to require exclusive access.
+    ///
+    ///
+    /// Note that implementations may choose not to check required fields within
+    /// a lazy sub-message.  That is, calling IsInitialized() on the outer message
+    /// may return true even if the inner message has missing required fields.
+    /// This is necessary because otherwise the inner message would have to be
+    /// parsed in order to perform the check, defeating the purpose of lazy
+    /// parsing.  An implementation which chooses not to check required fields
+    /// must be consistent about it.  That is, for any particular sub-message, the
+    /// implementation must either *always* check its required fields, or *never*
+    /// check its required fields, regardless of whether or not the message has
+    /// been parsed.
+    pub fn is_lazy(&self) -> bool {
+        self.descriptor().options().is_lazy()
+    }
+
+    /// Is this field deprecated?
+    /// Depending on the target platform, this can emit Deprecated annotations
+    /// for accessors, or it will be completely ignored; in the very least, this
+    /// is a formalization for deprecating fields.
+    pub fn is_deprecated(&self) -> bool {
+        self.descriptor().options().is_deprecated()
+    }
+
+    /// Options the parser does not recognize.
+    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+        self.descriptor().options().uninterpreted_options()
     }
 }
 

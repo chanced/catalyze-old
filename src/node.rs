@@ -2,7 +2,7 @@ use crate::{
     iter::Iter, Comments, Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof,
     Package, Service,
 };
-use crate::{Ast, MapField, RepeatedField};
+use crate::{AllMessages, Ast, MapField, RepeatedField};
 use std::collections::VecDeque;
 use std::convert::From;
 use std::fmt::{self, Display};

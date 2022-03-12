@@ -227,10 +227,11 @@ impl<'a, U> Message<'a, U> {
 
     pub fn nodes(&self) -> Nodes<'a, U> {
         Nodes::new(vec![
-            self.defined_extensions().into(),
-            self.oneofs().into(),
             self.enums().into(),
             self.messages().into(),
+            self.fields().into(),
+            self.oneofs().into(),
+            self.defined_extensions().into(),
         ])
     }
 
@@ -404,7 +405,7 @@ impl<'a, U> Clone for WeakMessage<'a, U> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AllMessages<'a, U> {
     q: VecDeque<Message<'a, U>>,
 }

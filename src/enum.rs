@@ -9,8 +9,8 @@ use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
     proto::{EnumDescriptor, EnumDescriptorPath},
-    Comments, EnumValue, File, FullyQualified, Message, Name, Node, NodeAtPath, Nodes, Package,
-    WeakFile, WeakMessage, WellKnownEnum, WellKnownType,
+    Comments, EnumValue, File, FullyQualified, Message, Name, Node, Nodes, Package, WeakFile,
+    WeakMessage, WellKnownEnum, WellKnownType,
 };
 
 #[derive(Debug, Clone)]
@@ -144,16 +144,7 @@ impl<'a, U> Enum<'a, U> {
     pub(crate) fn add_dependent(&self, dep: Message<'a, U>) {
         self.0.dependents.borrow_mut().push(dep.into());
     }
-}
-
-impl<'a, U> Clone for Enum<'a, U> {
-    fn clone(&self) -> Self {
-        Enum(self.0.clone())
-    }
-}
-
-impl<'a, U> NodeAtPath<'a, U> for Enum<'a, U> {
-    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         if path.is_empty() {
             return Some(Node::Enum(self.clone()));
         }
@@ -168,6 +159,12 @@ impl<'a, U> NodeAtPath<'a, U> for Enum<'a, U> {
                 EnumDescriptorPath::Value => self.0.values.borrow().get(next).map(Into::into),
                 // _ => None,
             })
+    }
+}
+
+impl<'a, U> Clone for Enum<'a, U> {
+    fn clone(&self) -> Self {
+        Enum(self.0.clone())
     }
 }
 

@@ -116,6 +116,7 @@ impl<'a, U> File<'a, U> {
 
         Ok(file)
     }
+
     pub fn name(&self) -> Name<U> {
         self.0.name.clone()
     }
@@ -203,9 +204,9 @@ impl<'a, U> File<'a, U> {
     pub fn nodes(&self) -> Nodes<'a, U> {
         Nodes::new(vec![
             self.enums().into(),
-            self.defined_extensions().into(),
             self.messages().into(),
             self.services().into(),
+            self.defined_extensions().into(),
         ])
     }
     #[cfg(test)]
@@ -222,9 +223,8 @@ impl<'a, U> File<'a, U> {
     pub fn syntax(&self) -> crate::proto::Syntax {
         self.0.syntax
     }
-}
-impl<'a, U> NodeAtPath<'a, U> for File<'a, U> {
-    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
         if path.is_empty() {
             return Some(self.into());
         }
@@ -257,6 +257,7 @@ impl<'a, U> NodeAtPath<'a, U> for File<'a, U> {
         })
     }
 }
+
 impl<'a, U> From<&WeakFile<'a, U>> for File<'a, U> {
     fn from(weak: &WeakFile<'a, U>) -> Self {
         weak.upgrade()

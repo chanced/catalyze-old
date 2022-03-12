@@ -835,7 +835,7 @@ impl<'a> FieldOptions<'a> {
     /// representation of the field than it normally would.  See the specific
     /// options below.  This option is not yet implemented in the open source
     /// release -- sorry, we'll try to include it in a future version!
-    pub fn c_type(&self) -> CType {
+    pub fn ctype(&self) -> CType {
         CType::from(self.opts().ctype())
     }
     /// The packed option can be enabled for repeated primitive fields to enable
@@ -857,7 +857,7 @@ impl<'a> FieldOptions<'a> {
     ///
     /// This option is an enum to permit additional types to be added, e.g.
     /// goog.math.Integer.
-    pub fn js_type(&self) -> JsType {
+    pub fn jstype(&self) -> JsType {
         self.opts().jstype().into()
     }
     /// Should this field be parsed lazily?  Lazy applies only to message-type

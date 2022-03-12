@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     container::Container, format_fqn, proto::EnumValueDescriptor, Comments, Enum, File,
-    FullyQualified, Name, Node, NodeAtPath, Package, WeakEnum,
+    FullyQualified, Name, Node, Package, WeakEnum,
 };
 
 #[derive(Debug, Clone)]
@@ -94,6 +94,14 @@ impl<'a, U> EnumValue<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.util.clone()
     }
+
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+        if path.is_empty() {
+            Some(self.to_owned().into())
+        } else {
+            None
+        }
+    }
 }
 
 impl<'a, U> FullyQualified for EnumValue<'a, U> {
@@ -105,15 +113,5 @@ impl<'a, U> FullyQualified for EnumValue<'a, U> {
 impl<'a, U> Clone for EnumValue<'a, U> {
     fn clone(&self) -> Self {
         EnumValue(self.0.clone())
-    }
-}
-
-impl<'a, U> NodeAtPath<'a, U> for EnumValue<'a, U> {
-    fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
-        if path.is_empty() {
-            Some(self.to_owned().into())
-        } else {
-            None
-        }
     }
 }
