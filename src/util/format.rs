@@ -2,9 +2,8 @@ use crate::name::Name;
 // use anyhow::Result;
 
 use heck::AsLowerCamelCase;
-pub use heck::{
+use heck::{
     ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase, ToShoutySnakeCase, ToSnakeCase,
-    ToTitleCase, ToUpperCamelCase,
 };
 use std::string::ToString;
 

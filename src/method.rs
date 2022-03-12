@@ -4,7 +4,6 @@ use crate::proto::MethodDescriptor;
 use crate::{
     Comments, File, FullyQualified, Name, Node, NodeAtPath, Package, Service, WeakService,
 };
-pub(crate) type MethodList<'a, U> = Rc<RefCell<Vec<Method<'a, U>>>>;
 
 #[derive(Debug, Clone)]
 struct MethodDetail<'a, U> {
@@ -31,7 +30,7 @@ impl<'a, U> Method<'a, U> {
         self.0.name.clone()
     }
     pub fn descriptor(&self) -> MethodDescriptor<'a> {
-        self.0.desc.clone()
+        self.0.desc
     }
     pub fn comments(&self) -> Comments<'a> {
         Comments::default()

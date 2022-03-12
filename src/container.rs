@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
-use crate::file::WeakFile;
-use crate::iter::Iter;
-use crate::proto::Syntax;
+use crate::Iter;
+use crate::Syntax;
+use crate::WeakFile;
 use crate::{
     AllEnums, AllMessages, Enum, File, FullyQualified, Message, Name, Node, Package, WeakMessage,
 };

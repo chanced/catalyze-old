@@ -2,7 +2,7 @@ use crate::container::Container;
 use crate::iter::Iter;
 use crate::package::WeakPackage;
 
-use crate::proto::path::FileDescriptorPath;
+use crate::proto::FileDescriptorPath;
 use crate::proto::{FileDescriptor, Syntax};
 
 use crate::*;
@@ -18,8 +18,8 @@ struct FileDetail<'a, U> {
     name: Name<U>,
     file_path: PathBuf,
     fqn: String,
-    messages: MessageList<'a, U>,
-    enums: EnumList<'a, U>,
+    messages: Rc<RefCell<Vec<Message<'a, U>>>>,
+    enums: Rc<RefCell<Vec<Enum<'a, U>>>>,
     services: ServiceList<'a, U>,
     defined_extensions: ExtensionList<'a, U>,
     build_target: bool,

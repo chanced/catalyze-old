@@ -401,7 +401,7 @@ impl<'a, U> From<&MappedEmbedField<'a, U>> for MapField<'a, U> {
 }
 
 #[derive(Debug, Clone)]
-pub struct MappedScalarFieldDetail<'a, U> {
+pub(crate) struct MappedScalarFieldDetail<'a, U> {
     detail: MapFieldDetail<'a, U>,
     scalar: Scalar,
 }
@@ -484,7 +484,7 @@ impl<'a, U> FullyQualified for MappedScalarField<'a, U> {
 }
 
 #[derive(Debug)]
-pub struct MappedEmbedFieldDetail<'a, U> {
+pub(crate) struct MappedEmbedFieldDetail<'a, U> {
     embed: RefCell<WeakMessage<'a, U>>,
     detail: MapFieldDetail<'a, U>,
 }
@@ -622,7 +622,7 @@ impl<'a, U> Clone for MappedEmbedField<'a, U> {
 }
 
 #[derive(Debug, Clone)]
-pub struct MappedEnumFieldDetail<'a, U> {
+pub(crate) struct MappedEnumFieldDetail<'a, U> {
     enumeration: RefCell<WeakEnum<'a, U>>,
     detail: MapFieldDetail<'a, U>,
 }

@@ -1,9 +1,9 @@
 #[cfg(test)]
 use crate::util::Generic;
-use crate::{ToCase, WELL_KNNOWN_TYPE_PACKAGE};
-pub use heck::{
+use crate::ToCase;
+use heck::{
     AsLowerCamelCase, ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase,
-    ToShoutySnakeCase, ToSnakeCase, ToTitleCase, ToUpperCamelCase,
+    ToShoutySnakeCase, ToSnakeCase,
 };
 
 use std::fmt::Write;
@@ -78,7 +78,7 @@ impl<'a, U> Name<U> {
     }
     // Returns a byte slice of this `Name`'s value.
     pub fn as_bytes(&self) -> &[u8] {
-        &self.val.as_bytes()
+        self.val.as_bytes()
     }
     /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
@@ -90,24 +90,15 @@ impl<'a, U> PartialEq for Name<U> {
     fn eq(&self, other: &Self) -> bool {
         PartialEq::eq(&self.val, &other.val)
     }
-    fn ne(&self, other: &Self) -> bool {
-        PartialEq::ne(&self.val, &other.val)
-    }
 }
 impl<'a, U> PartialEq<String> for Name<U> {
     fn eq(&self, other: &String) -> bool {
         PartialEq::eq(&self.val, other)
     }
-    fn ne(&self, other: &String) -> bool {
-        PartialEq::ne(&self.val, other)
-    }
 }
 impl<'a, U> PartialEq<str> for Name<U> {
     fn eq(&self, other: &str) -> bool {
         PartialEq::eq(self.as_str(), other)
-    }
-    fn ne(&self, other: &str) -> bool {
-        PartialEq::ne(self.as_str(), other)
     }
 }
 
@@ -125,9 +116,6 @@ impl<'a, U> ops::Deref for Name<U> {
 }
 
 impl<'a, U> Name<U> {
-    pub(crate) fn is_well_known_package(&self) -> bool {
-        self.val.starts_with(WELL_KNNOWN_TYPE_PACKAGE)
-    }
     pub fn as_str(&self) -> &str {
         self.val.as_str()
     }
@@ -145,14 +133,14 @@ impl<'a, U> Add<Self> for Name<U> {
 impl<'a, U> Add<&str> for Name<U> {
     type Output = Self;
     fn add(self, rhs: &str) -> Self::Output {
-        Name::new(&(self.val + rhs), self.util.clone())
+        Name::new(&(self.val + rhs), self.util)
     }
 }
 
 impl<'a, U> Add<String> for Name<U> {
     type Output = Self;
     fn add(self, rhs: String) -> Self::Output {
-        Name::new(&(self.val + rhs.as_str()), self.util.clone())
+        Name::new(&(self.val + rhs.as_str()), self.util)
     }
 }
 
@@ -273,6 +261,6 @@ mod tests {
     #[test]
     fn test_to_pascal() {
         let n = Name::new("hello_world", Rc::new(RefCell::new(Rust {})));
-        assert_eq!(n.to_pascal_case().to_string(), "HelloWorld".to_string());
+        assert_eq!(n.to_pascal_case(), "HelloWorld".to_string());
     }
 }

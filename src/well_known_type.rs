@@ -29,9 +29,7 @@ impl std::str::FromStr for WellKnownType {
             "Int64Value" => Ok(WellKnownType::Message(WellKnownMessage::Int64Value)),
             "ListValue" => Ok(WellKnownType::Message(WellKnownMessage::ListValue)),
             "Method" => Ok(WellKnownType::Message(WellKnownMessage::Method)),
-
             "FieldCardinality" => Ok(WellKnownType::Enum(WellKnownEnum::FieldCardinality)),
-            "FieldKind" => Ok(WellKnownType::Enum(WellKnownEnum::FieldKind)),
             "NullValue" => Ok(WellKnownType::Enum(WellKnownEnum::NullValue)),
             "Syntax" => Ok(WellKnownType::Enum(WellKnownEnum::Syntax)),
             _ => bail!("Not a Well-Known Type: {}", s),
@@ -272,20 +270,20 @@ impl std::str::FromStr for WellKnownEnum {
 pub enum WellKnownEnum {
     /// Whether a field is optional, required, or repeated.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#cardinality
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#cardinality>
     FieldCardinality,
     /// Basic field types.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#kind
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#kind>
     FieldKind,
 
     /// NullValue is a singleton enumeration to represent the null value for the
     /// Value type union.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#nullvalue
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#nullvalue>
     NullValue,
     /// The syntax in which a protocol buffer element is defined.
     ///
-    /// https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#syntax
+    /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#syntax>
     Syntax,
 }

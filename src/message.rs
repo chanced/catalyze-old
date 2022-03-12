@@ -5,26 +5,26 @@ use std::str::FromStr;
 use anyhow::bail;
 
 use crate::extension::WeakExtension;
-use crate::field::FieldList;
+
 use crate::iter::Iter;
-use crate::proto::Syntax;
-use crate::proto::{path::DescriptorPath, MessageDescriptor};
+use crate::Syntax;
 use crate::{container::Container, container::WeakContainer, Name};
 use crate::{
-    format_fqn, AllEnums, Comments, Enum, EnumList, Extension, Field, File, FullyQualified, Node,
-    NodeAtPath, Nodes, Oneof, OneofList, WeakFile, WellKnownMessage,
+    format_fqn, AllEnums, Comments, Enum, Extension, Field, File, FullyQualified, Node, NodeAtPath,
+    Nodes, Oneof, WeakFile, WellKnownMessage,
 };
+use crate::{DescriptorPath, MessageDescriptor};
 use crate::{Package, WellKnownType};
 
 use std::collections::VecDeque;
-
-pub(crate) type MessageList<'a, U> = Rc<RefCell<Vec<Message<'a, U>>>>;
 
 #[derive(Debug)]
 /// Message describes a proto message. Messages can be contained in either
 /// another Message or a File, and may house further Messages and/or Enums. While
 /// all Fields technically live on the Message, some may be contained within
-/// OneOf blocks.
+/// Oneof blocks.
+///
+/// Fields within Oneof blocks fields will be accessible on both the Message and the Oneof.
 pub struct Message<'a, U>(Rc<MessageDetail<'a, U>>);
 impl<'a, U> Clone for Message<'a, U> {
     fn clone(&self) -> Self {
@@ -38,14 +38,16 @@ pub(crate) struct MessageDetail<'a, U> {
     descriptor: MessageDescriptor<'a>,
     fqn: String,
     util: Rc<U>,
-    messages: MessageList<'a, U>,
-    enums: EnumList<'a, U>,
-    fields: FieldList<'a, U>,
-    oneofs: OneofList<'a, U>,
+    messages: Rc<RefCell<Vec<Message<'a, U>>>>,
+    enums: Rc<RefCell<Vec<Enum<'a, U>>>>,
+    fields: Rc<RefCell<Vec<Field<'a, U>>>>,
+    oneofs: Rc<RefCell<Vec<Oneof<'a, U>>>>,
+    real_oneofs: Rc<RefCell<Vec<Oneof<'a, U>>>>,
+    synthetic_oneofs: Rc<RefCell<Vec<Oneof<'a, U>>>>,
     dependents: Rc<RefCell<Vec<WeakMessage<'a, U>>>>,
     imports: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
     container: RefCell<WeakContainer<'a, U>>,
-    maps: MessageList<'a, U>,
+    maps: Rc<RefCell<Vec<Message<'a, U>>>>,
     /// `Extension`s defined by this message.
     defined_extensions: Rc<RefCell<Vec<Extension<'a, U>>>>,
     /// `Extension`s applied to this `Message`
@@ -79,6 +81,8 @@ impl<'a, U> Message<'a, U> {
             enums: Rc::new(RefCell::new(Vec::with_capacity(desc.enums().len()))),
             fields: Rc::new(RefCell::new(Vec::with_capacity(desc.fields().len()))),
             oneofs: Rc::new(RefCell::new(Vec::with_capacity(desc.oneofs().len()))),
+            real_oneofs: Rc::new(RefCell::new(Vec::new())),
+            synthetic_oneofs: Rc::new(RefCell::new(Vec::new())),
             messages: Rc::new(RefCell::new(Vec::new())),
             maps: Rc::new(RefCell::new(Vec::new())),
             dependents: Rc::new(RefCell::new(Vec::new())),
@@ -107,9 +111,16 @@ impl<'a, U> Message<'a, U> {
                 enums.push(e);
             }
             let mut oneofs = msg.0.oneofs.borrow_mut();
+            let mut real_oneofs = msg.0.real_oneofs.borrow_mut();
+            let mut synthetic_oneofs = msg.0.synthetic_oneofs.borrow_mut();
             for od in desc.oneofs() {
                 let o = Oneof::new(od, msg.clone());
-                oneofs.push(o);
+                oneofs.push(o.clone());
+                if o.is_real() {
+                    real_oneofs.push(o);
+                } else {
+                    synthetic_oneofs.push(o);
+                }
             }
             let mut def_exts = msg.0.defined_extensions.borrow_mut();
             for xd in desc.extensions() {
@@ -123,7 +134,10 @@ impl<'a, U> Message<'a, U> {
                     .oneof_index()
                     .map(|i| oneofs.get(i as usize).expect("Oneof index out of bounds"))
                     .cloned();
-                let f = Field::new(fd, msg.clone(), oneof)?;
+                let f = Field::new(fd, msg.clone(), oneof.clone())?;
+                if let Some(oneof) = oneof {
+                    oneof.add_field(f.clone());
+                }
                 if f.is_obj_value() {
                     msg.0.obj_fields.borrow_mut().push(f.clone());
                 }
@@ -182,11 +196,15 @@ impl<'a, U> Message<'a, U> {
     pub fn oneofs(&self) -> Iter<Oneof<'a, U>> {
         Iter::from(&self.0.oneofs)
     }
-
+    pub fn real_oneofs(&self) -> Iter<Oneof<'a, U>> {
+        Iter::from(&self.0.real_oneofs)
+    }
+    pub fn synthetic_oneofs(&self) -> Iter<Oneof<'a, U>> {
+        Iter::from(&self.0.synthetic_oneofs)
+    }
     pub fn enums(&self) -> Iter<Enum<'a, U>> {
         Iter::from(&self.0.enums)
     }
-
     pub fn all_messages(&self) -> AllMessages<'a, U> {
         AllMessages::new(self.0.messages.clone())
     }
@@ -210,6 +228,7 @@ impl<'a, U> Message<'a, U> {
     pub fn nodes(&self) -> Nodes<'a, U> {
         Nodes::new(vec![
             self.defined_extensions().into(),
+            self.oneofs().into(),
             self.enums().into(),
             self.messages().into(),
         ])
@@ -223,6 +242,16 @@ impl<'a, U> Message<'a, U> {
         self.0.dependents.borrow_mut().push(dependent.into());
     }
 
+    pub(crate) fn add_applied_extension(&self, extension: Extension<'a, U>) {
+        self.0
+            .applied_extensions
+            .borrow_mut()
+            .push(extension.into());
+    }
+
+    pub(crate) fn add_import(&self, file: File<'a, U>) {
+        self.0.imports.borrow_mut().push(file.into());
+    }
     pub(crate) fn weak_file(&self) -> WeakFile<'a, U> {
         self.0.container.borrow().weak_file()
     }
@@ -325,12 +354,12 @@ impl<'a, U> WeakMessage<'a, U> {
     pub fn build_target(&self) -> bool {
         self.upgrade().build_target()
     }
-    pub fn container(&self) -> Container<'a, U> {
-        self.upgrade().container()
-    }
-    pub fn name(&self) -> Name<U> {
-        self.upgrade().name()
-    }
+    // pub fn container(&self) -> Container<'a, U> {
+    //     self.upgrade().container()
+    // }
+    // pub fn name(&self) -> Name<U> {
+    //     self.upgrade().name()
+    // }
     pub fn package(&self) -> Package<'a, U> {
         self.upgrade().package()
     }
@@ -380,7 +409,7 @@ pub struct AllMessages<'a, U> {
     q: VecDeque<Message<'a, U>>,
 }
 impl<'a, U> AllMessages<'a, U> {
-    pub(crate) fn new(msgs: MessageList<'a, U>) -> Self {
+    pub(crate) fn new(msgs: Rc<RefCell<Vec<Message<'a, U>>>>) -> Self {
         Self {
             q: VecDeque::from_iter(msgs.borrow().iter().cloned()),
         }

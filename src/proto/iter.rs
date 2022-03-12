@@ -31,6 +31,15 @@ pub struct FileDescriptorIter<'a> {
     iter: std::slice::Iter<'a, prost_types::FileDescriptorProto>,
 }
 
+impl<'a> FileDescriptorIter<'a> {
+    pub fn len(&self) -> usize {
+        self.iter.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
 impl<'a> Iterator for FileDescriptorIter<'a> {
     type Item = FileDescriptor<'a>;
     fn next(&mut self) -> Option<Self::Item> {
@@ -41,15 +50,6 @@ impl<'a> Iterator for FileDescriptorIter<'a> {
 impl<'a> From<&'a Vec<prost_types::FileDescriptorProto>> for FileDescriptorIter<'a> {
     fn from(data: &'a Vec<prost_types::FileDescriptorProto>) -> Self {
         FileDescriptorIter { iter: data.iter() }
-    }
-}
-
-impl<'a> FileDescriptorIter<'a> {
-    pub fn len(&self) -> usize {
-        self.iter.len()
-    }
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
     }
 }
 

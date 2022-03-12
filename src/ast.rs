@@ -1,8 +1,8 @@
 use crate::iter::Iter;
-use crate::proto::FileDescriptor;
 use crate::util::Util;
 use crate::AllNodes;
 use crate::Extensions;
+use crate::FileDescriptor;
 use crate::Node;
 use crate::Source;
 use crate::Type;

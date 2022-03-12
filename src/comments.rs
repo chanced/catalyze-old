@@ -1,4 +1,4 @@
-use crate::{iter::Iter, proto::Location, File, Package};
+use crate::{iter::Iter, File, Location, Package};
 
 #[derive(Debug, Default)]
 pub struct Comments<'a> {

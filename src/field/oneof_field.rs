@@ -325,7 +325,7 @@ impl<'a, U> FullyQualified for OneofField<'a, U> {
 }
 
 #[derive(Debug, Clone)]
-pub struct OneofEnumFieldDetail<'a, U> {
+pub(crate) struct OneofEnumFieldDetail<'a, U> {
     detail: OneofFieldDetail<'a, U>,
     enumeration: RefCell<WeakEnum<'a, U>>,
 }

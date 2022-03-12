@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     iter::Iter,
-    proto::{path::ServiceDescriptorPath, ServiceDescriptor},
+    proto::{ServiceDescriptor, ServiceDescriptorPath},
     Comments, File, FullyQualified, Method, Name, Node, NodeAtPath, Nodes, Package, WeakFile,
 };
 
@@ -29,7 +29,7 @@ impl<'a, U> Service<'a, U> {
         let util = file.util();
         let fully_qualified_name = format!("{}.{}", file.fully_qualified_name(), desc.name());
         Service(Rc::new(ServiceDetail {
-            name: Name::new(desc.name(), util.clone()),
+            name: Name::new(desc.name(), util),
             fqn: fully_qualified_name,
             methods: Rc::new(RefCell::new(Vec::with_capacity(desc.methods().len()))),
             comments: RefCell::new(Comments::default()),

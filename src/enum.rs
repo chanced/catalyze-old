@@ -8,12 +8,10 @@ use std::{
 use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
-    proto::{EnumDescriptorPath, EnumDescriptor},
-    Comments, EnumValue, File, FullyQualified, Message, MessageList, Name, Node, NodeAtPath, Nodes,
-    Package, WeakFile, WeakMessage, WellKnownEnum, WellKnownType,
+    proto::{EnumDescriptor, EnumDescriptorPath},
+    Comments, EnumValue, File, FullyQualified, Message, Name, Node, NodeAtPath, Nodes, Package,
+    WeakFile, WeakMessage, WellKnownEnum, WellKnownType,
 };
-
-pub(crate) type EnumList<'a, U> = Rc<RefCell<Vec<Enum<'a, U>>>>;
 
 #[derive(Debug, Clone)]
 struct EnumDetail<'a, U> {
@@ -223,7 +221,10 @@ pub struct AllEnums<'a, U> {
     enums: VecDeque<Enum<'a, U>>,
 }
 impl<'a, U> AllEnums<'a, U> {
-    pub(crate) fn new(enums: EnumList<'a, U>, msgs: MessageList<'a, U>) -> Self {
+    pub(crate) fn new(
+        enums: Rc<RefCell<Vec<Enum<'a, U>>>>,
+        msgs: Rc<RefCell<Vec<Message<'a, U>>>>,
+    ) -> Self {
         Self {
             msgs: msgs.borrow().iter().cloned().collect(),
             enums: enums.borrow().iter().cloned().collect(),

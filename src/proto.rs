@@ -11,8 +11,6 @@ use std::{
     slice, vec,
 };
 
-use self::path::FileDescriptorPath;
-
 lazy_static::lazy_static! {
     static ref DEFAULT_SOURCE_CODE_INFO: prost_types::SourceCodeInfo =
         prost_types::SourceCodeInfo::default();

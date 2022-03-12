@@ -7,7 +7,6 @@ use crate::{
     iter::Iter, proto::OneofDescriptor, Comments, Field, File, Files, FullyQualified, Message,
     Name, Node, NodeAtPath, Package, WeakFile, WeakMessage,
 };
-pub(crate) type OneofList<'a, U> = Rc<RefCell<Vec<Oneof<'a, U>>>>;
 
 #[derive(Debug, Clone)]
 pub(crate) struct OneofDetail<'a, U> {
@@ -59,7 +58,9 @@ impl<'a, U> Oneof<'a, U> {
     pub fn file(&self) -> File<'a, U> {
         self.0.msg.file()
     }
-
+    pub fn descriptor(&self) -> OneofDescriptor<'a> {
+        self.0.desc
+    }
     pub fn package(&self) -> Package<'a, U> {
         self.file().package()
     }

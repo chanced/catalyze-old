@@ -75,6 +75,9 @@ impl<'a, U> Extension<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.0.util.clone()
     }
+    fn downgrade(&self) -> WeakExtension<'a, U> {
+        WeakExtension(Rc::downgrade(&self.0))
+    }
 }
 
 impl<U> FullyQualified for Extension<'_, U> {
@@ -88,14 +91,29 @@ impl<'a, U> Clone for Extension<'a, U> {
     }
 }
 
+impl<'a, U> From<WeakExtension<'a, U>> for Extension<'a, U> {
+    fn from(weak: WeakExtension<'a, U>) -> Self {
+        weak.upgrade()
+    }
+}
 #[derive(Debug)]
 pub(crate) struct WeakExtension<'a, U>(Weak<ExtensionDetail<'a, U>>);
-
+impl<'a, U> WeakExtension<'a, U> {
+    fn upgrade(&self) -> Extension<'a, U> {
+        Extension(self.0.upgrade().expect("WeakExtension is expired"))
+    }
+}
+impl<'a, U> From<Extension<'a, U>> for WeakExtension<'a, U> {
+    fn from(ext: Extension<'a, U>) -> Self {
+        ext.downgrade()
+    }
+}
 impl<'a, U> Clone for WeakExtension<'a, U> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
+
 #[derive(Clone, Debug)]
 pub struct Extensions<'a, U> {
     ext_map: ExtensionMap<'a, U>,
@@ -141,7 +159,6 @@ impl<'a, U> Extensions<'a, U> {
         }
     }
 }
-
 impl<'a, U> Default for Extensions<'a, U> {
     fn default() -> Self {
         Self::new()

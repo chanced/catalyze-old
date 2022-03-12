@@ -22,8 +22,6 @@ use crate::{
 };
 use std::{cell::RefCell, convert::From, rc::Rc};
 
-pub(crate) type FieldList<'a, U> = Rc<RefCell<Vec<Field<'a, U>>>>;
-
 #[derive(Debug)]
 pub(crate) struct FieldDetail<'a, U> {
     msg: WeakMessage<'a, U>,
@@ -141,12 +139,12 @@ impl<'a, U> FieldDetail<'a, U> {
         f.value_type().try_into()
     }
 
-    pub fn map_value(&self) -> Result<Field<'a, U>, anyhow::Error> {
-        self.map_entry()?
-            .fields()
-            .get(1)
-            .ok_or_else(|| anyhow!("value_type field not found in map entry"))
-    }
+    // pub fn map_value(&self) -> Result<Field<'a, U>, anyhow::Error> {
+    //     self.map_entry()?
+    //         .fields()
+    //         .get(1)
+    //         .ok_or_else(|| anyhow!("value_type field not found in map entry"))
+    // }
 }
 
 impl<'a, U> Clone for FieldDetail<'a, U> {
