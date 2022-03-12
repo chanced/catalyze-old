@@ -20,7 +20,10 @@ struct MethodDetail<'a, U> {
 pub struct Method<'a, U>(Rc<MethodDetail<'a, U>>);
 
 impl<'a, U> Method<'a, U> {
-    pub(crate) fn new(_descriptor: prost_types::MethodDescriptorProto, _svc: Service<'a, U>) -> Self {
+    pub(crate) fn new(
+        _descriptor: prost_types::MethodDescriptorProto,
+        _svc: Service<'a, U>,
+    ) -> Self {
         todo!()
     }
 

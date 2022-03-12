@@ -3,11 +3,11 @@ use crate::{
     Package, Service,
 };
 use crate::{Ast, MapField, RepeatedField};
+use std::collections::VecDeque;
 use std::convert::From;
 use std::fmt::{self, Display};
 use std::marker::PhantomData;
 use std::rc::Rc;
-use std::{collections::VecDeque};
 pub(crate) trait NodeAtPath<'a, U> {
     fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>>;
 }
@@ -165,6 +165,14 @@ impl<'a, U> Node<'a, U> {
             Node::Service(s) => s.package(),
             Node::Method(m) => m.package(),
             Node::Extension(e) => e.package(),
+        }
+    }
+
+    pub(crate) fn add_dependent(&self, dep: Message<'a, U>) {
+        match self {
+            Node::Message(m) => m.add_dependent(dep),
+            Node::Enum(e) => e.add_dependent(dep),
+            _ => unreachable!(),
         }
     }
 }

@@ -218,9 +218,6 @@ impl<'a, U> Message<'a, U> {
     pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.comments.replace(comments);
     }
-    pub(crate) fn add_field(&self, field: Field<'a, U>) {
-        self.0.fields.borrow_mut().push(field);
-    }
 
     pub(crate) fn add_dependent(&self, dependent: Message<'a, U>) {
         self.0.dependents.borrow_mut().push(dependent.into());

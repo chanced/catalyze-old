@@ -8,7 +8,7 @@ use std::{
 use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
-    proto::{path::EnumDescriptorPath, EnumDescriptor},
+    proto::{EnumDescriptorPath, EnumDescriptor},
     Comments, EnumValue, File, FullyQualified, Message, MessageList, Name, Node, NodeAtPath, Nodes,
     Package, WeakFile, WeakMessage, WellKnownEnum, WellKnownType,
 };
@@ -34,6 +34,9 @@ impl<'a, U> EnumDetail<'a, U> {
     }
     pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.comments.replace(comments);
+    }
+    pub(crate) fn descriptor(&self) -> EnumDescriptor<'a> {
+        self.descriptor
     }
     pub fn container(&self) -> Container<'a, U> {
         self.container.clone().into()
@@ -99,7 +102,9 @@ impl<'a, U> Enum<'a, U> {
     pub fn is_well_known_type(&self) -> bool {
         self.0.is_well_known_type()
     }
-
+    pub fn descriptor(&self) -> EnumDescriptor<'a> {
+        self.0.descriptor()
+    }
     pub fn container(&self) -> Container<'a, U> {
         self.0.container.clone().into()
     }
@@ -136,6 +141,10 @@ impl<'a, U> Enum<'a, U> {
 
     pub fn nodes(&self) -> Nodes<'a, U> {
         Nodes::new(vec![self.values().into()])
+    }
+
+    pub(crate) fn add_dependent(&self, dep: Message<'a, U>) {
+        self.0.dependents.borrow_mut().push(dep.into());
     }
 }
 
@@ -188,20 +197,8 @@ impl<'a, U> WeakEnum<'a, U> {
     fn upgrade(&self) -> Enum<'a, U> {
         Enum(self.0.upgrade().expect("Failed to upgrade WeakEnum"))
     }
-    pub fn file(&self) -> File<'a, U> {
-        self.upgrade().file()
-    }
     pub(crate) fn weak_file(&self) -> WeakFile<'a, U> {
         self.upgrade().weak_file()
-    }
-    pub fn well_known_type(&self) -> Option<WellKnownType> {
-        self.upgrade().well_known_type()
-    }
-    pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
-        self.upgrade().well_known_enum()
-    }
-    pub fn is_well_known_type(&self) -> bool {
-        self.upgrade().is_well_known_type()
     }
 }
 impl<'a, U> Clone for WeakEnum<'a, U> {

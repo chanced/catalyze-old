@@ -1,3 +1,5 @@
+#![allow(clippy::new_ret_no_self)]
+
 use std::{cell::RefCell, rc::Rc};
 
 use anyhow::bail;
@@ -27,6 +29,19 @@ impl<'a, U> EnumFieldDetail<'a, U> {
     pub fn util(&self) -> Rc<U> {
         self.detail.util()
     }
+    pub fn comments(&self) -> Comments<'a> {
+        self.detail.comments()
+    }
+
+    pub fn set_comments(&self, comments: Comments<'a>) {
+        self.detail.set_comments(comments)
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.detail.package()
+    }
+    pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
+        self.enumeration().well_known_enum()
+    }
     pub fn is_marked_required(&self) -> bool {
         self.detail.is_marked_required()
     }
@@ -49,19 +64,11 @@ impl<'a, U> EnumFieldDetail<'a, U> {
     pub fn enumeration(&self) -> Enum<'a, U> {
         self.r#enum()
     }
-    pub fn comments(&self) -> Comments<'a> {
-        self.detail.comments()
-    }
 
-    pub fn set_comments(&self, comments: Comments<'a>) {
-        self.detail.set_comments(comments)
-    }
     pub fn file(&self) -> File<'a, U> {
         self.detail.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
-        self.detail.package()
-    }
+
     pub fn imports(&self) -> Files<'a, U> {
         let e = self.r#enum();
         if self.file() != e.file() {
@@ -77,9 +84,7 @@ impl<'a, U> EnumFieldDetail<'a, U> {
     pub fn is_well_known_type(&self) -> bool {
         self.enumeration().is_well_known_type()
     }
-    pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
-        self.enumeration().well_known_enum()
-    }
+
     pub fn well_known_type(&self) -> Option<WellKnownType> {
         self.enumeration().well_known_type()
     }
@@ -117,6 +122,9 @@ impl<'a, U> EnumField<'a, U> {
     pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
+    pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
+        self.0.well_known_enum()
+    }
     /// Returns the `Enum` of this `EnumField`.
     pub fn r#enum(&self) -> Enum<'a, U> {
         self.0.enumeration.borrow().clone().into()
@@ -126,15 +134,37 @@ impl<'a, U> EnumField<'a, U> {
         self.0.build_target()
     }
 
+    pub fn is_repeated(&self) -> bool {
+        self.0.is_repeated()
+    }
+    pub fn is_map(&self) -> bool {
+        self.0.is_map()
+    }
+    pub fn message(&self) -> Message<'a, U> {
+        self.0.message()
+    }
+    /// Returns `Rc<U>`
+    pub fn util(&self) -> Rc<U> {
+        self.0.util()
+    }
+    pub fn comments(&self) -> Comments<'a> {
+        self.0.comments()
+    }
+
+    pub fn set_comments(&self, comments: Comments<'a>) {
+        self.0.set_comments(comments)
+    }
+    pub fn package(&self) -> Package<'a, U> {
+        self.0.package()
+    }
+
     /// alias for `r#enum`
     ///
     /// Returns the `Enum` of this `EnumField`.
     pub fn enumeration(&self) -> Enum<'a, U> {
         self.r#enum()
     }
-    pub fn comments(&self) -> Comments<'a> {
-        self.0.detail.comments()
-    }
+
     pub fn has_presence(&self) -> bool {
         self.syntax() == Syntax::Proto2 || self.descriptor().is_marked_optional(self.syntax())
     }
@@ -145,15 +175,8 @@ impl<'a, U> EnumField<'a, U> {
         self.0.descriptor()
     }
 
-    pub fn package(&self) -> Package<'a, U> {
-        self.0.detail.package()
-    }
     pub fn file(&self) -> File<'a, U> {
         self.0.detail.file()
-    }
-
-    pub fn set_comments(&self, comments: Comments<'a>) {
-        self.0.detail.set_comments(comments);
     }
 
     pub fn is_well_known_type(&self) -> bool {
@@ -179,9 +202,6 @@ impl<'a, U> EnumField<'a, U> {
         self.0.is_marked_optional()
     }
 
-    pub fn util(&self) -> Rc<U> {
-        self.0.detail.util()
-    }
     pub(crate) fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
         self.0.set_value(value)
     }

@@ -1,5 +1,3 @@
-
-
 use crate::container::Container;
 use crate::iter::Iter;
 use crate::package::WeakPackage;
@@ -106,8 +104,8 @@ impl<'a, U> File<'a, U> {
                         FileDescriptorPath::Syntax => file.set_comments(loc.into()),
                         _ => {
                             let n = file.node_at_path(loc.path());
-                            if n.is_some() {
-                                n.unwrap().set_comments(loc.into())
+                            if let Some(n) = n {
+                                n.set_comments(loc.into())
                             }
                         }
                     },
@@ -137,7 +135,9 @@ impl<'a, U> File<'a, U> {
     pub fn package_comments(&self) -> Comments<'a> {
         *self.0.pkg_comments.borrow()
     }
-
+    pub fn descriptor(&self) -> FileDescriptor<'a> {
+        self.0.desc
+    }
     pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         *self.0.comments.borrow_mut() = comments;
     }
@@ -300,12 +300,7 @@ impl<'a, U> WeakFile<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.upgrade().package()
     }
-    pub fn name(&self) -> Name<U> {
-        self.upgrade().name()
-    }
-    pub fn path(&self) -> PathBuf {
-        self.upgrade().path()
-    }
+
     pub fn build_target(&self) -> bool {
         self.upgrade().build_target()
     }

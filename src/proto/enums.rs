@@ -180,19 +180,19 @@ impl TryFrom<i32> for CType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum JsType {
     /// Use the default type.
-    JsNormal = 0,
+    Normal = 0,
     /// Use JavaScript strings.
-    JsString = 1,
+    String = 1,
     /// Use JavaScript numbers.
-    JsNumber = 2,
+    Number = 2,
 }
 
 impl From<prost_types::field_options::JsType> for JsType {
     fn from(value: prost_types::field_options::JsType) -> Self {
         match value {
-            prost_types::field_options::JsType::JsNormal => JsType::JsNormal,
-            prost_types::field_options::JsType::JsString => JsType::JsString,
-            prost_types::field_options::JsType::JsNumber => JsType::JsNumber,
+            prost_types::field_options::JsType::JsNormal => JsType::Normal,
+            prost_types::field_options::JsType::JsString => JsType::String,
+            prost_types::field_options::JsType::JsNumber => JsType::Number,
         }
     }
 }
@@ -211,9 +211,9 @@ impl TryFrom<i32> for JsType {
     type Error = anyhow::Error;
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         match value {
-            0 => Ok(JsType::JsNormal),
-            1 => Ok(JsType::JsString),
-            2 => Ok(JsType::JsNumber),
+            0 => Ok(JsType::Normal),
+            1 => Ok(JsType::String),
+            2 => Ok(JsType::Number),
             _ => bail!("invalid JsType {}", value),
         }
     }

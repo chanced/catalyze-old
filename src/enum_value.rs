@@ -53,7 +53,7 @@ impl<'a, U> EnumValue<'a, U> {
         }))
     }
     pub fn name(&self) -> Name<U> {
-        self.0.name.clone()
+        self.0.name()
     }
 
     /// Alias for `r#enum`.
@@ -63,9 +63,12 @@ impl<'a, U> EnumValue<'a, U> {
         self.r#enum()
     }
 
+    pub fn descriptor(&self) -> EnumValueDescriptor<'a> {
+        self.0.descriptor()
+    }
     /// Returns the `Enum` that contains this value.
     pub fn r#enum(&self) -> Enum<'a, U> {
-        self.0.e.clone().into()
+        self.0.enumeration()
     }
     pub fn container(&self) -> Container<'a, U> {
         self.enumeration().container()
@@ -79,8 +82,8 @@ impl<'a, U> EnumValue<'a, U> {
         self.enumeration().package()
     }
 
-    fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
+    pub fn fully_qualified_name(&self) -> String {
+        self.0.fully_qualified_name()
     }
     pub fn comments(&self) -> Comments<'a> {
         self.0.comments()

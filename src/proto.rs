@@ -1,8 +1,9 @@
 mod enums;
-pub mod iter;
-pub mod path;
+mod iter;
+mod path;
 pub use enums::*;
-use iter::*;
+pub use iter::*;
+pub use path::*;
 
 use std::{
     fmt::{self},

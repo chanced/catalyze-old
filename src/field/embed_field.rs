@@ -1,3 +1,5 @@
+#![allow(clippy::new_ret_no_self)]
+
 use std::{cell::RefCell, rc::Rc};
 
 use anyhow::bail;
@@ -33,6 +35,9 @@ impl<'a, U> EmbedFieldDetail<'a, U> {
     pub fn message(&self) -> Message<'a, U> {
         self.detail.message()
     }
+    pub fn well_known_message(&self) -> Option<WellKnownMessage> {
+        self.embed().well_known_message()
+    }
     /// Returns `Rc<U>`
     pub fn util(&self) -> Rc<U> {
         self.detail.util()
@@ -61,9 +66,7 @@ impl<'a, U> EmbedFieldDetail<'a, U> {
     pub fn well_known_type(&self) -> Option<WellKnownType> {
         self.embed().well_known_type()
     }
-    pub fn well_known_message(&self) -> Option<WellKnownMessage> {
-        self.embed().well_known_message()
-    }
+
     pub fn has_import(&self) -> bool {
         self.embed.borrow().file() != self.detail.file()
     }
@@ -92,7 +95,7 @@ pub struct EmbedField<'a, U>(Rc<EmbedFieldDetail<'a, U>>);
 
 impl<'a, U> EmbedField<'a, U> {
     pub fn name(&self) -> Name<U> {
-        self.0.detail.name.clone()
+        self.0.name()
     }
     pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
@@ -100,9 +103,7 @@ impl<'a, U> EmbedField<'a, U> {
     pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.detail.set_comments(comments);
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.detail.fully_qualified_name()
-    }
+
     pub fn embed(&self) -> Message<'a, U> {
         self.0.embed()
     }
@@ -135,6 +136,21 @@ impl<'a, U> EmbedField<'a, U> {
 
     pub fn imports(&self) -> Files<'a, U> {
         self.0.imports()
+    }
+    pub fn fully_qualified_name(&self) -> String {
+        self.0.fully_qualified_name()
+    }
+    pub fn is_repeated(&self) -> bool {
+        self.0.is_repeated()
+    }
+    pub fn is_map(&self) -> bool {
+        self.0.is_map()
+    }
+    pub fn message(&self) -> Message<'a, U> {
+        self.0.message()
+    }
+    pub fn well_known_message(&self) -> Option<WellKnownMessage> {
+        self.0.well_known_message()
     }
 
     pub fn descriptor(&self) -> FieldDescriptor<'a> {

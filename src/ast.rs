@@ -144,6 +144,7 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
                                 .get(path)
                                 .cloned()
                                 .ok_or_else(|| anyhow!("enum {} not found", path))?;
+                            node.add_dependent(msg.clone());
                             field.set_value(node)?;
                         }
                         _ => unreachable!(),
