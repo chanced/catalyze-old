@@ -3,8 +3,8 @@ use crate::util::Util;
 use crate::AllNodes;
 use crate::Extensions;
 use crate::FileDescriptor;
+use crate::Input;
 use crate::Node;
-use crate::Source;
 use crate::Type;
 use crate::{File, Package};
 
@@ -15,13 +15,6 @@ use std::rc::Rc;
 
 use anyhow::anyhow;
 use anyhow::bail;
-
-// protoc
-// --include_imports
-// --include_source_info
-// --proto_path=[dep dir path]
-// --descriptor_set_out=[path].bin
-// [path].proto
 
 /// Ast encapsulates the entirety of the input CodeGeneratorRequest from protoc,
 /// parsed to build the Node graph used by catalyze.
@@ -86,20 +79,19 @@ impl<'a, U> Clone for Ast<'a, U> {
     }
 }
 impl<'a, U: Util + 'a> Ast<'a, U> {
-    pub fn new(source: &'a impl Source<'a>, util: Rc<U>) -> Result<Self, anyhow::Error> {
-        let targets: HashSet<String> = source.targets().iter().cloned().collect();
+    pub fn new(input: Input<'a>, util: Rc<U>) -> Result<Self, anyhow::Error> {
         let mut ast = AstDetail {
             util: util.clone(),
             packages: HashMap::default(),
             files: HashMap::default(),
             file_list: Rc::new(RefCell::new(Vec::new())),
-            targets: HashMap::with_capacity(source.targets().len()),
+            targets: HashMap::with_capacity(input.targets.len()),
             defined_extensions: Extensions::new(),
             nodes: HashMap::default(),
             package_list: Rc::new(RefCell::new(Vec::new())),
         };
 
-        for fd in source.files() {
+        for fd in input.files() {
             let fd: FileDescriptor<'a> = fd.into();
 
             let pkg = {
@@ -113,7 +105,7 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
                     })
                     .clone()
             };
-            let build_target = targets.contains(fd.name());
+            let build_target = input.targets.contains(&fd.name().to_string());
             let file = File::new(build_target, fd.to_owned(), pkg.clone())?;
             for d in fd.dependencies() {
                 let dep = ast

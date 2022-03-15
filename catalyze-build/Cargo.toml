@@ -6,3 +6,7 @@ edition = "2021"
 [dependencies]
 catalyze = { path = "../" }
 anyhow = "1.0.53"
+prost-types = "0.9.0"
+
+[build-dependencies]
+which = "4.2.4"
