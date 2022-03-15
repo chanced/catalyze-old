@@ -4,8 +4,9 @@ use crate::Module;
 use std::{
     fs::File,
     io::{self, stdin},
-    io::{BufReader, Read, Stdin},
-    path::Path,
+    io::{stdout, BufReader, BufWriter, Read, Stdin, Stdout, Write},
+    marker::PhantomData,
+    path::{Path, PathBuf},
 };
 
 pub struct Input<'a> {
@@ -21,11 +22,12 @@ pub trait Workflow: Sized {
     fn parse_input<'a, R: Read>(g: Generator<Self, R>) -> Result<Input<'a>, io::Error>;
 }
 
-/// A `Standalone` reads a `FileDescriptorSet`, typically from the contents of a
-/// saved output from `protoc`, and generates based on a list of target (proto)
-/// files. The output is saved to disk at the specified output path.
-pub struct Standalone {}
-impl Workflow for Standalone {
+/// The `StandAlone` workflow reads a `FileDescriptorSet`, typically from the
+/// contents of a saved output from `protoc`, and generates based on a list of
+/// target (proto) files. The output is saved to disk at the specified output
+/// path.
+pub struct StandAlone {}
+impl Workflow for StandAlone {
     fn parse_input<'a, R: Read>(g: Generator<Self, R>) -> Result<Input<'a>, io::Error> {
         todo!()
     }
@@ -43,46 +45,76 @@ impl Workflow for ProtocPlugin {
     }
 }
 
-pub struct Generator<W: Workflow = ProtocPlugin, R: Read = Stdin> {
-    input: BufReader<R>,
+pub struct Generator<W: Workflow = ProtocPlugin, I: Read = Stdin, O: Write = Stdout> {
+    input: BufReader<I>,
+    output: Option<BufWriter<O>>,
+    output_dir: Option<PathBuf>,
     modules: Vec<Module>,
-    tarets: Vec<String>,
-    workflow: Box<W>,
+    targets: Vec<String>,
+    _marker: std::marker::PhantomData<W>,
 }
 
 impl Generator {
-    pub fn new_protoc_plugin() -> Generator<ProtocPlugin> {
+    pub fn new_protoc_plugin() -> Generator<ProtocPlugin, Stdin, Stdout> {
         let input = BufReader::new(stdin());
-        Self {
+        let output = Some(BufWriter::new(stdout()));
+        Generator {
             input,
+            output,
             modules: Vec::new(),
-            tarets: Vec::new(),
-            workflow: Box::new(ProtocPlugin {}),
+            targets: Vec::new(),
+            _marker: std::marker::PhantomData,
+            output_dir: None,
         }
     }
 }
 
-impl<T: Workflow, R: Read> Generator<T, R> {
-    /// Creates a new StandAlone
-    pub fn new_standalone(
-        input: R,
-        targets: &[impl AsRef<Path>],
-    ) -> Result<Generator<Standalone, R>, anyhow::Error> {
-        let mut target_strs = Vec::with_capacity(targets.len());
-        for path in targets {
+impl<I: Read, O: Write> Generator<ProtocPlugin, I, O> {
+    pub fn input<R: Read>(self, input: R) -> Generator<ProtocPlugin, R, O> {
+        Generator {
+            input: BufReader::new(input),
+            modules: self.modules,
+            targets: self.targets,
+            _marker: std::marker::PhantomData,
+            output_dir: self.output_dir,
+            output: self.output,
+        }
+    }
+    pub fn output<W: Write>(self, output: W) -> Generator<ProtocPlugin, I, W> {
+        Generator {
+            input: self.input,
+            modules: self.modules,
+            targets: self.targets,
+            _marker: std::marker::PhantomData,
+            output_dir: self.output_dir,
+            output: Some(BufWriter::new(output)),
+        }
+    }
+}
+
+impl<W: Workflow, I: Read> Generator<W, I> {
+    /// Returns a new `Generator` with the `StandAlone` workflow.
+    pub fn new_stand_alone(
+        input: I,
+        target_protos: &[impl AsRef<Path>],
+        output_dir: impl AsRef<Path>,
+    ) -> Result<Generator<StandAlone, I, File>, anyhow::Error> {
+        let mut targets = Vec::with_capacity(target_protos.len());
+        for path in target_protos {
             let path = path.as_ref();
             let p = path.to_str();
             if p.is_none() {
                 bail!("provided path is not valid UTF-8: {:?}", path);
             }
-            target_strs.push(p.unwrap().to_string());
+            targets.push(p.unwrap().to_string());
         }
-
         Ok(Generator {
+            targets,
             input: BufReader::new(input),
             modules: Vec::new(),
-            tarets: target_strs,
-            workflow: Box::new(Standalone {}),
+            _marker: PhantomData,
+            output_dir: Some(output_dir.as_ref().to_path_buf()),
+            output: None,
         })
     }
 }
