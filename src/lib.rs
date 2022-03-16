@@ -23,7 +23,6 @@ mod proto;
 mod service;
 mod source;
 mod traits;
-
 pub mod util;
 pub use artifact::*;
 mod visit;

@@ -26,9 +26,12 @@ pub enum Artifact {
         contents: String,
         op: Op,
     },
-    /// Custom files will always be written to disk rather than being sent to `protoc`.
-    ///
-    /// The path should be relative and must not start with `"."`, `".."`, or `"/"`.
+    /// Custom Artifacts are files generated directly against the file system,
+    /// and do not use protoc for the generation. These artifacts should be used
+    /// over Generic or Rust Artifacts when custom permissions need to be set
+    /// (such as executable scripts or read-only configs) or when the file needs
+    /// to be created outside of the protoc-plugin's generation output
+    /// directory.
     Custom {
         path: String,
         contents: String,
