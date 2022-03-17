@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::Iter;
 use crate::Syntax;
 use crate::WeakFile;
@@ -130,12 +128,7 @@ impl<'a> WeakContainer<'a> {
             WeakContainer::Message(m) => m.package(),
         }
     }
-    pub fn fully_qualified_name(&self) -> String {
-        match self {
-            WeakContainer::File(f) => f.fully_qualified_name(),
-            WeakContainer::Message(m) => m.fully_qualified_name(),
-        }
-    }
+
     pub fn build_target(&self) -> bool {
         match self {
             WeakContainer::File(f) => f.build_target(),

@@ -61,9 +61,8 @@ impl<'a> Ast<'a> {
         self.0.files()
     }
     pub fn target_files(&self) -> Iter<File<'a>> {
-        Iter::from(&self.0.target_files)
+        self.0.target_files()
     }
-
     pub fn packages(&self) -> Iter<Package<'a>> {
         self.0.packages()
     }
@@ -114,7 +113,7 @@ impl<'a> Ast<'a> {
 
                 if build_target {
                     ast.targets.insert(file.name().to_string(), file.clone());
-                    ast.target_files.borrow().push(file.clone());
+                    ast.target_files.borrow_mut().push(file.clone());
                 }
                 ast.files.insert(file.name().to_string(), file.clone());
                 for ext in file.defined_extensions() {
@@ -229,8 +228,6 @@ impl<'a> Ast<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
-
     #[test]
     fn nodes_issue() {
         let pkg = crate::Package::new("foo");

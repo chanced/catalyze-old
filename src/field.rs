@@ -30,7 +30,6 @@ pub(crate) struct FieldDetail<'a> {
     syntax: Syntax,
     is_map: bool,
     in_oneof: bool,
-
     desc: FieldDescriptor<'a>,
     comments: RefCell<Comments<'a>>,
     oneof: Option<WeakOneof<'a>>,

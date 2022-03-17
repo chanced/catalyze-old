@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use proc_macro2::TokenStream;
 
 pub enum Op {

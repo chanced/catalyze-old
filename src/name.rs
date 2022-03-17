@@ -32,7 +32,7 @@ impl Name {
             val: val.to_owned(),
         }
     }
-    /// Assign returns a new `Name` with the contents of `val` and a cloned copy
+    /// Returns a new `Name` with the contents of `val` and a cloned copy
     /// of `Rc<U>`.
     ///
     /// # Examples
@@ -40,8 +40,8 @@ impl Name {
     /// Basic usage:
     ///
     /// ```
-    /// let n = Name::new("foo", Rc::new(RefCell::new(util::Generic{})));
-    /// let n2 = n.assign("bar");
+    /// let n = Name::new("foo");
+    /// let n2 = n.with_value("bar");
     /// assert_eq!(n2, "bar");
     /// ```
     pub fn with_value(&self, val: &str) -> Self {
@@ -49,22 +49,7 @@ impl Name {
             val: val.to_owned(),
         }
     }
-    /// Assign returns a new `Name` with the contents of `val` and a cloned copy
-    /// of `Rc<U>`.
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// let n = Name::new("foo", Rc::new(RefCell::new(util::Generic{})));
-    /// let n2 = n.assign(String::from("bar"));
-    /// assert_eq!(n2, "bar");
-    /// ```
-    pub fn assign_string(&self, val: String) -> Self {
-        Self { val }
-    }
-    // Returns a byte slice of this `Name`'s value.
+    /// Returns a byte slice of this `Name`'s value.
     pub fn as_bytes(&self) -> &[u8] {
         self.val.as_bytes()
     }
@@ -91,7 +76,9 @@ impl Name {
 
 impl From<&str> for Name {
     fn from(val: &str) -> Self {
-        Self { val: val.to_string() }
+        Self {
+            val: val.to_string(),
+        }
     }
 }
 

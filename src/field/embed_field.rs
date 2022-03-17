@@ -23,9 +23,6 @@ impl<'a> EmbedFieldDetail<'a> {
     pub fn embed(&self) -> Message<'a> {
         self.embed.borrow().clone().into()
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.detail.fully_qualified_name()
-    }
     pub fn is_repeated(&self) -> bool {
         self.detail.is_repeated()
     }
