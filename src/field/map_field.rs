@@ -6,7 +6,7 @@ use anyhow::{anyhow, bail};
 use crate::{
     proto::{FieldDescriptor, Type},
     proto::{Scalar, Syntax},
-    Comments, Enum, Field, File, Files, FullyQualified, JsType, Message, Name, Node, Package,
+    Comments, Enum, Field, File, FileRefs, FullyQualified, JsType, Message, Name, Node, Package,
     UninterpretedOptions, WeakEnum, WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
@@ -222,9 +222,9 @@ impl<'a, U> MapField<'a, U> {
             MapField::Embed(f) => f.has_import(),
         }
     }
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         match self {
-            MapField::Scalar(_) => Files::empty(),
+            MapField::Scalar(_) => FileRefs::empty(),
             MapField::Enum(f) => f.imports(),
             MapField::Embed(f) => f.imports(),
         }
@@ -725,11 +725,11 @@ impl<'a, U> MappedEmbedField<'a, U> {
     pub fn has_import(&self) -> bool {
         self.file() != self.0.embed().file()
     }
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         if self.has_import() {
-            Files::from(self.0.embed().weak_file())
+            FileRefs::from(self.0.embed().weak_file())
         } else {
-            Files::empty()
+            FileRefs::empty()
         }
     }
 
@@ -937,11 +937,11 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn has_import(&self) -> bool {
         return self.enumeration().file() != self.file();
     }
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         if self.has_import() {
-            Files::from(self.enumeration().weak_file())
+            FileRefs::from(self.enumeration().weak_file())
         } else {
-            Files::empty()
+            FileRefs::empty()
         }
     }
 

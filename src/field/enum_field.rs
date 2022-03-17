@@ -5,7 +5,7 @@ use std::{cell::RefCell, rc::Rc};
 use anyhow::bail;
 
 use crate::{
-    proto::FieldDescriptor, proto::Syntax, Comments, Enum, Field, FieldDetail, File, Files,
+    proto::FieldDescriptor, proto::Syntax, Comments, Enum, Field, FieldDetail, File, FileRefs,
     FullyQualified, Message, Name, Node, Package, Type, UninterpretedOptions, WeakEnum,
     WellKnownEnum, WellKnownType,
 };
@@ -70,12 +70,12 @@ impl<'a, U> EnumFieldDetail<'a, U> {
         self.detail.file()
     }
 
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         let e = self.r#enum();
         if self.file() != e.file() {
-            Files::from(e.weak_file())
+            FileRefs::from(e.weak_file())
         } else {
-            Files::empty()
+            FileRefs::empty()
         }
     }
 
@@ -187,7 +187,7 @@ impl<'a, U> EnumField<'a, U> {
     pub fn has_import(&self) -> bool {
         self.0.has_import()
     }
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         self.0.imports()
     }
 

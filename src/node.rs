@@ -26,59 +26,7 @@ pub enum Node<'a, U> {
     Field(Field<'a, U>),
     Extension(Extension<'a, U>),
 }
-impl<'a, U> Display for Node<'a, U> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Node::Package(p) => write!(fmt, "Package({})", p.name()),
-            Node::File(f) => write!(fmt, "File({})", f.name()),
-            Node::Message(m) => write!(fmt, "Message({})", m.fully_qualified_name()),
-            Node::Oneof(o) => write!(fmt, "Oneof({})", o.fully_qualified_name()),
-            Node::Enum(e) => write!(fmt, "Enum({})", e.fully_qualified_name()),
-            Node::EnumValue(e) => write!(fmt, "EnumValue({})", e.fully_qualified_name()),
-            Node::Service(s) => write!(fmt, "Service({})", s.fully_qualified_name()),
-            Node::Method(m) => write!(fmt, "Mehtod({})", m.fully_qualified_name()),
-            Node::Field(f) => match f {
-                Field::Embed(f) => write!(fmt, "EmbedField({})", f.fully_qualified_name()),
-                Field::Enum(f) => write!(fmt, "EnumField({})", f.fully_qualified_name()),
-                Field::Map(f) => match f {
-                    MapField::Scalar(f) => {
-                        write!(fmt, "MappedScalarField({})", f.fully_qualified_name())
-                    }
-                    MapField::Enum(f) => {
-                        write!(fmt, "MappedEnumField({})", f.fully_qualified_name())
-                    }
-                    MapField::Embed(f) => {
-                        write!(fmt, "MappedEmbedField({})", f.fully_qualified_name())
-                    }
-                },
-                Field::Oneof(f) => match f {
-                    crate::OneofField::Scalar(f) => {
-                        write!(fmt, "OneofScalarField({})", f.fully_qualified_name())
-                    }
-                    crate::OneofField::Enum(f) => {
-                        write!(fmt, "OneofEnumField({})", f.fully_qualified_name())
-                    }
-                    crate::OneofField::Embed(f) => {
-                        write!(fmt, "OneofEmbedField({})", f.fully_qualified_name())
-                    }
-                },
-                Field::Repeated(f) => match f {
-                    RepeatedField::Scalar(f) => {
-                        write!(fmt, "RepeatedScalarField({})", f.fully_qualified_name())
-                    }
-                    RepeatedField::Enum(f) => {
-                        write!(fmt, "RepeatedEnumField({})", f.fully_qualified_name())
-                    }
-                    RepeatedField::Embed(f) => {
-                        write!(fmt, "RepeatedEmbedField({})", f.fully_qualified_name())
-                    }
-                },
-                Field::Scalar(f) => write!(fmt, "ScalarField({})", f.fully_qualified_name()),
-            },
-            Node::Extension(e) => write!(fmt, "Extension({})", e.fully_qualified_name()),
-        }
-    }
-}
+
 impl<'a, U> Node<'a, U> {
     pub fn name(&self) -> Name<U> {
         match self {
@@ -105,7 +53,6 @@ impl<'a, U> Node<'a, U> {
             _ => Nodes::empty(),
         }
     }
-
     pub fn fully_qualified_name(&self) -> String {
         match self {
             Node::Package(p) => p.fully_qualified_name(),
@@ -165,6 +112,21 @@ impl<'a, U> Node<'a, U> {
         }
     }
 
+    pub(crate) fn replace_util(&self) -> Node<'a, U> {
+        match self {
+            Node::Package(p) => Node::Package(p.replace_util()),
+            Node::File(f) => Node::File(f.replace_util()),
+            Node::Message(m) => Node::Message(m.replace_util()),
+            Node::Oneof(o) => Node::Oneof(o.replace_util()),
+            Node::Enum(e) => Node::Enum(e.replace_util()),
+            Node::EnumValue(ev) => Node::EnumValue(ev.replace_util()),
+            Node::Service(s) => Node::Service(s.replace_util()),
+            Node::Method(m) => Node::Method(m.replace_util()),
+            Node::Field(f) => Node::Field(f.replace_util()),
+            Node::Extension(e) => Node::Extension(e.replace_util()),
+        }
+    }
+
     pub(crate) fn add_dependent(&self, dep: Message<'a, U>) {
         match self {
             Node::Message(m) => m.add_dependent(dep),
@@ -187,7 +149,59 @@ impl<'a, U> Node<'a, U> {
         }
     }
 }
-
+impl<'a, U> Display for Node<'a, U> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Node::Package(p) => write!(fmt, "Package({})", p.name()),
+            Node::File(f) => write!(fmt, "File({})", f.name()),
+            Node::Message(m) => write!(fmt, "Message({})", m.fully_qualified_name()),
+            Node::Oneof(o) => write!(fmt, "Oneof({})", o.fully_qualified_name()),
+            Node::Enum(e) => write!(fmt, "Enum({})", e.fully_qualified_name()),
+            Node::EnumValue(e) => write!(fmt, "EnumValue({})", e.fully_qualified_name()),
+            Node::Service(s) => write!(fmt, "Service({})", s.fully_qualified_name()),
+            Node::Method(m) => write!(fmt, "Mehtod({})", m.fully_qualified_name()),
+            Node::Field(f) => match f {
+                Field::Embed(f) => write!(fmt, "EmbedField({})", f.fully_qualified_name()),
+                Field::Enum(f) => write!(fmt, "EnumField({})", f.fully_qualified_name()),
+                Field::Map(f) => match f {
+                    MapField::Scalar(f) => {
+                        write!(fmt, "MappedScalarField({})", f.fully_qualified_name())
+                    }
+                    MapField::Enum(f) => {
+                        write!(fmt, "MappedEnumField({})", f.fully_qualified_name())
+                    }
+                    MapField::Embed(f) => {
+                        write!(fmt, "MappedEmbedField({})", f.fully_qualified_name())
+                    }
+                },
+                Field::Oneof(f) => match f {
+                    crate::OneofField::Scalar(f) => {
+                        write!(fmt, "OneofScalarField({})", f.fully_qualified_name())
+                    }
+                    crate::OneofField::Enum(f) => {
+                        write!(fmt, "OneofEnumField({})", f.fully_qualified_name())
+                    }
+                    crate::OneofField::Embed(f) => {
+                        write!(fmt, "OneofEmbedField({})", f.fully_qualified_name())
+                    }
+                },
+                Field::Repeated(f) => match f {
+                    RepeatedField::Scalar(f) => {
+                        write!(fmt, "RepeatedScalarField({})", f.fully_qualified_name())
+                    }
+                    RepeatedField::Enum(f) => {
+                        write!(fmt, "RepeatedEnumField({})", f.fully_qualified_name())
+                    }
+                    RepeatedField::Embed(f) => {
+                        write!(fmt, "RepeatedEmbedField({})", f.fully_qualified_name())
+                    }
+                },
+                Field::Scalar(f) => write!(fmt, "ScalarField({})", f.fully_qualified_name()),
+            },
+            Node::Extension(e) => write!(fmt, "Extension({})", e.fully_qualified_name()),
+        }
+    }
+}
 impl<'a, U> FullyQualified for Node<'a, Node<'a, U>> {
     fn fully_qualified_name(&self) -> String {
         match self {

@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    iter::Iter, proto::OneofDescriptor, Comments, Field, File, Files, FullyQualified, Message,
+    iter::Iter, proto::OneofDescriptor, Comments, Field, File, FileRefs, FullyQualified, Message,
     Name, Node, Package, WeakFile, WeakMessage,
 };
 
@@ -64,8 +64,8 @@ impl<'a, U> Oneof<'a, U> {
     pub fn package(&self) -> Package<'a, U> {
         self.file().package()
     }
-    pub fn imports(&self) -> Files<'a, U> {
-        Files::from(&self.0.imports)
+    pub fn imports(&self) -> FileRefs<'a, U> {
+        FileRefs::from(&self.0.imports)
     }
     pub(crate) fn add_field(&self, field: Field<'a, U>) {
         self.0.fields.borrow_mut().push(field.clone());

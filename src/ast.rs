@@ -10,7 +10,6 @@ use crate::{File, Package};
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::rc::Rc;
 
 use anyhow::anyhow;
@@ -23,6 +22,7 @@ pub(crate) struct AstDetail<'a, U> {
     files: HashMap<String, File<'a, U>>,
     file_list: Rc<RefCell<Vec<File<'a, U>>>>,
     targets: HashMap<String, File<'a, U>>,
+    target_files: Rc<RefCell<Vec<File<'a, U>>>>,
     packages: HashMap<String, Package<'a, U>>,
     package_list: Rc<RefCell<Vec<Package<'a, U>>>>,
     defined_extensions: Extensions<'a, U>,
@@ -38,6 +38,9 @@ impl<'a, U> AstDetail<'a, U> {
     }
 
     pub fn files(&self) -> Iter<File<'a, U>> {
+        Iter::from(&self.file_list)
+    }
+    pub fn target_files(&self) -> Iter<File<'a, U>> {
         Iter::from(&self.file_list)
     }
     pub fn packages(&self) -> Iter<Package<'a, U>> {
@@ -59,10 +62,13 @@ impl<'a, U> Ast<'a, U> {
     pub fn file(&self, name: &str) -> Option<File<'a, U>> {
         self.0.file(name)
     }
-
     pub fn files(&self) -> Iter<File<'a, U>> {
         self.0.files()
     }
+    pub fn target_files(&self) -> Iter<File<'a, U>> {
+        Iter::from(self.0.target_files)
+    }
+
     pub fn packages(&self) -> Iter<Package<'a, U>> {
         self.0.packages()
     }
@@ -89,6 +95,7 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
             defined_extensions: Extensions::new(),
             nodes: HashMap::default(),
             package_list: Rc::new(RefCell::new(Vec::new())),
+            target_files: Rc::new(RefCell::new(Vec::new())),
         };
 
         for fd in input.files() {
@@ -117,6 +124,7 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
 
                 if build_target {
                     ast.targets.insert(file.name().to_string(), file.clone());
+                    ast.target_files.borrow().push(file.clone());
                 }
                 ast.files.insert(file.name().to_string(), file.clone());
                 for ext in file.defined_extensions() {

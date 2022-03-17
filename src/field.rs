@@ -17,7 +17,7 @@ pub use scalar_field::*;
 use crate::{
     container::Container,
     proto::{FieldDescriptor, Scalar, Syntax, Type},
-    CType, Comments, Enum, File, Files, FullyQualified, JsType, Message, Name, Node, Oneof,
+    CType, Comments, Enum, File, FileRefs, FullyQualified, JsType, Message, Name, Node, Oneof,
     Package, UninterpretedOptions, WeakMessage, WeakOneof, WellKnownType,
 };
 use std::{cell::RefCell, convert::From, rc::Rc};
@@ -284,14 +284,14 @@ impl<'a, U> Field<'a, U> {
         }
     }
 
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         match self {
             Field::Embed(f) => f.imports(),
             Field::Enum(f) => f.imports(),
             Field::Map(f) => f.imports(),
             Field::Oneof(f) => f.imports(),
             Field::Repeated(f) => f.imports(),
-            Field::Scalar(_) => Files::empty(),
+            Field::Scalar(_) => FileRefs::empty(),
         }
     }
 

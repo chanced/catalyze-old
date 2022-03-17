@@ -6,7 +6,7 @@ use anyhow::bail;
 
 use crate::{
     proto::{FieldDescriptor, Scalar, Syntax},
-    Comments, Enum, Field, File, Files, FullyQualified, JsType, Message, Name, Node, Oneof,
+    Comments, Enum, Field, File, FileRefs, FullyQualified, JsType, Message, Name, Node, Oneof,
     Package, Type, UninterpretedOptions, WeakEnum, WeakMessage, WeakOneof, WellKnownType,
 };
 
@@ -138,9 +138,9 @@ impl<'a, U> OneofField<'a, U> {
             OneofField::Embed(f) => f.has_import(),
         }
     }
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         match self {
-            OneofField::Scalar(_) => Files::empty(),
+            OneofField::Scalar(_) => FileRefs::empty(),
             OneofField::Enum(f) => f.imports(),
             OneofField::Embed(f) => f.imports(),
         }
@@ -447,11 +447,11 @@ impl<'a, U> OneofEnumField<'a, U> {
     pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.detail.set_comments(comments);
     }
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         if self.has_import() {
-            Files::from(self.0.enumeration.borrow().weak_file())
+            FileRefs::from(self.0.enumeration.borrow().weak_file())
         } else {
-            Files::empty()
+            FileRefs::empty()
         }
     }
 
@@ -769,11 +769,11 @@ impl<'a, U> OneofEmbedField<'a, U> {
     pub fn has_import(&self) -> bool {
         self.0.embed.borrow().file() != self.file()
     }
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         if self.has_import() {
-            Files::from(self.0.embed.borrow().weak_file())
+            FileRefs::from(self.0.embed.borrow().weak_file())
         } else {
-            Files::empty()
+            FileRefs::empty()
         }
     }
     pub fn build_target(&self) -> bool {

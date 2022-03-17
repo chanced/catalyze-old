@@ -5,7 +5,7 @@ use anyhow::bail;
 
 use crate::{
     proto::{FieldDescriptor, Scalar, Syntax},
-    Comments, EmbedFieldDetail, Enum, EnumFieldDetail, Field, FieldDetail, File, Files,
+    Comments, EmbedFieldDetail, Enum, EnumFieldDetail, Field, FieldDetail, File, FileRefs,
     FullyQualified, Message, Name, Node, Package, ScalarFieldDetail, Type, UninterpretedOptions,
     WeakEnum, WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
 };
@@ -98,11 +98,11 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Scalar(_) => false,
         }
     }
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         match self {
             RepeatedField::Enum(f) => f.imports(),
             RepeatedField::Embed(f) => f.imports(),
-            RepeatedField::Scalar(_) => Files::empty(),
+            RepeatedField::Scalar(_) => FileRefs::empty(),
         }
     }
     pub fn build_target(&self) -> bool {
@@ -418,11 +418,11 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
     pub fn has_import(&self) -> bool {
         self.file() != self.0.embed().file()
     }
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         if self.has_import() {
-            Files::from(self.0.embed().weak_file())
+            FileRefs::from(self.0.embed().weak_file())
         } else {
-            Files::empty()
+            FileRefs::empty()
         }
     }
 
@@ -581,7 +581,7 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn has_import(&self) -> bool {
         self.0.has_import()
     }
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         self.0.imports()
     }
 

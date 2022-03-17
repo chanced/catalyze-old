@@ -164,11 +164,11 @@ impl<'a, U> File<'a, U> {
         Iter::from(&self.0.defined_extensions)
     }
 
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         self.0.imports.clone().into()
     }
 
-    pub fn dependents(&self) -> Files<'a, U> {
+    pub fn dependents(&self) -> FileRefs<'a, U> {
         self.0.dependents.clone().into()
     }
     pub fn transitive_imports(&self) -> TransitiveImports<'a, U> {
@@ -386,12 +386,12 @@ impl<'a, U> Iterator for TransitiveImports<'a, U> {
     }
 }
 
-/// FileRefIter is an iterator that upgrades weak references to `File`s.
-pub struct Files<'a, U> {
+/// An iterator that upgrades weak file references to `File`s.
+pub struct FileRefs<'a, U> {
     files: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
     index: usize,
 }
-impl<'a, U> Files<'a, U> {
+impl<'a, U> FileRefs<'a, U> {
     pub fn len(&self) -> usize {
         self.files.borrow().len()
     }
@@ -406,38 +406,38 @@ impl<'a, U> Files<'a, U> {
     }
 }
 
-impl<'a, U> From<&Rc<RefCell<Vec<WeakFile<'a, U>>>>> for Files<'a, U> {
+impl<'a, U> From<&Rc<RefCell<Vec<WeakFile<'a, U>>>>> for FileRefs<'a, U> {
     fn from(files: &Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
-        Files {
+        FileRefs {
             files: files.clone(),
             index: 0,
         }
     }
 }
-impl<'a, U> From<Rc<RefCell<Vec<WeakFile<'a, U>>>>> for Files<'a, U> {
+impl<'a, U> From<Rc<RefCell<Vec<WeakFile<'a, U>>>>> for FileRefs<'a, U> {
     fn from(files: Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
-        Files {
+        FileRefs {
             files: files.clone(),
             index: 0,
         }
     }
 }
 
-impl<'a, U> From<WeakFile<'a, U>> for Files<'a, U> {
+impl<'a, U> From<WeakFile<'a, U>> for FileRefs<'a, U> {
     fn from(file: WeakFile<'a, U>) -> Self {
-        Files {
+        FileRefs {
             files: Rc::new(RefCell::new(vec![file])),
             index: 0,
         }
     }
 }
 
-impl<'a, U> From<Option<WeakFile<'a, U>>> for Files<'a, U> {
+impl<'a, U> From<Option<WeakFile<'a, U>>> for FileRefs<'a, U> {
     fn from(file: Option<WeakFile<'a, U>>) -> Self {
         file.map_or(Self::empty(), Into::into)
     }
 }
-impl<'a, U> Iterator for Files<'a, U> {
+impl<'a, U> Iterator for FileRefs<'a, U> {
     type Item = File<'a, U>;
     fn next(&mut self) -> Option<Self::Item> {
         let files = self.files.borrow();

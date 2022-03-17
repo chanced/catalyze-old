@@ -5,7 +5,7 @@ use std::{cell::RefCell, rc::Rc};
 use anyhow::bail;
 
 use crate::{
-    proto::FieldDescriptor, proto::Syntax, Comments, Field, File, Files, FullyQualified, JsType,
+    proto::FieldDescriptor, proto::Syntax, Comments, Field, File, FileRefs, FullyQualified, JsType,
     Message, Name, Node, Package, Type, UninterpretedOptions, WeakMessage, WellKnownMessage,
     WellKnownType,
 };
@@ -51,11 +51,11 @@ impl<'a, U> EmbedFieldDetail<'a, U> {
         self.detail.descriptor()
     }
 
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         if self.embed.borrow().file() != self.detail.file() {
-            Files::from(self.embed.borrow().weak_file())
+            FileRefs::from(self.embed.borrow().weak_file())
         } else {
-            Files::empty()
+            FileRefs::empty()
         }
     }
     pub fn build_target(&self) -> bool {
@@ -135,7 +135,7 @@ impl<'a, U> EmbedField<'a, U> {
         self.0.has_import()
     }
 
-    pub fn imports(&self) -> Files<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a, U> {
         self.0.imports()
     }
     pub fn fully_qualified_name(&self) -> String {
