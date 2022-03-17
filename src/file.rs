@@ -357,7 +357,7 @@ impl<'a> Iterator for TransitiveImports<'a> {
     type Item = File<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(file) = self.queue.pop_front() {
-            if !self.processed.contains(&file.name()) {
+            if !self.processed.contains(file.name()) {
                 self.processed.insert(file.name().clone());
                 for d in file.imports() {
                     self.queue.push_back(d);

@@ -1,8 +1,8 @@
-use std::{collections::HashMap, ops::Index};
+use std::collections::HashMap;
 
 const OUTPUT_PATH_KEY: &str = "output_path";
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Parameters {
     table: HashMap<String, String>,
 }
@@ -28,18 +28,17 @@ impl Parameters {
         self.table.iter()
     }
     pub fn output_path(&self) -> String {
-        self.get(OUTPUT_PATH_KEY).unwrap_or(".".to_string())
+        self.get(OUTPUT_PATH_KEY).unwrap_or_else(|| ".".to_string())
     }
     pub fn set_output_path(&mut self, path: String) {
-        self.table
-            .insert(OUTPUT_PATH_KEY.to_string(), path.to_string());
+        self.table.insert(OUTPUT_PATH_KEY.to_string(), path);
     }
     pub fn insert(&mut self, path: &str) {
         self.table.insert(path.to_string(), path.to_string());
     }
     fn parse_table(val: &str) -> HashMap<String, String> {
         let mut params = HashMap::new();
-        for param in val.split(",") {
+        for param in val.split(',') {
             if param.contains('=') {
                 let parts = param.splitn(2, '=').collect::<Vec<_>>();
                 params.insert(parts[0].to_string(), parts[1].to_string());
@@ -48,14 +47,6 @@ impl Parameters {
             }
         }
         params
-    }
-}
-
-impl Default for Parameters {
-    fn default() -> Self {
-        Self {
-            table: HashMap::new(),
-        }
     }
 }
 

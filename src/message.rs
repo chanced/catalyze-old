@@ -353,9 +353,6 @@ impl<'a> WeakMessage<'a> {
     pub fn package(&self) -> Package<'a> {
         self.upgrade().package()
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.upgrade().fully_qualified_name()
-    }
     fn upgrade(&self) -> Message<'a> {
         self.into()
     }

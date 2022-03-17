@@ -18,7 +18,7 @@ use crate::{
     container::Container,
     proto::{FieldDescriptor, Scalar, Syntax, Type},
     CType, Comments, Enum, File, FileRefs, JsType, Message, Name, Node, Oneof, Package,
-    UninterpretedOptions, WeakMessage, WeakOneof, WellKnownType,
+    UninterpretedOptions, WeakMessage, WellKnownType,
 };
 use std::{cell::RefCell, convert::From};
 
@@ -29,19 +29,14 @@ pub(crate) struct FieldDetail<'a> {
     fqn: String,
     syntax: Syntax,
     is_map: bool,
-    in_oneof: bool,
+
     desc: FieldDescriptor<'a>,
     comments: RefCell<Comments<'a>>,
-    oneof: Option<WeakOneof<'a>>,
     map_entry: Option<WeakMessage<'a>>,
 }
 
 impl<'a> FieldDetail<'a> {
-    pub fn new(
-        desc: FieldDescriptor<'a>,
-        msg: Message<'a>,
-        oneof: Option<Oneof<'a>>,
-    ) -> Result<Self, anyhow::Error> {
+    pub fn new(desc: FieldDescriptor<'a>, msg: Message<'a>) -> Result<Self, anyhow::Error> {
         let name = desc.name().into();
         let map_entry = if msg.is_map_entry() {
             Some(msg.clone())
@@ -64,12 +59,10 @@ impl<'a> FieldDetail<'a> {
             map_entry: map_entry.map(Into::into),
             syntax: msg.syntax(),
             is_map: msg.is_map_entry(),
-            in_oneof: oneof.is_some(),
 
             desc,
             msg: msg.clone().into(),
             comments: RefCell::new(Comments::default()),
-            oneof: oneof.map(Into::into),
         })
     }
 
@@ -159,7 +152,7 @@ impl<'a> Field<'a> {
         msg: Message<'a>,
         oneof: Option<Oneof<'a>>,
     ) -> Result<Field<'a>, anyhow::Error> {
-        let detail = FieldDetail::new(desc, msg, oneof.clone())?;
+        let detail = FieldDetail::new(desc, msg)?;
         if desc.proto_type().is_group() {
             bail!("Group is not supported")
         }
@@ -174,7 +167,7 @@ impl<'a> Field<'a> {
                 Type::Scalar(_) => ScalarField::new(detail),
                 Type::Enum(_) => EnumField::new(detail),
                 Type::Message(_) => EmbedField::new(detail),
-                Type::Group => bail!("Group is not supported. Use an embedded Message instead."),
+                Type::Group => bail!("group is not supported; use an embedded message instead"),
             }
         }
     }
