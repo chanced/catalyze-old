@@ -5,22 +5,22 @@ use anyhow::bail;
 
 use crate::{
     proto::{FieldDescriptor, Scalar, Syntax},
-    Comments, EmbedFieldDetail, Enum, EnumFieldDetail, Field, FieldDetail, File, FileRefs,
-    FullyQualified, Message, Name, Node, Package, ScalarFieldDetail, Type, UninterpretedOptions,
-    WeakEnum, WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
+    Comments, EmbedFieldDetail, Enum, EnumFieldDetail, Field, FieldDetail, File, FileRefs, Message,
+    Name, Node, Package, ScalarFieldDetail, Type, UninterpretedOptions, WeakEnum, WeakMessage,
+    WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
 /// Represents a field marked as `repeated`. The field can hold
 /// a scalar value, an enum, or a message.
 #[derive(Debug)]
-pub enum RepeatedField<'a, U> {
-    Scalar(RepeatedScalarField<'a, U>),
-    Enum(RepeatedEnumField<'a, U>),
-    Embed(RepeatedEmbedField<'a, U>),
+pub enum RepeatedField<'a> {
+    Scalar(RepeatedScalarField<'a>),
+    Enum(RepeatedEnumField<'a>),
+    Embed(RepeatedEmbedField<'a>),
 }
 
-impl<'a, U> RepeatedField<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> RepeatedField<'a> {
+    pub fn name(&self) -> Name {
         match self {
             RepeatedField::Scalar(f) => f.name(),
             RepeatedField::Enum(f) => f.name(),
@@ -28,7 +28,7 @@ impl<'a, U> RepeatedField<'a, U> {
         }
     }
 
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         match self {
             RepeatedField::Scalar(f) => f.file(),
             RepeatedField::Enum(f) => f.file(),
@@ -36,7 +36,7 @@ impl<'a, U> RepeatedField<'a, U> {
         }
     }
 
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         match self {
             RepeatedField::Scalar(f) => f.package(),
             RepeatedField::Enum(f) => f.package(),
@@ -52,22 +52,13 @@ impl<'a, U> RepeatedField<'a, U> {
         }
     }
     /// Returns the Message containing this RepeatedField
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         match self {
             RepeatedField::Scalar(f) => f.message(),
             RepeatedField::Enum(f) => f.message(),
             RepeatedField::Embed(f) => f.message(),
         }
     }
-    /// Returns `Rc<U>`
-    pub fn util(&self) -> Rc<U> {
-        match self {
-            RepeatedField::Scalar(f) => f.util(),
-            RepeatedField::Enum(f) => f.util(),
-            RepeatedField::Embed(f) => f.util(),
-        }
-    }
-
     pub fn syntax(&self) -> Syntax {
         match self {
             RepeatedField::Scalar(f) => f.syntax(),
@@ -98,7 +89,7 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Scalar(_) => false,
         }
     }
-    pub fn imports(&self) -> FileRefs<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a> {
         match self {
             RepeatedField::Enum(f) => f.imports(),
             RepeatedField::Embed(f) => f.imports(),
@@ -112,19 +103,19 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Embed(f) => f.build_target(),
         }
     }
-    pub fn r#enum(&self) -> Option<Enum<'a, U>> {
+    pub fn r#enum(&self) -> Option<Enum<'a>> {
         match self {
             RepeatedField::Enum(f) => Some(f.r#enum()),
             _ => None,
         }
     }
-    pub fn enumeration(&self) -> Option<Enum<'a, U>> {
+    pub fn enumeration(&self) -> Option<Enum<'a>> {
         match self {
             RepeatedField::Enum(f) => Some(f.enumeration()),
             _ => None,
         }
     }
-    pub fn embed(&self) -> Option<Message<'a, U>> {
+    pub fn embed(&self) -> Option<Message<'a>> {
         match self {
             RepeatedField::Embed(f) => Some(f.embed()),
             _ => None,
@@ -196,7 +187,7 @@ impl<'a, U> RepeatedField<'a, U> {
         matches!(self, RepeatedField::Enum(_))
     }
 
-    pub(crate) fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+    pub(crate) fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
         match self {
             RepeatedField::Enum(f) => f.set_value(value),
             RepeatedField::Embed(f) => f.set_value(value),
@@ -208,7 +199,7 @@ impl<'a, U> RepeatedField<'a, U> {
         self.descriptor().proto_type()
     }
 
-    pub(crate) fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
+    pub(crate) fn new(detail: FieldDetail<'a>) -> Result<Field<'a>, anyhow::Error> {
         match detail.value_type() {
             Type::Scalar(s) => Ok(Field::Repeated(RepeatedField::Scalar(RepeatedScalarField(
                 Rc::new(ScalarFieldDetail::new(detail, s)),
@@ -315,8 +306,15 @@ impl<'a, U> RepeatedField<'a, U> {
             RepeatedField::Embed(f) => f.uninterpreted_options(),
         }
     }
+    pub fn fully_qualified_name(&self) -> String {
+        match self {
+            RepeatedField::Scalar(f) => f.fully_qualified_name(),
+            RepeatedField::Enum(f) => f.fully_qualified_name(),
+            RepeatedField::Embed(f) => f.fully_qualified_name(),
+        }
+    }
 }
-impl<'a, U> Clone for RepeatedField<'a, U> {
+impl<'a> Clone for RepeatedField<'a> {
     fn clone(&self) -> Self {
         match self {
             RepeatedField::Scalar(f) => RepeatedField::Scalar(f.clone()),
@@ -325,57 +323,48 @@ impl<'a, U> Clone for RepeatedField<'a, U> {
         }
     }
 }
-impl<'a, U> FullyQualified for RepeatedField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        match self {
-            RepeatedField::Scalar(f) => f.fully_qualified_name(),
-            RepeatedField::Enum(f) => f.fully_qualified_name(),
-            RepeatedField::Embed(f) => f.fully_qualified_name(),
-        }
-    }
-}
 
-impl<'a, U> From<RepeatedScalarField<'a, U>> for RepeatedField<'a, U> {
-    fn from(f: RepeatedScalarField<'a, U>) -> Self {
+impl<'a> From<RepeatedScalarField<'a>> for RepeatedField<'a> {
+    fn from(f: RepeatedScalarField<'a>) -> Self {
         RepeatedField::Scalar(f)
     }
 }
 
-impl<'a, U> From<&RepeatedScalarField<'a, U>> for RepeatedField<'a, U> {
-    fn from(f: &RepeatedScalarField<'a, U>) -> Self {
+impl<'a> From<&RepeatedScalarField<'a>> for RepeatedField<'a> {
+    fn from(f: &RepeatedScalarField<'a>) -> Self {
         RepeatedField::Scalar(f.clone())
     }
 }
 
-impl<'a, U> From<RepeatedEnumField<'a, U>> for RepeatedField<'a, U> {
-    fn from(f: RepeatedEnumField<'a, U>) -> Self {
+impl<'a> From<RepeatedEnumField<'a>> for RepeatedField<'a> {
+    fn from(f: RepeatedEnumField<'a>) -> Self {
         RepeatedField::Enum(f)
     }
 }
 
-impl<'a, U> From<&RepeatedEnumField<'a, U>> for RepeatedField<'a, U> {
-    fn from(f: &RepeatedEnumField<'a, U>) -> Self {
+impl<'a> From<&RepeatedEnumField<'a>> for RepeatedField<'a> {
+    fn from(f: &RepeatedEnumField<'a>) -> Self {
         RepeatedField::Enum(f.clone())
     }
 }
 
-impl<'a, U> From<RepeatedEmbedField<'a, U>> for RepeatedField<'a, U> {
-    fn from(f: RepeatedEmbedField<'a, U>) -> Self {
+impl<'a> From<RepeatedEmbedField<'a>> for RepeatedField<'a> {
+    fn from(f: RepeatedEmbedField<'a>) -> Self {
         RepeatedField::Embed(f)
     }
 }
 
-impl<'a, U> From<&RepeatedEmbedField<'a, U>> for RepeatedField<'a, U> {
-    fn from(f: &RepeatedEmbedField<'a, U>) -> Self {
+impl<'a> From<&RepeatedEmbedField<'a>> for RepeatedField<'a> {
+    fn from(f: &RepeatedEmbedField<'a>) -> Self {
         RepeatedField::Embed(f.clone())
     }
 }
 
 #[derive(Debug)]
-pub struct RepeatedEmbedField<'a, U>(Rc<EmbedFieldDetail<'a, U>>);
+pub struct RepeatedEmbedField<'a>(Rc<EmbedFieldDetail<'a>>);
 
-impl<'a, U> RepeatedEmbedField<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> RepeatedEmbedField<'a> {
+    pub fn name(&self) -> Name {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -387,19 +376,15 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
     pub fn is_map(&self) -> bool {
         self.0.detail.is_map()
     }
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.0.detail.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.0.detail.package()
     }
 
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.0.detail.message()
-    }
-    /// Returns `Rc<U>`
-    pub fn util(&self) -> Rc<U> {
-        self.0.detail.util()
     }
 
     pub fn syntax(&self) -> Syntax {
@@ -418,7 +403,7 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
     pub fn has_import(&self) -> bool {
         self.file() != self.0.embed().file()
     }
-    pub fn imports(&self) -> FileRefs<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a> {
         if self.has_import() {
             FileRefs::from(self.0.embed().weak_file())
         } else {
@@ -426,7 +411,7 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
         }
     }
 
-    pub fn embed(&self) -> Message<'a, U> {
+    pub fn embed(&self) -> Message<'a> {
         self.0.embed()
     }
 
@@ -448,7 +433,7 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
         self.0.embed().well_known_message()
     }
 
-    fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+    fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
         self.0.set_value(value)
     }
 
@@ -522,26 +507,26 @@ impl<'a, U> RepeatedEmbedField<'a, U> {
     }
 }
 
-impl<'a, U> Clone for RepeatedEmbedField<'a, U> {
+impl<'a> Clone for RepeatedEmbedField<'a> {
     fn clone(&self) -> Self {
         RepeatedEmbedField(self.0.clone())
     }
 }
 
 #[derive(Debug)]
-pub struct RepeatedEnumField<'a, U>(Rc<EnumFieldDetail<'a, U>>);
+pub struct RepeatedEnumField<'a>(Rc<EnumFieldDetail<'a>>);
 
-impl<'a, U> RepeatedEnumField<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> RepeatedEnumField<'a> {
+    pub fn name(&self) -> Name {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.0.detail.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.0.detail.package()
     }
 
@@ -551,12 +536,8 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn is_map(&self) -> bool {
         self.0.detail.is_map()
     }
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.0.detail.message()
-    }
-    /// Returns `Rc<U>`
-    pub fn util(&self) -> Rc<U> {
-        self.0.detail.util()
     }
 
     pub fn syntax(&self) -> Syntax {
@@ -581,14 +562,14 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn has_import(&self) -> bool {
         self.0.has_import()
     }
-    pub fn imports(&self) -> FileRefs<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a> {
         self.0.imports()
     }
 
-    pub fn r#enum(&self) -> Enum<'a, U> {
+    pub fn r#enum(&self) -> Enum<'a> {
         self.0.r#enum()
     }
-    pub fn enumeration(&self) -> Enum<'a, U> {
+    pub fn enumeration(&self) -> Enum<'a> {
         self.0.enumeration()
     }
     pub fn build_target(&self) -> bool {
@@ -605,7 +586,7 @@ impl<'a, U> RepeatedEnumField<'a, U> {
         self.0.enumeration().well_known_type()
     }
 
-    fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+    fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
         self.0.set_value(value)
     }
 
@@ -677,33 +658,31 @@ impl<'a, U> RepeatedEnumField<'a, U> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
+    pub fn fully_qualified_name(&self) -> String {
+        self.0.detail.fully_qualified_name()
+    }
 }
-impl<'a, U> Clone for RepeatedEnumField<'a, U> {
+impl<'a> Clone for RepeatedEnumField<'a> {
     fn clone(&self) -> Self {
         RepeatedEnumField(self.0.clone())
     }
 }
-impl<'a, U> FullyQualified for RepeatedEnumField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.0.detail.fully_qualified_name()
-    }
-}
 
 #[derive(Debug)]
-pub struct RepeatedScalarField<'a, U>(Rc<ScalarFieldDetail<'a, U>>);
+pub struct RepeatedScalarField<'a>(Rc<ScalarFieldDetail<'a>>);
 
-impl<'a, U> RepeatedScalarField<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> RepeatedScalarField<'a> {
+    pub fn name(&self) -> Name {
         self.0.name()
     }
     pub fn fully_qualified_name(&self) -> String {
         self.0.fully_qualified_name()
     }
 
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.0.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.0.package()
     }
 
@@ -713,12 +692,8 @@ impl<'a, U> RepeatedScalarField<'a, U> {
     pub fn is_map(&self) -> bool {
         self.0.is_map()
     }
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.0.message()
-    }
-    /// Returns `Rc<U>`
-    pub fn util(&self) -> Rc<U> {
-        self.0.util()
     }
 
     pub fn syntax(&self) -> Syntax {
@@ -813,15 +788,12 @@ impl<'a, U> RepeatedScalarField<'a, U> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
-}
-
-impl<'a, U> FullyQualified for RepeatedScalarField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> String {
         self.0.fully_qualified_name()
     }
 }
 
-impl<'a, U> Clone for RepeatedScalarField<'a, U> {
+impl<'a> Clone for RepeatedScalarField<'a> {
     fn clone(&self) -> Self {
         RepeatedScalarField(self.0.clone())
     }

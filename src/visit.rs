@@ -9,171 +9,171 @@ use crate::{
     Enum, EnumValue, Extension, Field, File, Message, Method, Node, Oneof, Package, Service,
 };
 
-pub trait Visitor<'a, U>: Sized {
+pub trait Visitor<'a>: Sized {
     type Error;
 
-    fn visit_node(&mut self, node: Node<'a, U>) -> Result<(), Self::Error> {
+    fn visit_node(&mut self, node: Node<'a>) -> Result<(), Self::Error> {
         visit_node(self, node)
     }
 
-    fn visit_package(&mut self, pkg: Package<'a, U>) -> Result<(), Self::Error> {
+    fn visit_package(&mut self, pkg: Package<'a>) -> Result<(), Self::Error> {
         visit_package(self, pkg)
     }
 
-    fn visit_file(&mut self, f: File<'a, U>) -> Result<(), Self::Error> {
+    fn visit_file(&mut self, f: File<'a>) -> Result<(), Self::Error> {
         visit_file(self, f)
     }
 
-    fn visit_message(&mut self, msg: Message<'a, U>) -> Result<(), Self::Error> {
+    fn visit_message(&mut self, msg: Message<'a>) -> Result<(), Self::Error> {
         visit_message(self, msg)
     }
 
-    fn visit_enum(&mut self, enm: Enum<'a, U>) -> Result<(), Self::Error> {
+    fn visit_enum(&mut self, enm: Enum<'a>) -> Result<(), Self::Error> {
         visit_enum(self, enm)
     }
 
-    fn visit_enum_value(&mut self, val: EnumValue<'a, U>) -> Result<(), Self::Error> {
+    fn visit_enum_value(&mut self, val: EnumValue<'a>) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn visit_extension(&mut self, ext: Extension<'a, U>) -> Result<(), Self::Error> {
+    fn visit_extension(&mut self, ext: Extension<'a>) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn visit_oneof(&mut self, oneof: Oneof<'a, U>) -> Result<(), Self::Error> {
+    fn visit_oneof(&mut self, oneof: Oneof<'a>) -> Result<(), Self::Error> {
         visit_oneof(self, oneof)
     }
 
-    fn visit_real_oneof(&mut self, oneof: Oneof<'a, U>) -> Result<(), Self::Error> {
+    fn visit_real_oneof(&mut self, oneof: Oneof<'a>) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn visit_synthetic_oneof(&mut self, oneof: Oneof<'a, U>) -> Result<(), Self::Error> {
+    fn visit_synthetic_oneof(&mut self, oneof: Oneof<'a>) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn visit_service(&mut self, svc: Service<'a, U>) -> Result<(), Self::Error> {
+    fn visit_service(&mut self, svc: Service<'a>) -> Result<(), Self::Error> {
         visit_service(self, svc)
     }
 
-    fn visit_method(&mut self, mth: Method<'a, U>) -> Result<(), Self::Error> {
+    fn visit_method(&mut self, mth: Method<'a>) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn visit_field(&mut self, fld: Field<'a, U>) -> Result<(), Self::Error> {
+    fn visit_field(&mut self, fld: Field<'a>) -> Result<(), Self::Error> {
         visit_field(self, fld)
     }
 
-    fn visit_scalar_field(&mut self, fld: ScalarField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_scalar_field(&mut self, fld: ScalarField<'a>) -> Result<(), Self::Error> {
         Ok(())
     }
-    fn visit_embed_field(&mut self, fld: EmbedField<'a, U>) -> Result<(), Self::Error> {
-        Ok(())
-    }
-
-    fn visit_enum_field(&mut self, fld: EnumField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_embed_field(&mut self, fld: EmbedField<'a>) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn visit_map_field(&mut self, fld: MapField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_enum_field(&mut self, fld: EnumField<'a>) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn visit_map_field(&mut self, fld: MapField<'a>) -> Result<(), Self::Error> {
         visit_map_field(self, fld)
     }
 
     fn visit_mapped_scalar_field(
         &mut self,
-        fld: MappedScalarField<'a, U>,
+        fld: MappedScalarField<'a>,
     ) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn visit_mapped_enum_field(&mut self, fld: MappedEnumField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_mapped_enum_field(&mut self, fld: MappedEnumField<'a>) -> Result<(), Self::Error> {
         Ok(())
     }
 
     fn visit_mapped_embed_field(
         &mut self,
-        fld: MappedEmbedField<'a, U>,
+        fld: MappedEmbedField<'a>,
     ) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn visit_repeated_field(&mut self, fld: RepeatedField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_repeated_field(&mut self, fld: RepeatedField<'a>) -> Result<(), Self::Error> {
         visit_repeated_field(self, fld)
     }
 
     fn visit_repeated_scalar_field(
         &mut self,
-        fld: RepeatedScalarField<'a, U>,
+        fld: RepeatedScalarField<'a>,
     ) -> Result<(), Self::Error> {
         Ok(())
     }
 
     fn visit_repeated_enum_field(
         &mut self,
-        fld: RepeatedEnumField<'a, U>,
+        fld: RepeatedEnumField<'a>,
     ) -> Result<(), Self::Error> {
         Ok(())
     }
 
     fn visit_repeated_embed_field(
         &mut self,
-        fld: RepeatedEmbedField<'a, U>,
+        fld: RepeatedEmbedField<'a>,
     ) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn visit_oneof_field(&mut self, fld: OneofField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_oneof_field(&mut self, fld: OneofField<'a>) -> Result<(), Self::Error> {
         visit_oneof_field(self, fld)
     }
 
-    fn visit_real_oneof_field(&mut self, fld: OneofField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_real_oneof_field(&mut self, fld: OneofField<'a>) -> Result<(), Self::Error> {
         visit_real_oneof_field(self, fld)
     }
 
     fn visit_real_oneof_scalar_field(
         &mut self,
-        fld: OneofScalarField<'a, U>,
+        fld: OneofScalarField<'a>,
     ) -> Result<(), Self::Error> {
         Ok(())
     }
     fn visit_real_oneof_enum_field(
         &mut self,
-        fld: OneofEnumField<'a, U>,
+        fld: OneofEnumField<'a>,
     ) -> Result<(), Self::Error> {
         Ok(())
     }
     fn visit_real_oneof_embed_field(
         &mut self,
-        fld: OneofEmbedField<'a, U>,
+        fld: OneofEmbedField<'a>,
     ) -> Result<(), Self::Error> {
         Ok(())
     }
-    fn visit_synthetic_oneof_field(&mut self, fld: OneofField<'a, U>) -> Result<(), Self::Error> {
+    fn visit_synthetic_oneof_field(&mut self, fld: OneofField<'a>) -> Result<(), Self::Error> {
         visit_synthetic_oneof_field(self, fld)
     }
     fn visit_synthetic_oneof_scalar_field(
         &mut self,
-        fld: OneofScalarField<'a, U>,
+        fld: OneofScalarField<'a>,
     ) -> Result<(), Self::Error> {
         Ok(())
     }
     fn visit_synthetic_oneof_enum_field(
         &mut self,
-        fld: OneofEnumField<'a, U>,
+        fld: OneofEnumField<'a>,
     ) -> Result<(), Self::Error> {
         Ok(())
     }
     fn visit_synthetic_oneof_embed_field(
         &mut self,
-        fld: OneofEmbedField<'a, U>,
+        fld: OneofEmbedField<'a>,
     ) -> Result<(), Self::Error> {
         Ok(())
     }
 }
 
-pub fn visit_node<'a, U, V>(v: &mut V, node: Node<'a, U>) -> Result<(), V::Error>
+pub fn visit_node<'a, V>(v: &mut V, node: Node<'a>) -> Result<(), V::Error>
 where
-    V: Visitor<'a, U>,
+    V: Visitor<'a>,
 {
     match node {
         Node::Package(p) => v.visit_package(p),
@@ -189,9 +189,9 @@ where
     }
 }
 
-pub fn visit_package<'a, U, V>(v: &mut V, pkg: Package<'a, U>) -> Result<(), V::Error>
+pub fn visit_package<'a, V>(v: &mut V, pkg: Package<'a>) -> Result<(), V::Error>
 where
-    V: Visitor<'a, U>,
+    V: Visitor<'a>,
 {
     for file in pkg.files() {
         v.visit_node(file.into())?;
@@ -199,9 +199,9 @@ where
     Ok(())
 }
 
-pub fn visit_file<'a, U, V>(v: &mut V, f: File<'a, U>) -> Result<(), V::Error>
+pub fn visit_file<'a, V>(v: &mut V, f: File<'a>) -> Result<(), V::Error>
 where
-    V: Visitor<'a, U>,
+    V: Visitor<'a>,
 {
     for node in f.nodes() {
         v.visit_node(node)?;
@@ -221,9 +221,9 @@ where
     Ok(())
 }
 
-pub fn visit_message<'a, U, V>(v: &mut V, msg: Message<'a, U>) -> Result<(), V::Error>
+pub fn visit_message<'a, V>(v: &mut V, msg: Message<'a>) -> Result<(), V::Error>
 where
-    V: Visitor<'a, U>,
+    V: Visitor<'a>,
 {
     for n in msg.nodes() {
         v.visit_node(n)?;
@@ -246,9 +246,9 @@ where
     Ok(())
 }
 
-pub fn visit_service<'a, U, V>(v: &mut V, svc: Service<'a, U>) -> Result<(), V::Error>
+pub fn visit_service<'a, V>(v: &mut V, svc: Service<'a>) -> Result<(), V::Error>
 where
-    V: Visitor<'a, U>,
+    V: Visitor<'a>,
 {
     for mth in svc.methods() {
         v.visit_node(mth.into())?;
@@ -256,9 +256,9 @@ where
     Ok(())
 }
 
-pub fn visit_enum<'a, U, V>(v: &mut V, enm: Enum<'a, U>) -> Result<(), V::Error>
+pub fn visit_enum<'a, V>(v: &mut V, enm: Enum<'a>) -> Result<(), V::Error>
 where
-    V: Visitor<'a, U>,
+    V: Visitor<'a>,
 {
     for node in enm.nodes() {
         v.visit_node(node)?;
@@ -270,9 +270,9 @@ where
     Ok(())
 }
 
-pub fn visit_oneof<'a, U, V>(v: &mut V, one: Oneof<'a, U>) -> Result<(), V::Error>
+pub fn visit_oneof<'a, V>(v: &mut V, one: Oneof<'a>) -> Result<(), V::Error>
 where
-    V: Visitor<'a, U>,
+    V: Visitor<'a>,
 {
     if one.is_real() {
         v.visit_real_oneof(one)?;
@@ -282,9 +282,9 @@ where
     Ok(())
 }
 
-pub fn visit_field<'a, U, V>(v: &mut V, fld: Field<'a, U>) -> Result<(), V::Error>
+pub fn visit_field<'a, V>(v: &mut V, fld: Field<'a>) -> Result<(), V::Error>
 where
-    V: Visitor<'a, U>,
+    V: Visitor<'a>,
 {
     match fld {
         Field::Embed(f) => v.visit_embed_field(f),
@@ -296,9 +296,9 @@ where
     }
 }
 
-pub fn visit_map_field<'a, U, V>(v: &mut V, fld: MapField<'a, U>) -> Result<(), V::Error>
+pub fn visit_map_field<'a, V>(v: &mut V, fld: MapField<'a>) -> Result<(), V::Error>
 where
-    V: Visitor<'a, U>,
+    V: Visitor<'a>,
 {
     match fld {
         MapField::Scalar(f) => v.visit_mapped_scalar_field(f),
@@ -306,9 +306,9 @@ where
         MapField::Embed(f) => v.visit_mapped_embed_field(f),
     }
 }
-pub fn visit_repeated_field<'a, U, V>(v: &mut V, fld: RepeatedField<'a, U>) -> Result<(), V::Error>
+pub fn visit_repeated_field<'a, V>(v: &mut V, fld: RepeatedField<'a>) -> Result<(), V::Error>
 where
-    V: Visitor<'a, U>,
+    V: Visitor<'a>,
 {
     match fld {
         RepeatedField::Scalar(f) => v.visit_repeated_scalar_field(f),
@@ -316,9 +316,9 @@ where
         RepeatedField::Embed(f) => v.visit_repeated_embed_field(f),
     }
 }
-pub fn visit_oneof_field<'a, U, V>(v: &mut V, fld: OneofField<'a, U>) -> Result<(), V::Error>
+pub fn visit_oneof_field<'a, V>(v: &mut V, fld: OneofField<'a>) -> Result<(), V::Error>
 where
-    V: Visitor<'a, U>,
+    V: Visitor<'a>,
 {
     if fld.is_in_real_oneof() {
         v.visit_real_oneof_field(fld)
@@ -327,9 +327,9 @@ where
     }
 }
 
-pub fn visit_real_oneof_field<'a, U, V>(v: &mut V, fld: OneofField<'a, U>) -> Result<(), V::Error>
+pub fn visit_real_oneof_field<'a, V>(v: &mut V, fld: OneofField<'a>) -> Result<(), V::Error>
 where
-    V: Visitor<'a, U>,
+    V: Visitor<'a>,
 {
     match fld {
         OneofField::Scalar(f) => v.visit_real_oneof_scalar_field(f),
@@ -337,12 +337,12 @@ where
         OneofField::Embed(f) => v.visit_real_oneof_embed_field(f),
     }
 }
-pub fn visit_synthetic_oneof_field<'a, U, V>(
+pub fn visit_synthetic_oneof_field<'a, V>(
     v: &mut V,
-    fld: OneofField<'a, U>,
+    fld: OneofField<'a>,
 ) -> Result<(), V::Error>
 where
-    V: Visitor<'a, U>,
+    V: Visitor<'a>,
 {
     match fld {
         OneofField::Scalar(f) => v.visit_synthetic_oneof_scalar_field(f),

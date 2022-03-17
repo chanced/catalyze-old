@@ -6,29 +6,25 @@ use anyhow::bail;
 
 use crate::{
     proto::FieldDescriptor, proto::Syntax, Comments, Enum, Field, FieldDetail, File, FileRefs,
-    FullyQualified, Message, Name, Node, Package, Type, UninterpretedOptions, WeakEnum,
-    WellKnownEnum, WellKnownType,
+    Message, Name, Node, Package, Type, UninterpretedOptions, WeakEnum, WellKnownEnum,
+    WellKnownType,
 };
 
 #[derive(Debug, Clone)]
-pub(crate) struct EnumFieldDetail<'a, U> {
-    pub detail: FieldDetail<'a, U>,
-    pub enumeration: RefCell<WeakEnum<'a, U>>,
+pub(crate) struct EnumFieldDetail<'a> {
+    pub detail: FieldDetail<'a>,
+    pub enumeration: RefCell<WeakEnum<'a>>,
 }
 
-impl<'a, U> EnumFieldDetail<'a, U> {
+impl<'a> EnumFieldDetail<'a> {
     pub fn is_repeated(&self) -> bool {
         self.detail.is_repeated()
     }
     pub fn is_map(&self) -> bool {
         self.detail.is_map()
     }
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.detail.message()
-    }
-    /// Returns `Rc<U>`
-    pub fn util(&self) -> Rc<U> {
-        self.detail.util()
     }
     pub fn comments(&self) -> Comments<'a> {
         self.detail.comments()
@@ -37,7 +33,7 @@ impl<'a, U> EnumFieldDetail<'a, U> {
     pub fn set_comments(&self, comments: Comments<'a>) {
         self.detail.set_comments(comments)
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.detail.package()
     }
     pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
@@ -56,21 +52,21 @@ impl<'a, U> EnumFieldDetail<'a, U> {
     pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.detail.descriptor()
     }
-    pub fn r#enum(&self) -> Enum<'a, U> {
+    pub fn r#enum(&self) -> Enum<'a> {
         self.enumeration.borrow().clone().into()
     }
     pub fn build_target(&self) -> bool {
         self.file().build_target()
     }
-    pub fn enumeration(&self) -> Enum<'a, U> {
+    pub fn enumeration(&self) -> Enum<'a> {
         self.r#enum()
     }
 
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.detail.file()
     }
 
-    pub fn imports(&self) -> FileRefs<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a> {
         let e = self.r#enum();
         if self.file() != e.file() {
             FileRefs::from(e.weak_file())
@@ -90,7 +86,7 @@ impl<'a, U> EnumFieldDetail<'a, U> {
         self.enumeration().well_known_type()
     }
 
-    pub(crate) fn set_value(&self, node: Node<'a, U>) -> Result<(), anyhow::Error> {
+    pub(crate) fn set_value(&self, node: Node<'a>) -> Result<(), anyhow::Error> {
         match node {
             Node::Enum(v) => {
                 self.enumeration.replace(v.into());
@@ -102,10 +98,10 @@ impl<'a, U> EnumFieldDetail<'a, U> {
 }
 
 #[derive(Debug)]
-pub struct EnumField<'a, U>(Rc<EnumFieldDetail<'a, U>>);
+pub struct EnumField<'a>(Rc<EnumFieldDetail<'a>>);
 
-impl<'a, U> EnumField<'a, U> {
-    pub(crate) fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
+impl<'a> EnumField<'a> {
+    pub(crate) fn new(detail: FieldDetail<'a>) -> Result<Field<'a>, anyhow::Error> {
         if matches!(detail.value_type(), Type::Enum(_)) {
             bail!("expected Enum, received {}", detail.value_type());
         }
@@ -117,7 +113,7 @@ impl<'a, U> EnumField<'a, U> {
         Ok(Field::Enum(f))
     }
 
-    pub fn name(&self) -> Name<U> {
+    pub fn name(&self) -> Name {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -127,7 +123,7 @@ impl<'a, U> EnumField<'a, U> {
         self.0.well_known_enum()
     }
     /// Returns the `Enum` of this `EnumField`.
-    pub fn r#enum(&self) -> Enum<'a, U> {
+    pub fn r#enum(&self) -> Enum<'a> {
         self.0.enumeration.borrow().clone().into()
     }
 
@@ -141,12 +137,8 @@ impl<'a, U> EnumField<'a, U> {
     pub fn is_map(&self) -> bool {
         self.0.is_map()
     }
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.0.message()
-    }
-    /// Returns `Rc<U>`
-    pub fn util(&self) -> Rc<U> {
-        self.0.util()
     }
     pub fn comments(&self) -> Comments<'a> {
         self.0.comments()
@@ -155,14 +147,14 @@ impl<'a, U> EnumField<'a, U> {
     pub fn set_comments(&self, comments: Comments<'a>) {
         self.0.set_comments(comments)
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.0.package()
     }
 
     /// alias for `r#enum`
     ///
     /// Returns the `Enum` of this `EnumField`.
-    pub fn enumeration(&self) -> Enum<'a, U> {
+    pub fn enumeration(&self) -> Enum<'a> {
         self.r#enum()
     }
 
@@ -176,7 +168,7 @@ impl<'a, U> EnumField<'a, U> {
         self.0.descriptor()
     }
 
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.0.detail.file()
     }
 
@@ -187,7 +179,7 @@ impl<'a, U> EnumField<'a, U> {
     pub fn has_import(&self) -> bool {
         self.0.has_import()
     }
-    pub fn imports(&self) -> FileRefs<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a> {
         self.0.imports()
     }
 
@@ -203,7 +195,7 @@ impl<'a, U> EnumField<'a, U> {
         self.0.is_marked_optional()
     }
 
-    pub(crate) fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+    pub(crate) fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
         self.0.set_value(value)
     }
 
@@ -277,15 +269,12 @@ impl<'a, U> EnumField<'a, U> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
-}
-
-impl<'a, U> FullyQualified for EnumField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
 }
 
-impl<'a, U> Clone for EnumField<'a, U> {
+impl<'a> Clone for EnumField<'a> {
     fn clone(&self) -> Self {
         EnumField(self.0.clone())
     }

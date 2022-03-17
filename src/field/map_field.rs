@@ -6,7 +6,7 @@ use anyhow::{anyhow, bail};
 use crate::{
     proto::{FieldDescriptor, Type},
     proto::{Scalar, Syntax},
-    Comments, Enum, Field, File, FileRefs, FullyQualified, JsType, Message, Name, Node, Package,
+    Comments, Enum, Field, File, FileRefs, JsType, Message, Name, Node, Package,
     UninterpretedOptions, WeakEnum, WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
@@ -52,13 +52,13 @@ impl<'a> TryFrom<Type<'a>> for Key {
 use super::FieldDetail;
 
 #[derive(Debug)]
-pub(crate) struct MapFieldDetail<'a, U> {
+pub(crate) struct MapFieldDetail<'a> {
     key: Key,
-    detail: FieldDetail<'a, U>,
+    detail: FieldDetail<'a>,
 }
 
-impl<'a, U> MapFieldDetail<'a, U> {
-    fn value_field(&self) -> Result<Field<'a, U>, anyhow::Error> {
+impl<'a> MapFieldDetail<'a> {
+    fn value_field(&self) -> Result<Field<'a>, anyhow::Error> {
         let map_entry = self.detail.map_entry()?;
         map_entry
             .fields()
@@ -66,7 +66,7 @@ impl<'a, U> MapFieldDetail<'a, U> {
             .ok_or_else(|| anyhow!("map entry {} is missing value field", &map_entry.name()))
     }
 
-    pub fn name(&self) -> Name<U> {
+    pub fn name(&self) -> Name {
         self.detail.name()
     }
 
@@ -83,12 +83,8 @@ impl<'a, U> MapFieldDetail<'a, U> {
     pub fn is_map(&self) -> bool {
         self.detail.is_map()
     }
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.detail.message()
-    }
-    /// Returns `Rc<U>`
-    pub fn util(&self) -> Rc<U> {
-        self.detail.util()
     }
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
@@ -103,10 +99,10 @@ impl<'a, U> MapFieldDetail<'a, U> {
         self.detail.comments.replace(comments);
     }
 
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.detail.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.detail.package()
     }
 
@@ -119,7 +115,7 @@ impl<'a, U> MapFieldDetail<'a, U> {
     }
 }
 
-impl<'a, U> Clone for MapFieldDetail<'a, U> {
+impl<'a> Clone for MapFieldDetail<'a> {
     fn clone(&self) -> Self {
         Self {
             key: self.key,
@@ -129,14 +125,14 @@ impl<'a, U> Clone for MapFieldDetail<'a, U> {
 }
 
 #[derive(Debug)]
-pub enum MapField<'a, U> {
-    Scalar(MappedScalarField<'a, U>),
-    Enum(MappedEnumField<'a, U>),
-    Embed(MappedEmbedField<'a, U>),
+pub enum MapField<'a> {
+    Scalar(MappedScalarField<'a>),
+    Enum(MappedEnumField<'a>),
+    Embed(MappedEmbedField<'a>),
 }
 
-impl<'a, U> MapField<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> MapField<'a> {
+    pub fn name(&self) -> Name {
         match self {
             MapField::Scalar(f) => f.name(),
             MapField::Enum(f) => f.name(),
@@ -159,18 +155,18 @@ impl<'a, U> MapField<'a, U> {
             MapField::Embed(f) => f.fully_qualified_name(),
         }
     }
-    pub fn embed(&self) -> Option<Message<'a, U>> {
+    pub fn embed(&self) -> Option<Message<'a>> {
         match self {
             MapField::Embed(m) => m.embed().into(),
             _ => None,
         }
     }
     /// alias for `r#enum`
-    pub fn enumeration(&self) -> Option<Enum<'a, U>> {
+    pub fn enumeration(&self) -> Option<Enum<'a>> {
         self.r#enum()
     }
 
-    pub fn r#enum(&self) -> Option<Enum<'a, U>> {
+    pub fn r#enum(&self) -> Option<Enum<'a>> {
         match self {
             MapField::Enum(e) => e.r#enum().into(),
             _ => None,
@@ -184,7 +180,7 @@ impl<'a, U> MapField<'a, U> {
         }
     }
 
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         match self {
             MapField::Scalar(f) => f.file(),
             MapField::Enum(f) => f.file(),
@@ -200,7 +196,7 @@ impl<'a, U> MapField<'a, U> {
         }
     }
 
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         match self {
             MapField::Scalar(f) => f.package(),
             MapField::Enum(f) => f.package(),
@@ -222,7 +218,7 @@ impl<'a, U> MapField<'a, U> {
             MapField::Embed(f) => f.has_import(),
         }
     }
-    pub fn imports(&self) -> FileRefs<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a> {
         match self {
             MapField::Scalar(_) => FileRefs::empty(),
             MapField::Enum(f) => f.imports(),
@@ -296,15 +292,7 @@ impl<'a, U> MapField<'a, U> {
         }
     }
 
-    pub fn util(&self) -> Rc<U> {
-        match self {
-            MapField::Scalar(f) => f.util(),
-            MapField::Enum(f) => f.util(),
-            MapField::Embed(f) => f.util(),
-        }
-    }
-
-    pub(crate) fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+    pub(crate) fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
         match self {
             MapField::Enum(f) => f.set_value(value),
             MapField::Embed(f) => f.set_value(value),
@@ -320,7 +308,7 @@ impl<'a, U> MapField<'a, U> {
         }
     }
 
-    pub(crate) fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
+    pub(crate) fn new(detail: FieldDetail<'a>) -> Result<Field<'a>, anyhow::Error> {
         if !detail.is_map() {
             bail!("Field is not a map")
         }
@@ -435,15 +423,22 @@ impl<'a, U> MapField<'a, U> {
         }
     }
 
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         match self {
             MapField::Scalar(f) => f.message(),
             MapField::Enum(f) => f.message(),
             MapField::Embed(f) => f.message(),
         }
     }
+    pub fn fully_qualified_name(&self) -> String {
+        match self {
+            MapField::Scalar(f) => f.fully_qualified_name(),
+            MapField::Enum(f) => f.fully_qualified_name(),
+            MapField::Embed(f) => f.fully_qualified_name(),
+        }
+    }
 }
-impl<'a, U> Clone for MapField<'a, U> {
+impl<'a> Clone for MapField<'a> {
     fn clone(&self) -> Self {
         match self {
             Self::Scalar(f) => Self::Scalar(f.clone()),
@@ -452,65 +447,56 @@ impl<'a, U> Clone for MapField<'a, U> {
         }
     }
 }
-impl<'a, U> FullyQualified for MapField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        match self {
-            MapField::Scalar(f) => f.fully_qualified_name(),
-            MapField::Enum(f) => f.fully_qualified_name(),
-            MapField::Embed(f) => f.fully_qualified_name(),
-        }
-    }
-}
 
-impl<'a, U> From<MappedEnumField<'a, U>> for MapField<'a, U> {
-    fn from(f: MappedEnumField<'a, U>) -> Self {
+impl<'a> From<MappedEnumField<'a>> for MapField<'a> {
+    fn from(f: MappedEnumField<'a>) -> Self {
         MapField::Enum(f)
     }
 }
-impl<'a, U> From<&MappedEnumField<'a, U>> for MapField<'a, U> {
-    fn from(f: &MappedEnumField<'a, U>) -> Self {
+impl<'a> From<&MappedEnumField<'a>> for MapField<'a> {
+    fn from(f: &MappedEnumField<'a>) -> Self {
         MapField::Enum(f.clone())
     }
 }
 
-impl<'a, U> From<MappedScalarField<'a, U>> for MapField<'a, U> {
-    fn from(f: MappedScalarField<'a, U>) -> Self {
+impl<'a> From<MappedScalarField<'a>> for MapField<'a> {
+    fn from(f: MappedScalarField<'a>) -> Self {
         MapField::Scalar(f)
     }
 }
-impl<'a, U> From<&MappedScalarField<'a, U>> for MapField<'a, U> {
-    fn from(f: &MappedScalarField<'a, U>) -> Self {
+impl<'a> From<&MappedScalarField<'a>> for MapField<'a> {
+    fn from(f: &MappedScalarField<'a>) -> Self {
         MapField::Scalar(f.clone())
     }
 }
 
-impl<'a, U> From<MappedEmbedField<'a, U>> for MapField<'a, U> {
-    fn from(f: MappedEmbedField<'a, U>) -> Self {
+impl<'a> From<MappedEmbedField<'a>> for MapField<'a> {
+    fn from(f: MappedEmbedField<'a>) -> Self {
         MapField::Embed(f)
     }
 }
-impl<'a, U> From<&MappedEmbedField<'a, U>> for MapField<'a, U> {
-    fn from(f: &MappedEmbedField<'a, U>) -> Self {
+impl<'a> From<&MappedEmbedField<'a>> for MapField<'a> {
+    fn from(f: &MappedEmbedField<'a>) -> Self {
         MapField::Embed(f.clone())
     }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct MappedScalarFieldDetail<'a, U> {
-    detail: MapFieldDetail<'a, U>,
+pub(crate) struct MappedScalarFieldDetail<'a> {
+    detail: MapFieldDetail<'a>,
     scalar: Scalar,
 }
 
 #[derive(Debug)]
-pub struct MappedScalarField<'a, U>(Rc<MappedScalarFieldDetail<'a, U>>);
-impl<'a, U> Clone for MappedScalarField<'a, U> {
+pub struct MappedScalarField<'a>(Rc<MappedScalarFieldDetail<'a>>);
+impl<'a> Clone for MappedScalarField<'a> {
     fn clone(&self) -> Self {
         MappedScalarField(self.0.clone())
     }
 }
 
-impl<'a, U> MappedScalarField<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> MappedScalarField<'a> {
+    pub fn name(&self) -> Name {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -522,12 +508,8 @@ impl<'a, U> MappedScalarField<'a, U> {
     pub fn is_map(&self) -> bool {
         self.0.detail.is_map()
     }
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.0.detail.message()
-    }
-    /// Returns `Rc<U>`
-    pub fn util(&self) -> Rc<U> {
-        self.0.detail.util()
     }
 
     pub fn syntax(&self) -> Syntax {
@@ -540,10 +522,10 @@ impl<'a, U> MappedScalarField<'a, U> {
         self.0.detail.comments()
     }
 
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.0.detail.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.0.detail.package()
     }
 
@@ -637,21 +619,18 @@ impl<'a, U> MappedScalarField<'a, U> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
-}
-
-impl<'a, U> FullyQualified for MappedScalarField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
 }
 
 #[derive(Debug)]
-pub(crate) struct MappedEmbedFieldDetail<'a, U> {
-    embed: RefCell<WeakMessage<'a, U>>,
-    detail: MapFieldDetail<'a, U>,
+pub(crate) struct MappedEmbedFieldDetail<'a> {
+    embed: RefCell<WeakMessage<'a>>,
+    detail: MapFieldDetail<'a>,
 }
-impl<'a, U> MappedEmbedFieldDetail<'a, U> {
-    pub(crate) fn embed(&self) -> WeakMessage<'a, U> {
+impl<'a> MappedEmbedFieldDetail<'a> {
+    pub(crate) fn embed(&self) -> WeakMessage<'a> {
         self.embed.borrow().clone()
     }
     pub(crate) fn value_type(&self) -> Type<'a> {
@@ -659,7 +638,7 @@ impl<'a, U> MappedEmbedFieldDetail<'a, U> {
     }
 }
 
-impl<'a, U> Clone for MappedEmbedFieldDetail<'a, U> {
+impl<'a> Clone for MappedEmbedFieldDetail<'a> {
     fn clone(&self) -> Self {
         Self {
             embed: self.embed.clone(),
@@ -669,10 +648,10 @@ impl<'a, U> Clone for MappedEmbedFieldDetail<'a, U> {
 }
 
 #[derive(Debug)]
-pub struct MappedEmbedField<'a, U>(Rc<MappedEmbedFieldDetail<'a, U>>);
+pub struct MappedEmbedField<'a>(Rc<MappedEmbedFieldDetail<'a>>);
 
-impl<'a, U> MappedEmbedField<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> MappedEmbedField<'a> {
+    pub fn name(&self) -> Name {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -686,12 +665,8 @@ impl<'a, U> MappedEmbedField<'a, U> {
         self.0.detail.is_map()
     }
     /// Returns the Message which contains this field.
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.0.detail.message()
-    }
-    /// Returns `Rc<U>`
-    pub fn util(&self) -> Rc<U> {
-        self.0.detail.util()
     }
 
     pub fn syntax(&self) -> Syntax {
@@ -701,7 +676,7 @@ impl<'a, U> MappedEmbedField<'a, U> {
         self.0.detail.descriptor()
     }
     /// Returns the embedded message.
-    pub fn embed(&self) -> Message<'a, U> {
+    pub fn embed(&self) -> Message<'a> {
         self.0.embed().into()
     }
 
@@ -711,10 +686,10 @@ impl<'a, U> MappedEmbedField<'a, U> {
     pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.0.detail.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.0.detail.package()
     }
 
@@ -725,7 +700,7 @@ impl<'a, U> MappedEmbedField<'a, U> {
     pub fn has_import(&self) -> bool {
         self.file() != self.0.embed().file()
     }
-    pub fn imports(&self) -> FileRefs<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a> {
         if self.has_import() {
             FileRefs::from(self.0.embed().weak_file())
         } else {
@@ -771,7 +746,7 @@ impl<'a, U> MappedEmbedField<'a, U> {
         self.descriptor().options().jstype()
     }
 
-    pub(crate) fn set_value(&self, node: Node<'a, U>) -> Result<(), anyhow::Error> {
+    pub(crate) fn set_value(&self, node: Node<'a>) -> Result<(), anyhow::Error> {
         match node {
             Node::Message(m) => {
                 self.0.embed.replace(m.into());
@@ -838,28 +813,25 @@ impl<'a, U> MappedEmbedField<'a, U> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
-}
-
-impl<'a, U> FullyQualified for MappedEmbedField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
 }
 
-impl<'a, U> Clone for MappedEmbedField<'a, U> {
+impl<'a> Clone for MappedEmbedField<'a> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct MappedEnumFieldDetail<'a, U> {
-    enumeration: RefCell<WeakEnum<'a, U>>,
-    detail: MapFieldDetail<'a, U>,
+pub(crate) struct MappedEnumFieldDetail<'a> {
+    enumeration: RefCell<WeakEnum<'a>>,
+    detail: MapFieldDetail<'a>,
 }
 
-impl<'a, U> MappedEnumFieldDetail<'a, U> {
-    pub fn enumeration(&self) -> Enum<'a, U> {
+impl<'a> MappedEnumFieldDetail<'a> {
+    pub fn enumeration(&self) -> Enum<'a> {
         self.enumeration.borrow().clone().into()
     }
     pub(crate) fn value_type(&self) -> Type<'a> {
@@ -868,20 +840,20 @@ impl<'a, U> MappedEnumFieldDetail<'a, U> {
 }
 
 #[derive(Debug)]
-pub struct MappedEnumField<'a, U>(Rc<MappedEnumFieldDetail<'a, U>>);
-impl<'a, U> Clone for MappedEnumField<'a, U> {
+pub struct MappedEnumField<'a>(Rc<MappedEnumFieldDetail<'a>>);
+impl<'a> Clone for MappedEnumField<'a> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
-impl<'a, U> MappedEnumField<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> MappedEnumField<'a> {
+    pub fn name(&self) -> Name {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.0.detail.message()
     }
 
@@ -891,10 +863,6 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn is_map(&self) -> bool {
         self.0.detail.is_map()
     }
-    /// Returns `Rc<U>`
-    pub fn util(&self) -> Rc<U> {
-        self.0.detail.util()
-    }
 
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
@@ -902,18 +870,18 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.0.detail.descriptor()
     }
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.0.detail.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.0.detail.package()
     }
 
     /// Alias for `r#enum()`
-    pub fn enumeration(&self) -> Enum<'a, U> {
+    pub fn enumeration(&self) -> Enum<'a> {
         self.r#enum()
     }
-    pub fn r#enum(&self) -> Enum<'a, U> {
+    pub fn r#enum(&self) -> Enum<'a> {
         self.0.enumeration()
     }
     pub fn comments(&self) -> Comments<'a> {
@@ -937,7 +905,7 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn has_import(&self) -> bool {
         return self.enumeration().file() != self.file();
     }
-    pub fn imports(&self) -> FileRefs<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a> {
         if self.has_import() {
             FileRefs::from(self.enumeration().weak_file())
         } else {
@@ -974,7 +942,7 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn jstype(&self) -> JsType {
         self.descriptor().options().jstype()
     }
-    fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+    fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
         match value {
             Node::Enum(e) => {
                 self.0.enumeration.replace(e.into());
@@ -1041,10 +1009,9 @@ impl<'a, U> MappedEnumField<'a, U> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
-}
-
-impl<'a, U> FullyQualified for MappedEnumField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
+
 }
+

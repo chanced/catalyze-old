@@ -7,28 +7,23 @@ use std::collections::VecDeque;
 use std::convert::From;
 use std::fmt::{self, Display};
 use std::marker::PhantomData;
-use std::rc::Rc;
-
-pub trait FullyQualified {
-    fn fully_qualified_name(&self) -> String;
-}
 
 #[derive(Debug)]
-pub enum Node<'a, U> {
-    Package(Package<'a, U>),
-    File(File<'a, U>),
-    Message(Message<'a, U>),
-    Oneof(Oneof<'a, U>),
-    Enum(Enum<'a, U>),
-    EnumValue(EnumValue<'a, U>),
-    Service(Service<'a, U>),
-    Method(Method<'a, U>),
-    Field(Field<'a, U>),
-    Extension(Extension<'a, U>),
+pub enum Node<'a> {
+    Package(Package<'a>),
+    File(File<'a>),
+    Message(Message<'a>),
+    Oneof(Oneof<'a>),
+    Enum(Enum<'a>),
+    EnumValue(EnumValue<'a>),
+    Service(Service<'a>),
+    Method(Method<'a>),
+    Field(Field<'a>),
+    Extension(Extension<'a>),
 }
 
-impl<'a, U> Node<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> Node<'a> {
+    pub fn name(&self) -> Name {
         match self {
             Node::Package(p) => p.name(),
             Node::File(f) => f.name(),
@@ -43,7 +38,7 @@ impl<'a, U> Node<'a, U> {
         }
     }
 
-    pub fn nodes(&self) -> Nodes<'a, U> {
+    pub fn nodes(&self) -> Nodes<'a> {
         match self {
             Node::Package(p) => p.nodes(),
             Node::File(f) => f.nodes(),
@@ -82,22 +77,8 @@ impl<'a, U> Node<'a, U> {
             Node::Package(_) | Node::File(_) => unreachable!(),
         }
     }
-    pub fn util(&self) -> Rc<U> {
-        match self {
-            Node::Package(n) => n.util(),
-            Node::File(n) => n.util(),
-            Node::Message(n) => n.util(),
-            Node::Oneof(n) => n.util(),
-            Node::Enum(n) => n.util(),
-            Node::EnumValue(n) => n.util(),
-            Node::Service(n) => n.util(),
-            Node::Method(n) => n.util(),
-            Node::Field(n) => n.util(),
-            Node::Extension(n) => n.util(),
-        }
-    }
 
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         match self {
             Node::Package(p) => p.clone(),
             Node::File(f) => f.package(),
@@ -112,29 +93,14 @@ impl<'a, U> Node<'a, U> {
         }
     }
 
-    pub(crate) fn replace_util(&self) -> Node<'a, U> {
-        match self {
-            Node::Package(p) => Node::Package(p.replace_util()),
-            Node::File(f) => Node::File(f.replace_util()),
-            Node::Message(m) => Node::Message(m.replace_util()),
-            Node::Oneof(o) => Node::Oneof(o.replace_util()),
-            Node::Enum(e) => Node::Enum(e.replace_util()),
-            Node::EnumValue(ev) => Node::EnumValue(ev.replace_util()),
-            Node::Service(s) => Node::Service(s.replace_util()),
-            Node::Method(m) => Node::Method(m.replace_util()),
-            Node::Field(f) => Node::Field(f.replace_util()),
-            Node::Extension(e) => Node::Extension(e.replace_util()),
-        }
-    }
-
-    pub(crate) fn add_dependent(&self, dep: Message<'a, U>) {
+    pub(crate) fn add_dependent(&self, dep: Message<'a>) {
         match self {
             Node::Message(m) => m.add_dependent(dep),
             Node::Enum(e) => e.add_dependent(dep),
             _ => unreachable!(),
         }
     }
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a>> {
         match self {
             Node::File(f) => f.node_at_path(path),
             Node::Message(m) => m.node_at_path(path),
@@ -149,7 +115,7 @@ impl<'a, U> Node<'a, U> {
         }
     }
 }
-impl<'a, U> Display for Node<'a, U> {
+impl<'a> Display for Node<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Node::Package(p) => write!(fmt, "Package({})", p.name()),
@@ -202,23 +168,8 @@ impl<'a, U> Display for Node<'a, U> {
         }
     }
 }
-impl<'a, U> FullyQualified for Node<'a, Node<'a, U>> {
-    fn fully_qualified_name(&self) -> String {
-        match self {
-            Node::File(f) => f.fully_qualified_name(),
-            Node::Message(m) => m.fully_qualified_name(),
-            Node::Oneof(o) => o.fully_qualified_name(),
-            Node::Enum(e) => e.fully_qualified_name(),
-            Node::EnumValue(ev) => ev.fully_qualified_name(),
-            Node::Service(s) => s.fully_qualified_name(),
-            Node::Method(m) => m.fully_qualified_name(),
-            Node::Field(f) => f.fully_qualified_name(),
-            Node::Extension(e) => e.fully_qualified_name(),
-            Node::Package(p) => p.fully_qualified_name(),
-        }
-    }
-}
-impl<'a, U> Clone for Node<'a, U> {
+
+impl<'a> Clone for Node<'a> {
     fn clone(&self) -> Self {
         match self {
             Self::Package(p) => Self::Package(p.clone()),
@@ -235,148 +186,148 @@ impl<'a, U> Clone for Node<'a, U> {
     }
 }
 
-impl<'a, U> From<File<'a, U>> for Node<'a, U> {
-    fn from(file: File<'a, U>) -> Self {
+impl<'a> From<File<'a>> for Node<'a> {
+    fn from(file: File<'a>) -> Self {
         Node::File(file)
     }
 }
-impl<'a, U> From<&File<'a, U>> for Node<'a, U> {
-    fn from(file: &File<'a, U>) -> Self {
+impl<'a> From<&File<'a>> for Node<'a> {
+    fn from(file: &File<'a>) -> Self {
         Node::File(file.clone())
     }
 }
 
-impl<'a, U> From<Package<'a, U>> for Node<'a, U> {
-    fn from(p: Package<'a, U>) -> Self {
+impl<'a> From<Package<'a>> for Node<'a> {
+    fn from(p: Package<'a>) -> Self {
         Node::Package(p)
     }
 }
 
-impl<'a, U> From<&Package<'a, U>> for Node<'a, U> {
-    fn from(p: &Package<'a, U>) -> Self {
+impl<'a> From<&Package<'a>> for Node<'a> {
+    fn from(p: &Package<'a>) -> Self {
         Node::Package(p.clone())
     }
 }
 
-impl<'a, U> From<Message<'a, U>> for Node<'a, U> {
-    fn from(m: Message<'a, U>) -> Self {
+impl<'a> From<Message<'a>> for Node<'a> {
+    fn from(m: Message<'a>) -> Self {
         Node::Message(m)
     }
 }
 
-impl<'a, U> From<&Message<'a, U>> for Node<'a, U> {
-    fn from(m: &Message<'a, U>) -> Self {
+impl<'a> From<&Message<'a>> for Node<'a> {
+    fn from(m: &Message<'a>) -> Self {
         Node::Message(m.clone())
     }
 }
 
-impl<'a, U> From<Oneof<'a, U>> for Node<'a, U> {
-    fn from(oneof: Oneof<'a, U>) -> Self {
+impl<'a> From<Oneof<'a>> for Node<'a> {
+    fn from(oneof: Oneof<'a>) -> Self {
         Node::Oneof(oneof)
     }
 }
-impl<'a, U> From<&Oneof<'a, U>> for Node<'a, U> {
-    fn from(oneof: &Oneof<'a, U>) -> Self {
+impl<'a> From<&Oneof<'a>> for Node<'a> {
+    fn from(oneof: &Oneof<'a>) -> Self {
         Node::Oneof(oneof.clone())
     }
 }
-impl<'a, U> From<Field<'a, U>> for Node<'a, U> {
-    fn from(field: Field<'a, U>) -> Self {
+impl<'a> From<Field<'a>> for Node<'a> {
+    fn from(field: Field<'a>) -> Self {
         Node::Field(field)
     }
 }
-impl<'a, U> From<&Field<'a, U>> for Node<'a, U> {
-    fn from(field: &Field<'a, U>) -> Self {
+impl<'a> From<&Field<'a>> for Node<'a> {
+    fn from(field: &Field<'a>) -> Self {
         Node::Field(field.clone())
     }
 }
 
-impl<'a, U> From<Enum<'a, U>> for Node<'a, U> {
-    fn from(e: Enum<'a, U>) -> Self {
+impl<'a> From<Enum<'a>> for Node<'a> {
+    fn from(e: Enum<'a>) -> Self {
         Node::Enum(e)
     }
 }
 
-impl<'a, U> From<&Enum<'a, U>> for Node<'a, U> {
-    fn from(e: &Enum<'a, U>) -> Self {
+impl<'a> From<&Enum<'a>> for Node<'a> {
+    fn from(e: &Enum<'a>) -> Self {
         Node::Enum(e.clone())
     }
 }
 
-impl<'a, U> From<EnumValue<'a, U>> for Node<'a, U> {
-    fn from(ev: EnumValue<'a, U>) -> Self {
+impl<'a> From<EnumValue<'a>> for Node<'a> {
+    fn from(ev: EnumValue<'a>) -> Self {
         Node::EnumValue(ev)
     }
 }
 
-impl<'a, U> From<&EnumValue<'a, U>> for Node<'a, U> {
-    fn from(ev: &EnumValue<'a, U>) -> Self {
+impl<'a> From<&EnumValue<'a>> for Node<'a> {
+    fn from(ev: &EnumValue<'a>) -> Self {
         Node::EnumValue(ev.clone())
     }
 }
 
-impl<'a, U> From<Service<'a, U>> for Node<'a, U> {
-    fn from(s: Service<'a, U>) -> Self {
+impl<'a> From<Service<'a>> for Node<'a> {
+    fn from(s: Service<'a>) -> Self {
         Node::Service(s)
     }
 }
 
-impl<'a, U> From<&Service<'a, U>> for Node<'a, U> {
-    fn from(s: &Service<'a, U>) -> Self {
+impl<'a> From<&Service<'a>> for Node<'a> {
+    fn from(s: &Service<'a>) -> Self {
         Node::Service(s.clone())
     }
 }
 
-impl<'a, U> From<Method<'a, U>> for Node<'a, U> {
-    fn from(m: Method<'a, U>) -> Self {
+impl<'a> From<Method<'a>> for Node<'a> {
+    fn from(m: Method<'a>) -> Self {
         Node::Method(m)
     }
 }
 
-impl<'a, U> From<&Method<'a, U>> for Node<'a, U> {
-    fn from(m: &Method<'a, U>) -> Self {
+impl<'a> From<&Method<'a>> for Node<'a> {
+    fn from(m: &Method<'a>) -> Self {
         Node::Method(m.clone())
     }
 }
 
-impl<'a, U> From<Extension<'a, U>> for Node<'a, U> {
-    fn from(e: Extension<'a, U>) -> Self {
+impl<'a> From<Extension<'a>> for Node<'a> {
+    fn from(e: Extension<'a>) -> Self {
         Node::Extension(e)
     }
 }
 
-impl<'a, U> From<&Extension<'a, U>> for Node<'a, U> {
-    fn from(e: &Extension<'a, U>) -> Self {
+impl<'a> From<&Extension<'a>> for Node<'a> {
+    fn from(e: &Extension<'a>) -> Self {
         Node::Extension(e.clone())
     }
 }
 
-// File(File<'a, U>),
-//     Message(Message<'a, U>),
-//     Oneof(Oneof<'a, U>),
-//     Enum(Enum<'a, U>),
-//     EnumValue(EnumValue<'a, U>),
-//     Service(Service<'a, U>),
-//     Method(Method<'a, U>),
-//     Field(Field<'a, U>),
-//     Extension(Extension<'a, U>),
+// File(File<'a>),
+//     Message(Message<'a>),
+//     Oneof(Oneof<'a>),
+//     Enum(Enum<'a>),
+//     EnumValue(EnumValue<'a>),
+//     Service(Service<'a>),
+//     Method(Method<'a>),
+//     Field(Field<'a>),
+//     Extension(Extension<'a>),
 
 #[derive(Debug, Clone)]
-pub enum NodeIter<'a, U, T = Node<'a, U>> {
-    Nodes(Nodes<'a, U>),
-    Packages(Iter<Package<'a, U>>),
-    Files(Iter<File<'a, U>>),
-    Messages(Iter<Message<'a, U>>),
-    Oneofs(Iter<Oneof<'a, U>>),
-    Enums(Iter<Enum<'a, U>>),
-    EnumValues(Iter<EnumValue<'a, U>>),
-    Services(Iter<Service<'a, U>>),
-    Methods(Iter<Method<'a, U>>),
-    Fields(Iter<Field<'a, U>>),
-    Extensions(Iter<Extension<'a, U>>),
+pub enum NodeIter<'a, T = Node<'a>> {
+    Nodes(Nodes<'a>),
+    Packages(Iter<Package<'a>>),
+    Files(Iter<File<'a>>),
+    Messages(Iter<Message<'a>>),
+    Oneofs(Iter<Oneof<'a>>),
+    Enums(Iter<Enum<'a>>),
+    EnumValues(Iter<EnumValue<'a>>),
+    Services(Iter<Service<'a>>),
+    Methods(Iter<Method<'a>>),
+    Fields(Iter<Field<'a>>),
+    Extensions(Iter<Extension<'a>>),
     _Phantom(PhantomData<T>),
 }
-impl<'a, U, T> NodeIter<'a, U, T> {
+impl<'a, T> NodeIter<'a, T> {
     pub fn len(&self) -> usize {
         match self {
             NodeIter::Nodes(nodes) => nodes.len(),
@@ -397,8 +348,8 @@ impl<'a, U, T> NodeIter<'a, U, T> {
         self.len() == 0
     }
 }
-impl<'a, U> Iterator for NodeIter<'a, U, Node<'a, U>> {
-    type Item = Node<'a, U>;
+impl<'a> Iterator for NodeIter<'a, Node<'a>> {
+    type Item = Node<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             NodeIter::Nodes(nodes) => nodes.next(),
@@ -416,72 +367,72 @@ impl<'a, U> Iterator for NodeIter<'a, U, Node<'a, U>> {
         }
     }
 }
-impl<'a, U> From<Nodes<'a, U>> for NodeIter<'a, U> {
-    fn from(i: Nodes<'a, U>) -> Self {
+impl<'a> From<Nodes<'a>> for NodeIter<'a> {
+    fn from(i: Nodes<'a>) -> Self {
         NodeIter::Nodes(i)
     }
 }
 
-impl<'a, U> From<Iter<Message<'a, U>>> for NodeIter<'a, U> {
-    fn from(i: Iter<Message<'a, U>>) -> Self {
+impl<'a> From<Iter<Message<'a>>> for NodeIter<'a> {
+    fn from(i: Iter<Message<'a>>) -> Self {
         NodeIter::Messages(i)
     }
 }
-impl<'a, U> From<Iter<Oneof<'a, U>>> for NodeIter<'a, U> {
-    fn from(i: Iter<Oneof<'a, U>>) -> Self {
+impl<'a> From<Iter<Oneof<'a>>> for NodeIter<'a> {
+    fn from(i: Iter<Oneof<'a>>) -> Self {
         NodeIter::Oneofs(i)
     }
 }
-impl<'a, U> From<Iter<Enum<'a, U>>> for NodeIter<'a, U> {
-    fn from(i: Iter<Enum<'a, U>>) -> Self {
+impl<'a> From<Iter<Enum<'a>>> for NodeIter<'a> {
+    fn from(i: Iter<Enum<'a>>) -> Self {
         NodeIter::Enums(i)
     }
 }
-impl<'a, U> From<Iter<EnumValue<'a, U>>> for NodeIter<'a, U> {
-    fn from(i: Iter<EnumValue<'a, U>>) -> Self {
+impl<'a> From<Iter<EnumValue<'a>>> for NodeIter<'a> {
+    fn from(i: Iter<EnumValue<'a>>) -> Self {
         NodeIter::EnumValues(i)
     }
 }
-impl<'a, U> From<Iter<Service<'a, U>>> for NodeIter<'a, U> {
-    fn from(i: Iter<Service<'a, U>>) -> Self {
+impl<'a> From<Iter<Service<'a>>> for NodeIter<'a> {
+    fn from(i: Iter<Service<'a>>) -> Self {
         NodeIter::Services(i)
     }
 }
-impl<'a, U> From<Iter<Method<'a, U>>> for NodeIter<'a, U> {
-    fn from(i: Iter<Method<'a, U>>) -> Self {
+impl<'a> From<Iter<Method<'a>>> for NodeIter<'a> {
+    fn from(i: Iter<Method<'a>>) -> Self {
         NodeIter::Methods(i)
     }
 }
-impl<'a, U> From<Iter<Field<'a, U>>> for NodeIter<'a, U> {
-    fn from(i: Iter<Field<'a, U>>) -> Self {
+impl<'a> From<Iter<Field<'a>>> for NodeIter<'a> {
+    fn from(i: Iter<Field<'a>>) -> Self {
         NodeIter::Fields(i)
     }
 }
-impl<'a, U> From<Iter<Extension<'a, U>>> for NodeIter<'a, U> {
-    fn from(i: Iter<Extension<'a, U>>) -> Self {
+impl<'a> From<Iter<Extension<'a>>> for NodeIter<'a> {
+    fn from(i: Iter<Extension<'a>>) -> Self {
         NodeIter::Extensions(i)
     }
 }
-impl<'a, U> From<Iter<File<'a, U>>> for NodeIter<'a, U> {
-    fn from(i: Iter<File<'a, U>>) -> Self {
+impl<'a> From<Iter<File<'a>>> for NodeIter<'a> {
+    fn from(i: Iter<File<'a>>) -> Self {
         NodeIter::Files(i)
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Nodes<'a, U, T = Node<'a, U>> {
+pub struct Nodes<'a, T = Node<'a>> {
     _marker: PhantomData<T>,
-    iters: VecDeque<NodeIter<'a, U>>,
+    iters: VecDeque<NodeIter<'a>>,
 }
 
-impl<'a, U> Nodes<'a, U> {
-    pub fn new(iters: Vec<NodeIter<'a, U>>) -> Nodes<'a, U> {
+impl<'a> Nodes<'a> {
+    pub fn new(iters: Vec<NodeIter<'a>>) -> Nodes<'a> {
         Nodes {
             _marker: PhantomData,
             iters: iters.into(),
         }
     }
-    pub fn empty() -> Nodes<'a, U> {
+    pub fn empty() -> Nodes<'a> {
         Nodes {
             _marker: PhantomData,
             iters: VecDeque::new(),
@@ -494,16 +445,16 @@ impl<'a, U> Nodes<'a, U> {
     pub fn is_empty(&self) -> bool {
         self.iters.iter().all(NodeIter::is_empty)
     }
-    pub fn push_back<I: Into<NodeIter<'a, U>>>(&mut self, i: I) {
+    pub fn push_back<I: Into<NodeIter<'a>>>(&mut self, i: I) {
         self.iters.push_back(i.into());
     }
-    pub fn push_front<I: Into<NodeIter<'a, U>>>(&mut self, i: I) {
+    pub fn push_front<I: Into<NodeIter<'a>>>(&mut self, i: I) {
         self.iters.push_front(i.into());
     }
 }
 
-impl<'a, U> Iterator for Nodes<'a, U, Node<'a, U>> {
-    type Item = Node<'a, U>;
+impl<'a> Iterator for Nodes<'a, Node<'a>> {
+    type Item = Node<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(i) = self.iters.front_mut() {
@@ -519,25 +470,25 @@ impl<'a, U> Iterator for Nodes<'a, U, Node<'a, U>> {
     }
 }
 
-pub struct AllNodes<'a, U, T = Node<'a, U>> {
-    iter: Nodes<'a, U>,
+pub struct AllNodes<'a, T = Node<'a>> {
+    iter: Nodes<'a>,
     _marker: PhantomData<T>,
 }
 
-impl<'a, U> AllNodes<'a, U, Node<'a, U>> {
-    pub fn new(node: Node<'a, U>) -> AllNodes<'a, U, Node<'a, U>> {
+impl<'a> AllNodes<'a, Node<'a>> {
+    pub fn new(node: Node<'a>) -> AllNodes<'a, Node<'a>> {
         AllNodes {
             iter: node.nodes(),
             _marker: PhantomData,
         }
     }
-    pub fn push_back(&mut self, nodes: Nodes<'a, U>) {
+    pub fn push_back(&mut self, nodes: Nodes<'a>) {
         self.iter.push_back(nodes);
     }
 }
 
-impl<'a, U> Iterator for AllNodes<'a, U> {
-    type Item = Node<'a, U>;
+impl<'a> Iterator for AllNodes<'a> {
+    type Item = Node<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(n) = self.iter.next() {
@@ -551,8 +502,8 @@ impl<'a, U> Iterator for AllNodes<'a, U> {
         }
     }
 }
-impl<'a, U> From<Nodes<'a, U>> for AllNodes<'a, U> {
-    fn from(i: Nodes<'a, U>) -> Self {
+impl<'a> From<Nodes<'a>> for AllNodes<'a> {
+    fn from(i: Nodes<'a>) -> Self {
         AllNodes {
             iter: i,
             _marker: PhantomData,
@@ -560,8 +511,8 @@ impl<'a, U> From<Nodes<'a, U>> for AllNodes<'a, U> {
     }
 }
 
-impl<'a, U> From<&Ast<'a, U>> for AllNodes<'a, U> {
-    fn from(ast: &Ast<'a, U>) -> Self {
+impl<'a> From<&Ast<'a>> for AllNodes<'a> {
+    fn from(ast: &Ast<'a>) -> Self {
         AllNodes {
             iter: Nodes::new(vec![NodeIter::Packages(ast.packages())]),
             _marker: PhantomData,
@@ -578,7 +529,7 @@ mod tests {
     #[test]
     fn test_nodes() {
         let u = Rc::new(Generic {});
-        let pkg = Package::new("pkg", u);
+        let pkg = Package::new("pkg");
 
         let f = File::new(true, FileDescriptor::default(), pkg.clone()).unwrap();
         let m1 = Message::new(Default::default(), f.clone().into()).unwrap();
@@ -595,7 +546,7 @@ mod tests {
     #[test]
     fn test_all_nodes() {
         let u = Rc::new(Generic {});
-        let pkg = Package::new("pkg", u);
+        let pkg = Package::new("pkg");
 
         let f = File::new(true, FileDescriptor::default(), pkg.clone()).unwrap();
         let m1 = Message::new(Default::default(), f.clone().into()).unwrap();

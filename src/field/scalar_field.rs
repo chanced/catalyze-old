@@ -7,21 +7,21 @@ use super::FieldDetail;
 use crate::{
     proto::{FieldDescriptor, Scalar},
     proto::{Syntax, Type},
-    Comments, Field, File, FullyQualified, Message, Name, Package, UninterpretedOptions,
+    Comments, Field, File, Message, Name, Package, UninterpretedOptions,
 };
 
 #[derive(Debug)]
-pub(crate) struct ScalarFieldDetail<'a, U> {
-    detail: FieldDetail<'a, U>,
+pub(crate) struct ScalarFieldDetail<'a> {
+    detail: FieldDetail<'a>,
     scalar: Scalar,
 }
 
-impl<'a, U> ScalarFieldDetail<'a, U> {
-    pub(crate) fn new(detail: FieldDetail<'a, U>, scalar: Scalar) -> Self {
+impl<'a> ScalarFieldDetail<'a> {
+    pub(crate) fn new(detail: FieldDetail<'a>, scalar: Scalar) -> Self {
         Self { detail, scalar }
     }
 
-    pub fn name(&self) -> Name<U> {
+    pub fn name(&self) -> Name {
         self.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -39,13 +39,11 @@ impl<'a, U> ScalarFieldDetail<'a, U> {
     pub fn is_map(&self) -> bool {
         self.detail.is_map()
     }
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.detail.message()
     }
     /// Returns `Rc<U>`
-    pub fn util(&self) -> Rc<U> {
-        self.detail.util()
-    }
+
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
     }
@@ -56,10 +54,10 @@ impl<'a, U> ScalarFieldDetail<'a, U> {
     pub fn comments(&self) -> Comments<'a> {
         self.detail.comments()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.detail.package()
     }
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.detail.file()
     }
 
@@ -75,7 +73,7 @@ impl<'a, U> ScalarFieldDetail<'a, U> {
     }
 }
 
-impl<'a, U> Clone for ScalarFieldDetail<'a, U> {
+impl<'a> Clone for ScalarFieldDetail<'a> {
     fn clone(&self) -> Self {
         Self {
             detail: self.detail.clone(),
@@ -84,10 +82,10 @@ impl<'a, U> Clone for ScalarFieldDetail<'a, U> {
     }
 }
 #[derive(Debug)]
-pub struct ScalarField<'a, U>(Rc<ScalarFieldDetail<'a, U>>);
+pub struct ScalarField<'a>(Rc<ScalarFieldDetail<'a>>);
 
-impl<'a, U> ScalarField<'a, U> {
-    pub(crate) fn new(detail: FieldDetail<'a, U>) -> Result<Field<'a, U>, anyhow::Error> {
+impl<'a> ScalarField<'a> {
+    pub(crate) fn new(detail: FieldDetail<'a>) -> Result<Field<'a>, anyhow::Error> {
         match detail.value_type() {
             Type::Scalar(s) => Ok(Field::Scalar(Self(Rc::new(ScalarFieldDetail {
                 detail,
@@ -100,7 +98,7 @@ impl<'a, U> ScalarField<'a, U> {
     pub fn scalar(&self) -> Scalar {
         self.0.scalar
     }
-    pub fn name(&self) -> Name<U> {
+    pub fn name(&self) -> Name {
         self.0.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -109,10 +107,10 @@ impl<'a, U> ScalarField<'a, U> {
     pub fn comments(&self) -> Comments<'a> {
         self.0.comments()
     }
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.0.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.0.package()
     }
     pub fn syntax(&self) -> Syntax {
@@ -140,10 +138,6 @@ impl<'a, U> ScalarField<'a, U> {
 
     pub fn has_presence(&self) -> bool {
         self.syntax().is_proto2() || self.is_marked_optional()
-    }
-
-    pub fn util(&self) -> Rc<U> {
-        self.0.util()
     }
 
     pub fn value_type(&self) -> Type<'a> {
@@ -219,21 +213,19 @@ impl<'a, U> ScalarField<'a, U> {
         self.descriptor().options().uninterpreted_options()
     }
 
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.0.message()
     }
-}
-
-impl<'a, U> FullyQualified for ScalarField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> String {
         self.0.fully_qualified_name()
     }
 }
-impl<'a, U> Clone for ScalarField<'a, U> {
+
+impl<'a> Clone for ScalarField<'a> {
     fn clone(&self) -> Self {
         ScalarField(self.0.clone())
     }
 }
 
 // #[derive(Debug, Clone)]
-// pub(crate) struct WeakScalarField<'a, U>(Weak<MappedScalarFieldDetail<'a, U>>);
+// pub(crate) struct WeakScalarField<'a>(Weak<MappedScalarFieldDetail<'a>>);

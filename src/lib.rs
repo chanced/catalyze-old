@@ -51,6 +51,5 @@ pub use proto::*;
 pub use r#enum::*;
 pub use service::*;
 pub use source::*;
-pub use util::{IsKeyword, ToCase, Util};
 pub use visit::*;
 pub use well_known_type::*;

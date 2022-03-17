@@ -6,30 +6,28 @@ use anyhow::bail;
 
 use crate::{
     proto::{FieldDescriptor, Scalar, Syntax},
-    Comments, Enum, Field, File, FileRefs, FullyQualified, JsType, Message, Name, Node, Oneof,
-    Package, Type, UninterpretedOptions, WeakEnum, WeakMessage, WeakOneof, WellKnownType,
+    Comments, Enum, Field, File, FileRefs, JsType, Message, Name, Node, Oneof, Package, Type,
+    UninterpretedOptions, WeakEnum, WeakMessage, WeakOneof, WellKnownType,
 };
 
 use super::FieldDetail;
 #[derive(Debug)]
-pub(crate) struct OneofFieldDetail<'a, U> {
-    pub detail: FieldDetail<'a, U>,
-    pub oneof: WeakOneof<'a, U>,
+pub(crate) struct OneofFieldDetail<'a> {
+    pub detail: FieldDetail<'a>,
+    pub oneof: WeakOneof<'a>,
 }
-impl<'a, U> OneofFieldDetail<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> OneofFieldDetail<'a> {
+    pub fn name(&self) -> Name {
         self.detail.name()
     }
     pub fn descriptor(&self) -> FieldDescriptor<'a> {
         self.detail.descriptor()
     }
-    pub fn util(&self) -> Rc<U> {
-        self.detail.util()
-    }
+
     pub fn fully_qualified_name(&self) -> String {
         self.detail.fully_qualified_name()
     }
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.detail.message()
     }
     pub fn comments(&self) -> Comments<'a> {
@@ -38,13 +36,13 @@ impl<'a, U> OneofFieldDetail<'a, U> {
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
     }
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.detail.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.detail.package()
     }
-    pub fn oneof(&self) -> Oneof<'a, U> {
+    pub fn oneof(&self) -> Oneof<'a> {
         self.oneof.clone().into()
     }
     pub(crate) fn set_comments(&self, comments: Comments<'a>) {
@@ -62,7 +60,7 @@ impl<'a, U> OneofFieldDetail<'a, U> {
         self.oneof().is_synthetic()
     }
 }
-impl<'a, U> Clone for OneofFieldDetail<'a, U> {
+impl<'a> Clone for OneofFieldDetail<'a> {
     fn clone(&self) -> Self {
         Self {
             detail: self.detail.clone(),
@@ -72,12 +70,12 @@ impl<'a, U> Clone for OneofFieldDetail<'a, U> {
 }
 
 #[derive(Debug)]
-pub enum OneofField<'a, U> {
-    Scalar(OneofScalarField<'a, U>),
-    Enum(OneofEnumField<'a, U>),
-    Embed(OneofEmbedField<'a, U>),
+pub enum OneofField<'a> {
+    Scalar(OneofScalarField<'a>),
+    Enum(OneofEnumField<'a>),
+    Embed(OneofEmbedField<'a>),
 }
-impl<'a, U> Clone for OneofField<'a, U> {
+impl<'a> Clone for OneofField<'a> {
     fn clone(&self) -> Self {
         match self {
             Self::Scalar(f) => Self::Scalar(f.clone()),
@@ -86,8 +84,8 @@ impl<'a, U> Clone for OneofField<'a, U> {
         }
     }
 }
-impl<'a, U> OneofField<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> OneofField<'a> {
+    pub fn name(&self) -> Name {
         match self {
             OneofField::Scalar(f) => f.name(),
             OneofField::Enum(f) => f.name(),
@@ -101,7 +99,7 @@ impl<'a, U> OneofField<'a, U> {
             OneofField::Embed(f) => f.fully_qualified_name(),
         }
     }
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         match self {
             OneofField::Scalar(f) => f.message(),
             OneofField::Enum(f) => f.message(),
@@ -116,14 +114,14 @@ impl<'a, U> OneofField<'a, U> {
         }
     }
 
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         match self {
             OneofField::Scalar(f) => f.file(),
             OneofField::Enum(f) => f.file(),
             OneofField::Embed(f) => f.file(),
         }
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         match self {
             OneofField::Scalar(f) => f.package(),
             OneofField::Enum(f) => f.package(),
@@ -138,7 +136,7 @@ impl<'a, U> OneofField<'a, U> {
             OneofField::Embed(f) => f.has_import(),
         }
     }
-    pub fn imports(&self) -> FileRefs<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a> {
         match self {
             OneofField::Scalar(_) => FileRefs::empty(),
             OneofField::Enum(f) => f.imports(),
@@ -153,16 +151,16 @@ impl<'a, U> OneofField<'a, U> {
             OneofField::Embed(f) => f.build_target(),
         }
     }
-    pub fn r#enum(&self) -> Option<Enum<'a, U>> {
+    pub fn r#enum(&self) -> Option<Enum<'a>> {
         match self {
             OneofField::Enum(f) => Some(f.r#enum()),
             _ => None,
         }
     }
-    pub fn enumeration(&self) -> Option<Enum<'a, U>> {
+    pub fn enumeration(&self) -> Option<Enum<'a>> {
         self.r#enum()
     }
-    pub fn embed(&self) -> Option<Message<'a, U>> {
+    pub fn embed(&self) -> Option<Message<'a>> {
         match self {
             OneofField::Embed(f) => Some(f.embed()),
             _ => None,
@@ -257,15 +255,7 @@ impl<'a, U> OneofField<'a, U> {
         }
     }
 
-    pub fn util(&self) -> Rc<U> {
-        match self {
-            OneofField::Scalar(f) => f.util(),
-            OneofField::Enum(f) => f.util(),
-            OneofField::Embed(f) => f.util(),
-        }
-    }
-
-    pub(crate) fn set_value(&self, value: crate::Node<'a, U>) -> Result<(), anyhow::Error> {
+    pub(crate) fn set_value(&self, value: crate::Node<'a>) -> Result<(), anyhow::Error> {
         match self {
             OneofField::Enum(f) => f.set_value(value),
             OneofField::Embed(f) => f.set_value(value),
@@ -278,9 +268,9 @@ impl<'a, U> OneofField<'a, U> {
     }
 
     pub(crate) fn new(
-        detail: FieldDetail<'a, U>,
-        oneof: Oneof<'a, U>,
-    ) -> Result<crate::Field<'a, U>, anyhow::Error> {
+        detail: FieldDetail<'a>,
+        oneof: Oneof<'a>,
+    ) -> Result<crate::Field<'a>, anyhow::Error> {
         match detail.value_type() {
             Type::Scalar(scalar) => Ok(Field::Oneof(OneofField::Scalar(OneofScalarField(
                 Rc::new(OneofScalarFieldDetail {
@@ -395,10 +385,7 @@ impl<'a, U> OneofField<'a, U> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
-}
-
-impl<'a, U> FullyQualified for OneofField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> String {
         match self {
             OneofField::Scalar(f) => f.fully_qualified_name(),
             OneofField::Enum(f) => f.fully_qualified_name(),
@@ -408,46 +395,44 @@ impl<'a, U> FullyQualified for OneofField<'a, U> {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct OneofEnumFieldDetail<'a, U> {
-    detail: OneofFieldDetail<'a, U>,
-    enumeration: RefCell<WeakEnum<'a, U>>,
+pub(crate) struct OneofEnumFieldDetail<'a> {
+    detail: OneofFieldDetail<'a>,
+    enumeration: RefCell<WeakEnum<'a>>,
 }
 #[derive(Debug)]
-pub struct OneofEnumField<'a, U>(Rc<OneofEnumFieldDetail<'a, U>>);
+pub struct OneofEnumField<'a>(Rc<OneofEnumFieldDetail<'a>>);
 
-impl<'a, U> OneofEnumField<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> OneofEnumField<'a> {
+    pub fn name(&self) -> Name {
         self.0.detail.name()
     }
-    pub fn util(&self) -> Rc<U> {
-        self.0.detail.util()
-    }
+
     pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.0.detail.message()
     }
     pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
-    pub fn r#enum(&self) -> Enum<'a, U> {
+    pub fn r#enum(&self) -> Enum<'a> {
         self.0.enumeration.borrow().clone().into()
     }
-    pub fn enumeration(&self) -> Enum<'a, U> {
+    pub fn enumeration(&self) -> Enum<'a> {
         self.r#enum()
     }
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.0.detail.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.0.detail.package()
     }
 
     pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.detail.set_comments(comments);
     }
-    pub fn imports(&self) -> FileRefs<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a> {
         if self.has_import() {
             FileRefs::from(self.0.enumeration.borrow().weak_file())
         } else {
@@ -494,7 +479,7 @@ impl<'a, U> OneofEnumField<'a, U> {
         true
     }
 
-    fn set_value(&self, value: crate::Node<'a, U>) -> Result<(), anyhow::Error> {
+    fn set_value(&self, value: crate::Node<'a>) -> Result<(), anyhow::Error> {
         match value {
             Node::Enum(v) => {
                 self.0.enumeration.replace(v.into());
@@ -567,39 +552,38 @@ impl<'a, U> OneofEnumField<'a, U> {
     pub fn is_deprecated(&self) -> bool {
         self.descriptor().options().is_deprecated()
     }
-}
-impl<'a, U> FullyQualified for OneofEnumField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
 }
-impl<'a, U> Clone for OneofEnumField<'a, U> {
+
+impl<'a> Clone for OneofEnumField<'a> {
     fn clone(&self) -> Self {
         OneofEnumField(self.0.clone())
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct OneofScalarFieldDetail<'a, U> {
+pub struct OneofScalarFieldDetail<'a> {
     scalar: Scalar,
-    detail: OneofFieldDetail<'a, U>,
+    detail: OneofFieldDetail<'a>,
 }
 
 #[derive(Debug)]
-pub struct OneofScalarField<'a, U>(Rc<OneofScalarFieldDetail<'a, U>>);
+pub struct OneofScalarField<'a>(Rc<OneofScalarFieldDetail<'a>>);
 
-impl<'a, U> OneofScalarField<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> OneofScalarField<'a> {
+    pub fn name(&self) -> Name {
         self.0.detail.name()
     }
-    pub fn oneof(&self) -> Oneof<'a, U> {
+    pub fn oneof(&self) -> Oneof<'a> {
         self.0.detail.oneof()
     }
     pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
 
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.0.detail.message()
     }
 
@@ -607,10 +591,10 @@ impl<'a, U> OneofScalarField<'a, U> {
         self.0.detail.comments()
     }
 
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.0.detail.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.0.detail.package()
     }
     pub fn scalar(&self) -> Scalar {
@@ -646,10 +630,6 @@ impl<'a, U> OneofScalarField<'a, U> {
 
     pub fn has_presence(&self) -> bool {
         true
-    }
-
-    pub fn util(&self) -> Rc<U> {
-        self.0.detail.util()
     }
 
     /// The jstype option determines the JavaScript type used for values of the
@@ -715,61 +695,58 @@ impl<'a, U> OneofScalarField<'a, U> {
     pub fn is_deprecated(&self) -> bool {
         self.descriptor().options().is_deprecated()
     }
-}
-
-impl<'a, U> FullyQualified for OneofScalarField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
 }
 
-impl<'a, U> Clone for OneofScalarField<'a, U> {
+impl<'a> Clone for OneofScalarField<'a> {
     fn clone(&self) -> Self {
         OneofScalarField(self.0.clone())
     }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct OneofEmbedFieldDetail<'a, U> {
-    detail: OneofFieldDetail<'a, U>,
-    embed: RefCell<WeakMessage<'a, U>>,
+pub(crate) struct OneofEmbedFieldDetail<'a> {
+    detail: OneofFieldDetail<'a>,
+    embed: RefCell<WeakMessage<'a>>,
 }
 
 #[derive(Debug)]
-pub struct OneofEmbedField<'a, U>(Rc<OneofEmbedFieldDetail<'a, U>>);
-impl<'a, U> Clone for OneofEmbedField<'a, U> {
+pub struct OneofEmbedField<'a>(Rc<OneofEmbedFieldDetail<'a>>);
+impl<'a> Clone for OneofEmbedField<'a> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
-impl<'a, U> OneofEmbedField<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> OneofEmbedField<'a> {
+    pub fn name(&self) -> Name {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.0.detail.message()
     }
 
     pub fn comments(&self) -> Comments<'a> {
         self.0.detail.comments()
     }
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.0.detail.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.0.detail.package()
     }
 
-    pub fn embed(&self) -> Message<'a, U> {
+    pub fn embed(&self) -> Message<'a> {
         self.0.embed.borrow().clone().into()
     }
     pub fn has_import(&self) -> bool {
         self.0.embed.borrow().file() != self.file()
     }
-    pub fn imports(&self) -> FileRefs<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a> {
         if self.has_import() {
             FileRefs::from(self.0.embed.borrow().weak_file())
         } else {
@@ -814,11 +791,7 @@ impl<'a, U> OneofEmbedField<'a, U> {
         true
     }
 
-    pub fn util(&self) -> Rc<U> {
-        self.0.detail.util()
-    }
-
-    fn set_value(&self, value: crate::Node<'a, U>) -> Result<(), anyhow::Error> {
+    fn set_value(&self, value: crate::Node<'a>) -> Result<(), anyhow::Error> {
         match value {
             Node::Message(v) => {
                 self.0.embed.replace(v.into());
@@ -891,10 +864,7 @@ impl<'a, U> OneofEmbedField<'a, U> {
     pub fn is_deprecated(&self) -> bool {
         self.descriptor().options().is_deprecated()
     }
-}
-
-impl<'a, U> FullyQualified for OneofEmbedField<'a, U> {
-    fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> String {
         self.0.detail.fully_qualified_name()
     }
 }

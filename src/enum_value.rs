@@ -1,22 +1,21 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    container::Container, proto::EnumValueDescriptor, Comments, Enum, File, FullyQualified, Name,
-    Node, Package, WeakEnum,
+    container::Container, proto::EnumValueDescriptor, Comments, Enum, File, Name, Node, Package,
+    WeakEnum,
 };
 
 #[derive(Debug, Clone)]
-struct EnumValueDetail<'a, U> {
-    name: Name<U>,
+struct EnumValueDetail<'a> {
+    name: Name,
     fqn: String,
     desc: EnumValueDescriptor<'a>,
-    e: WeakEnum<'a, U>,
+    e: WeakEnum<'a>,
     comments: RefCell<Comments<'a>>,
-    util: Rc<U>,
 }
 
-impl<'a, U> EnumValueDetail<'a, U> {
-    pub fn name(&self) -> Name<U> {
+impl<'a> EnumValueDetail<'a> {
+    pub fn name(&self) -> Name {
         self.name.clone()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -26,7 +25,7 @@ impl<'a, U> EnumValueDetail<'a, U> {
         self.desc
     }
 
-    pub fn enumeration(&self) -> Enum<'a, U> {
+    pub fn enumeration(&self) -> Enum<'a> {
         self.e.clone().into()
     }
 
@@ -39,28 +38,27 @@ impl<'a, U> EnumValueDetail<'a, U> {
 }
 
 #[derive(Debug)]
-pub struct EnumValue<'a, U>(Rc<EnumValueDetail<'a, U>>);
+pub struct EnumValue<'a>(Rc<EnumValueDetail<'a>>);
 
-impl<'a, U> EnumValue<'a, U> {
-    pub(crate) fn new(desc: EnumValueDescriptor<'a>, e: Enum<'a, U>) -> Self {
+impl<'a> EnumValue<'a> {
+    pub(crate) fn new(desc: EnumValueDescriptor<'a>, e: Enum<'a>) -> Self {
         let fqn = format!("{}.{}", e.fully_qualified_name(), desc.name());
         EnumValue(Rc::new(EnumValueDetail {
             fqn,
-            name: Name::new(desc.name(), e.util()),
+            name: desc.name().into(),
             desc,
             e: e.clone().into(),
             comments: RefCell::new(Comments::default()),
-            util: e.util(),
         }))
     }
-    pub fn name(&self) -> Name<U> {
+    pub fn name(&self) -> Name {
         self.0.name()
     }
 
     /// Alias for `r#enum`.
     ///
     /// Returns the enum that contains this enum value.
-    pub fn enumeration(&self) -> Enum<'a, U> {
+    pub fn enumeration(&self) -> Enum<'a> {
         self.r#enum()
     }
 
@@ -68,18 +66,18 @@ impl<'a, U> EnumValue<'a, U> {
         self.0.descriptor()
     }
     /// Returns the `Enum` that contains this value.
-    pub fn r#enum(&self) -> Enum<'a, U> {
+    pub fn r#enum(&self) -> Enum<'a> {
         self.0.enumeration()
     }
-    pub fn container(&self) -> Container<'a, U> {
+    pub fn container(&self) -> Container<'a> {
         self.enumeration().container()
     }
 
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.enumeration().file()
     }
 
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.enumeration().package()
     }
 
@@ -92,11 +90,8 @@ impl<'a, U> EnumValue<'a, U> {
     pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.set_comments(comments);
     }
-    pub fn util(&self) -> Rc<U> {
-        self.0.util.clone()
-    }
 
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a>> {
         if path.is_empty() {
             Some(self.to_owned().into())
         } else {
@@ -105,13 +100,7 @@ impl<'a, U> EnumValue<'a, U> {
     }
 }
 
-impl<'a, U> FullyQualified for EnumValue<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
-    }
-}
-
-impl<'a, U> Clone for EnumValue<'a, U> {
+impl<'a> Clone for EnumValue<'a> {
     fn clone(&self) -> Self {
         EnumValue(self.0.clone())
     }

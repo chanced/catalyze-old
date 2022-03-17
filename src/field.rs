@@ -17,33 +17,33 @@ pub use scalar_field::*;
 use crate::{
     container::Container,
     proto::{FieldDescriptor, Scalar, Syntax, Type},
-    CType, Comments, Enum, File, FileRefs, FullyQualified, JsType, Message, Name, Node, Oneof,
-    Package, UninterpretedOptions, WeakMessage, WeakOneof, WellKnownType,
+    CType, Comments, Enum, File, FileRefs, JsType, Message, Name, Node, Oneof, Package,
+    UninterpretedOptions, WeakMessage, WeakOneof, WellKnownType,
 };
-use std::{cell::RefCell, convert::From, rc::Rc};
+use std::{cell::RefCell, convert::From};
 
 #[derive(Debug)]
-pub(crate) struct FieldDetail<'a, U> {
-    msg: WeakMessage<'a, U>,
-    name: Name<U>,
+pub(crate) struct FieldDetail<'a> {
+    msg: WeakMessage<'a>,
+    name: Name,
     fqn: String,
     syntax: Syntax,
     is_map: bool,
     in_oneof: bool,
-    util: Rc<U>,
+
     desc: FieldDescriptor<'a>,
     comments: RefCell<Comments<'a>>,
-    oneof: Option<WeakOneof<'a, U>>,
-    map_entry: Option<WeakMessage<'a, U>>,
+    oneof: Option<WeakOneof<'a>>,
+    map_entry: Option<WeakMessage<'a>>,
 }
 
-impl<'a, U> FieldDetail<'a, U> {
+impl<'a> FieldDetail<'a> {
     pub fn new(
         desc: FieldDescriptor<'a>,
-        msg: Message<'a, U>,
-        oneof: Option<Oneof<'a, U>>,
+        msg: Message<'a>,
+        oneof: Option<Oneof<'a>>,
     ) -> Result<Self, anyhow::Error> {
-        let name = Name::new(desc.name(), msg.util());
+        let name = desc.name().into;
         let map_entry = if msg.is_map_entry() {
             Some(msg.clone())
         } else {
@@ -66,7 +66,7 @@ impl<'a, U> FieldDetail<'a, U> {
             syntax: msg.syntax(),
             is_map: msg.is_map_entry(),
             in_oneof: oneof.is_some(),
-            util: msg.util(),
+
             desc,
             msg: msg.clone().into(),
             comments: RefCell::new(Comments::default()),
@@ -74,20 +74,17 @@ impl<'a, U> FieldDetail<'a, U> {
         })
     }
 
-    pub fn name(&self) -> Name<U> {
+    pub fn name(&self) -> Name {
         self.name.clone()
     }
     pub fn fully_qualified_name(&self) -> String {
         self.fqn.clone()
     }
-    pub fn message(&self) -> Message<'a, U> {
+    pub fn message(&self) -> Message<'a> {
         self.msg.clone().into()
     }
-    /// Returns `Rc<U>`
-    pub fn util(&self) -> Rc<U> {
-        self.util.clone()
-    }
-    pub fn map_entry(&self) -> Result<Message<'a, U>, anyhow::Error> {
+
+    pub fn map_entry(&self) -> Result<Message<'a>, anyhow::Error> {
         self.map_entry
             .clone()
             .map(Into::into)
@@ -121,10 +118,10 @@ impl<'a, U> FieldDetail<'a, U> {
     pub fn comments(&self) -> Comments<'a> {
         *self.comments.borrow()
     }
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.msg.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.file().package()
     }
     pub fn build_target(&self) -> bool {
@@ -139,7 +136,7 @@ impl<'a, U> FieldDetail<'a, U> {
         f.value_type().try_into()
     }
 
-    // pub fn map_value(&self) -> Result<Field<'a, U>, anyhow::Error> {
+    // pub fn map_value(&self) -> Result<Field<'a>, anyhow::Error> {
     //     self.map_entry()?
     //         .fields()
     //         .get(1)
@@ -147,7 +144,7 @@ impl<'a, U> FieldDetail<'a, U> {
     // }
 }
 
-impl<'a, U> Clone for FieldDetail<'a, U> {
+impl<'a> Clone for FieldDetail<'a> {
     fn clone(&self) -> Self {
         Self {
             msg: self.msg.clone(),
@@ -155,7 +152,7 @@ impl<'a, U> Clone for FieldDetail<'a, U> {
             fqn: self.fqn.clone(),
             syntax: self.syntax,
             is_map: self.is_map,
-            util: self.util.clone(),
+
             desc: self.desc,
             in_oneof: self.in_oneof,
             comments: self.comments.clone(),
@@ -166,21 +163,21 @@ impl<'a, U> Clone for FieldDetail<'a, U> {
 }
 
 #[derive(Debug)]
-pub enum Field<'a, U> {
-    Embed(EmbedField<'a, U>),
-    Enum(EnumField<'a, U>),
-    Map(MapField<'a, U>),
-    Oneof(OneofField<'a, U>),
-    Repeated(RepeatedField<'a, U>),
-    Scalar(ScalarField<'a, U>),
+pub enum Field<'a> {
+    Embed(EmbedField<'a>),
+    Enum(EnumField<'a>),
+    Map(MapField<'a>),
+    Oneof(OneofField<'a>),
+    Repeated(RepeatedField<'a>),
+    Scalar(ScalarField<'a>),
 }
 
-impl<'a, U> Field<'a, U> {
+impl<'a> Field<'a> {
     pub fn new(
         desc: FieldDescriptor<'a>,
-        msg: Message<'a, U>,
-        oneof: Option<Oneof<'a, U>>,
-    ) -> Result<Field<'a, U>, anyhow::Error> {
+        msg: Message<'a>,
+        oneof: Option<Oneof<'a>>,
+    ) -> Result<Field<'a>, anyhow::Error> {
         let detail = FieldDetail::new(desc, msg, oneof.clone())?;
         if desc.proto_type().is_group() {
             bail!("Group is not supported")
@@ -200,7 +197,18 @@ impl<'a, U> Field<'a, U> {
             }
         }
     }
-    pub fn message(&self) -> Message<'a, U> {
+
+    pub fn fully_qualified_name(&self) -> String {
+        match self {
+            Field::Enum(f) => f.fully_qualified_name(),
+            Field::Map(f) => f.fully_qualified_name(),
+            Field::Embed(f) => f.fully_qualified_name(),
+            Field::Oneof(f) => f.fully_qualified_name(),
+            Field::Repeated(f) => f.fully_qualified_name(),
+            Field::Scalar(f) => f.fully_qualified_name(),
+        }
+    }
+    pub fn message(&self) -> Message<'a> {
         match self {
             Self::Embed(f) => f.message(),
             Self::Enum(f) => f.message(),
@@ -220,7 +228,7 @@ impl<'a, U> Field<'a, U> {
             Self::Scalar(f) => f.value_type(),
         }
     }
-    pub fn name(&self) -> Name<U> {
+    pub fn name(&self) -> Name {
         match self {
             Field::Embed(f) => f.name(),
             Field::Enum(f) => f.name(),
@@ -284,7 +292,7 @@ impl<'a, U> Field<'a, U> {
         }
     }
 
-    pub fn imports(&self) -> FileRefs<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a> {
         match self {
             Field::Embed(f) => f.imports(),
             Field::Enum(f) => f.imports(),
@@ -305,7 +313,7 @@ impl<'a, U> Field<'a, U> {
             Field::Scalar(f) => f.build_target(),
         }
     }
-    pub fn r#enum(&self) -> Option<Enum<'a, U>> {
+    pub fn r#enum(&self) -> Option<Enum<'a>> {
         match self {
             Field::Enum(f) => Some(f.r#enum()),
             Field::Map(f) => f.r#enum(),
@@ -314,7 +322,7 @@ impl<'a, U> Field<'a, U> {
             _ => None,
         }
     }
-    pub fn enumeration(&self) -> Option<Enum<'a, U>> {
+    pub fn enumeration(&self) -> Option<Enum<'a>> {
         match self {
             Field::Enum(f) => Some(f.enumeration()),
             Field::Map(f) => f.enumeration(),
@@ -323,7 +331,7 @@ impl<'a, U> Field<'a, U> {
             _ => None,
         }
     }
-    pub fn embed(&self) -> Option<Message<'a, U>> {
+    pub fn embed(&self) -> Option<Message<'a>> {
         match self {
             Field::Embed(f) => Some(f.embed()),
             Field::Map(f) => f.embed(),
@@ -478,7 +486,7 @@ impl<'a, U> Field<'a, U> {
         matches!(self, Field::Map(_))
     }
 
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         match self {
             Field::Embed(f) => f.file(),
             Field::Enum(f) => f.file(),
@@ -488,7 +496,7 @@ impl<'a, U> Field<'a, U> {
             Field::Scalar(f) => f.file(),
         }
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         match self {
             Field::Embed(f) => f.package(),
             Field::Enum(f) => f.package(),
@@ -509,18 +517,7 @@ impl<'a, U> Field<'a, U> {
         }
     }
 
-    pub(crate) fn util(&self) -> Rc<U> {
-        match self {
-            Field::Embed(f) => f.util(),
-            Field::Enum(f) => f.util(),
-            Field::Map(f) => f.util(),
-            Field::Oneof(f) => f.util(),
-            Field::Repeated(f) => f.util(),
-            Field::Scalar(f) => f.util(),
-        }
-    }
-
-    pub(crate) fn set_value(&self, value: Node<'a, U>) -> Result<(), anyhow::Error> {
+    pub(crate) fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
         match self {
             Field::Embed(f) => f.set_value(value),
             Field::Enum(f) => f.set_value(value),
@@ -531,7 +528,7 @@ impl<'a, U> Field<'a, U> {
         }
     }
 
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a>> {
         if path.is_empty() {
             Some(self.into())
         } else {
@@ -670,7 +667,7 @@ impl<'a, U> Field<'a, U> {
         }
     }
 }
-impl<'a, U> Clone for Field<'a, U> {
+impl<'a> Clone for Field<'a> {
     fn clone(&self) -> Self {
         match self {
             Self::Embed(f) => Self::Embed(f.clone()),
@@ -683,48 +680,35 @@ impl<'a, U> Clone for Field<'a, U> {
     }
 }
 
-impl<'a, U> FullyQualified for Field<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        match self {
-            Field::Enum(f) => f.fully_qualified_name(),
-            Field::Map(f) => f.fully_qualified_name(),
-            Field::Embed(f) => f.fully_qualified_name(),
-            Field::Oneof(f) => f.fully_qualified_name(),
-            Field::Repeated(f) => f.fully_qualified_name(),
-            Field::Scalar(f) => f.fully_qualified_name(),
-        }
-    }
-}
-
-impl<'a, U> From<ScalarField<'a, U>> for Field<'a, U> {
-    fn from(f: ScalarField<'a, U>) -> Self {
+impl<'a> From<ScalarField<'a>> for Field<'a> {
+    fn from(f: ScalarField<'a>) -> Self {
         Field::Scalar(f)
     }
 }
 
-impl<'a, U> From<EnumField<'a, U>> for Field<'a, U> {
-    fn from(f: EnumField<'a, U>) -> Self {
+impl<'a> From<EnumField<'a>> for Field<'a> {
+    fn from(f: EnumField<'a>) -> Self {
         Field::Enum(f)
     }
 }
-impl<'a, U> From<MapField<'a, U>> for Field<'a, U> {
-    fn from(f: MapField<'a, U>) -> Self {
+impl<'a> From<MapField<'a>> for Field<'a> {
+    fn from(f: MapField<'a>) -> Self {
         Field::Map(f)
     }
 }
-impl<'a, U> From<&ScalarField<'a, U>> for Field<'a, U> {
-    fn from(f: &ScalarField<'a, U>) -> Self {
+impl<'a> From<&ScalarField<'a>> for Field<'a> {
+    fn from(f: &ScalarField<'a>) -> Self {
         f.clone().into()
     }
 }
 
-impl<'a, U> From<&EnumField<'a, U>> for Field<'a, U> {
-    fn from(f: &EnumField<'a, U>) -> Self {
+impl<'a> From<&EnumField<'a>> for Field<'a> {
+    fn from(f: &EnumField<'a>) -> Self {
         f.clone().into()
     }
 }
-impl<'a, U> From<&MapField<'a, U>> for Field<'a, U> {
-    fn from(f: &MapField<'a, U>) -> Self {
+impl<'a> From<&MapField<'a>> for Field<'a> {
+    fn from(f: &MapField<'a>) -> Self {
         f.clone().into()
     }
 }

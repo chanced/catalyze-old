@@ -1,5 +1,4 @@
 use crate::iter::Iter;
-use crate::util::Util;
 use crate::AllNodes;
 use crate::Extensions;
 use crate::FileDescriptor;
@@ -18,76 +17,71 @@ use anyhow::bail;
 /// Ast encapsulates the entirety of the input CodeGeneratorRequest from protoc,
 /// parsed to build the Node graph used by catalyze.
 #[derive(Debug)]
-pub(crate) struct AstDetail<'a, U> {
-    files: HashMap<String, File<'a, U>>,
-    file_list: Rc<RefCell<Vec<File<'a, U>>>>,
-    targets: HashMap<String, File<'a, U>>,
-    target_files: Rc<RefCell<Vec<File<'a, U>>>>,
-    packages: HashMap<String, Package<'a, U>>,
-    package_list: Rc<RefCell<Vec<Package<'a, U>>>>,
-    defined_extensions: Extensions<'a, U>,
-    nodes: HashMap<String, Node<'a, U>>,
-    util: Rc<U>,
+pub(crate) struct AstDetail<'a> {
+    files: HashMap<String, File<'a>>,
+    file_list: Rc<RefCell<Vec<File<'a>>>>,
+    targets: HashMap<String, File<'a>>,
+    target_files: Rc<RefCell<Vec<File<'a>>>>,
+    packages: HashMap<String, Package<'a>>,
+    package_list: Rc<RefCell<Vec<Package<'a>>>>,
+    defined_extensions: Extensions<'a>,
+    nodes: HashMap<String, Node<'a>>,
 }
-impl<'a, U> AstDetail<'a, U> {
-    pub fn package(&self, name: &str) -> Option<Package<'a, U>> {
+impl<'a> AstDetail<'a> {
+    pub fn package(&self, name: &str) -> Option<Package<'a>> {
         self.packages.get(name).cloned()
     }
-    pub fn file(&self, name: &str) -> Option<File<'a, U>> {
+    pub fn file(&self, name: &str) -> Option<File<'a>> {
         self.files.get(name).cloned()
     }
 
-    pub fn files(&self) -> Iter<File<'a, U>> {
+    pub fn files(&self) -> Iter<File<'a>> {
         Iter::from(&self.file_list)
     }
-    pub fn target_files(&self) -> Iter<File<'a, U>> {
+    pub fn target_files(&self) -> Iter<File<'a>> {
         Iter::from(&self.file_list)
     }
-    pub fn packages(&self) -> Iter<Package<'a, U>> {
+    pub fn packages(&self) -> Iter<Package<'a>> {
         Iter::from(&self.package_list)
     }
-    pub fn node(&self, key: &str) -> Option<Node<'a, U>> {
+    pub fn node(&self, key: &str) -> Option<Node<'a>> {
         self.nodes.get(key).cloned()
     }
 }
 #[derive(Debug)]
-pub struct Ast<'a, U>(Rc<AstDetail<'a, U>>);
-impl<'a, U> Ast<'a, U> {
-    pub fn util(&self) -> Rc<U> {
-        self.0.util.clone()
-    }
-    pub fn package(&self, name: &str) -> Option<Package<'a, U>> {
+pub struct Ast<'a>(Rc<AstDetail<'a>>);
+impl<'a> Ast<'a> {
+    pub fn package(&self, name: &str) -> Option<Package<'a>> {
         self.0.package(name)
     }
-    pub fn file(&self, name: &str) -> Option<File<'a, U>> {
+    pub fn file(&self, name: &str) -> Option<File<'a>> {
         self.0.file(name)
     }
-    pub fn files(&self) -> Iter<File<'a, U>> {
+    pub fn files(&self) -> Iter<File<'a>> {
         self.0.files()
     }
-    pub fn target_files(&self) -> Iter<File<'a, U>> {
+    pub fn target_files(&self) -> Iter<File<'a>> {
         Iter::from(self.0.target_files)
     }
 
-    pub fn packages(&self) -> Iter<Package<'a, U>> {
+    pub fn packages(&self) -> Iter<Package<'a>> {
         self.0.packages()
     }
-    pub fn node(&self, key: &str) -> Option<Node<'a, U>> {
+    pub fn node(&self, key: &str) -> Option<Node<'a>> {
         self.0.node(key)
     }
-    pub fn all_nodes(&self) -> AllNodes<'a, U> {
+    pub fn all_nodes(&self) -> AllNodes<'a> {
         AllNodes::from(self)
     }
 }
-impl<'a, U> Clone for Ast<'a, U> {
+impl<'a> Clone for Ast<'a> {
     fn clone(&self) -> Self {
         Ast(self.0.clone())
     }
 }
-impl<'a, U: Util + 'a> Ast<'a, U> {
-    pub fn new(input: Input<'a>, util: Rc<U>) -> Result<Self, anyhow::Error> {
+impl<'a> Ast<'a> {
+    pub fn new(input: Input<'a>) -> Result<Self, anyhow::Error> {
         let mut ast = AstDetail {
-            util: util.clone(),
             packages: HashMap::default(),
             files: HashMap::default(),
             file_list: Rc::new(RefCell::new(Vec::new())),
@@ -106,7 +100,7 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
                 ast.packages
                     .entry(name.to_string())
                     .or_insert_with(|| {
-                        let pkg = Package::new(name, util.clone());
+                        let pkg = Package::new(name);
                         ast.package_list.borrow_mut().push(pkg.clone());
                         pkg
                     })
@@ -233,7 +227,6 @@ impl<'a, U: Util + 'a> Ast<'a, U> {
             }
         }
         let ast = Ast(Rc::new(ast));
-        util.init(ast.clone());
         Ok(ast)
     }
 }
@@ -244,7 +237,7 @@ mod tests {
 
     #[test]
     fn nodes_issue() {
-        let pkg = crate::Package::new("foo", Rc::new(crate::util::Generic {}));
+        let pkg = crate::Package::new("foo");
 
         for n in pkg.nodes() {
             println!("{:?}", n);

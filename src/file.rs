@@ -13,37 +13,37 @@ use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 
 #[derive(Debug, Clone)]
-struct FileDetail<'a, U> {
+struct FileDetail<'a> {
     desc: FileDescriptor<'a>,
-    name: Name<U>,
+    name: Name,
     file_path: PathBuf,
     fqn: String,
-    messages: Rc<RefCell<Vec<Message<'a, U>>>>,
-    enums: Rc<RefCell<Vec<Enum<'a, U>>>>,
-    services: Rc<RefCell<Vec<Service<'a, U>>>>,
-    defined_extensions: Rc<RefCell<Vec<Extension<'a, U>>>>,
+    messages: Rc<RefCell<Vec<Message<'a>>>>,
+    enums: Rc<RefCell<Vec<Enum<'a>>>>,
+    services: Rc<RefCell<Vec<Service<'a>>>>,
+    defined_extensions: Rc<RefCell<Vec<Extension<'a>>>>,
     build_target: bool,
     pkg_comments: RefCell<Comments<'a>>,
     comments: RefCell<Comments<'a>>,
-    util: Rc<U>,
-    pkg: WeakPackage<'a, U>,
-    dependents: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
-    imports: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
+
+    pkg: WeakPackage<'a>,
+    dependents: Rc<RefCell<Vec<WeakFile<'a>>>>,
+    imports: Rc<RefCell<Vec<WeakFile<'a>>>>,
     used_imports: Rc<RefCell<HashSet<String>>>,
     syntax: Syntax,
 }
 
 #[derive(Debug)]
-pub struct File<'a, U>(Rc<FileDetail<'a, U>>);
+pub struct File<'a>(Rc<FileDetail<'a>>);
 
-impl<'a, U> File<'a, U> {
+impl<'a> File<'a> {
     pub(crate) fn new(
         build_target: bool,
         desc: FileDescriptor<'a>,
-        pkg: Package<'a, U>,
+        pkg: Package<'a>,
     ) -> Result<Self, anyhow::Error> {
         let util = pkg.util();
-        let name = Name::new(desc.name(), util.clone());
+        let name = desc.name().into;
         let fqn = match desc.package() {
             "" => String::default(),
             p => format!(".{}", p),
@@ -52,7 +52,7 @@ impl<'a, U> File<'a, U> {
         let file = Self(Rc::new(FileDetail {
             name,
             desc,
-            util,
+
             pkg: pkg.into(),
             build_target,
             fqn,
@@ -69,7 +69,7 @@ impl<'a, U> File<'a, U> {
             used_imports: Rc::new(RefCell::new(HashSet::new())),
         }));
 
-        let container: Container<'a, U> = file.clone().into();
+        let container: Container<'a> = file.clone().into();
         {
             let mut msgs = file.0.messages.borrow_mut();
             for md in desc.messages() {
@@ -118,11 +118,13 @@ impl<'a, U> File<'a, U> {
 
         Ok(file)
     }
-
-    pub fn name(&self) -> Name<U> {
+    pub fn fully_qualified_name(&self) -> String {
+        self.0.fqn.clone()
+    }
+    pub fn name(&self) -> Name {
         self.0.name.clone()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.0.pkg.clone().into()
     }
     pub fn build_target(&self) -> bool {
@@ -147,42 +149,39 @@ impl<'a, U> File<'a, U> {
     pub(crate) fn set_package_comments(&self, comments: Comments<'a>) {
         *self.0.pkg_comments.borrow_mut() = comments;
     }
-    pub fn util(&self) -> Rc<U> {
-        self.0.util.clone()
-    }
 
-    pub fn messages(&self) -> Iter<Message<'a, U>> {
+    pub fn messages(&self) -> Iter<Message<'a>> {
         Iter::from(&self.0.messages)
     }
-    pub fn enums(&self) -> Iter<Enum<'a, U>> {
+    pub fn enums(&self) -> Iter<Enum<'a>> {
         Iter::from(&self.0.enums)
     }
-    pub fn services(&self) -> Iter<Service<'a, U>> {
+    pub fn services(&self) -> Iter<Service<'a>> {
         Iter::from(&self.0.services)
     }
-    pub fn defined_extensions(&self) -> Iter<Extension<'a, U>> {
+    pub fn defined_extensions(&self) -> Iter<Extension<'a>> {
         Iter::from(&self.0.defined_extensions)
     }
 
-    pub fn imports(&self) -> FileRefs<'a, U> {
+    pub fn imports(&self) -> FileRefs<'a> {
         self.0.imports.clone().into()
     }
 
-    pub fn dependents(&self) -> FileRefs<'a, U> {
+    pub fn dependents(&self) -> FileRefs<'a> {
         self.0.dependents.clone().into()
     }
-    pub fn transitive_imports(&self) -> TransitiveImports<'a, U> {
+    pub fn transitive_imports(&self) -> TransitiveImports<'a> {
         TransitiveImports::new(self.0.imports.clone())
     }
 
     /// all_messages returns an iterator of all top-level and nested messages from this
     /// file.
-    pub fn all_messages(&self) -> AllMessages<'a, U> {
+    pub fn all_messages(&self) -> AllMessages<'a> {
         AllMessages::new(self.0.messages.clone())
     }
 
     /// all_enums returns an iterator of all top-level and nested enums from this file.
-    pub fn all_enums(&self) -> AllEnums<'a, U> {
+    pub fn all_enums(&self) -> AllEnums<'a> {
         AllEnums::new(self.0.enums.clone(), self.0.messages.clone())
     }
 
@@ -190,27 +189,27 @@ impl<'a, U> File<'a, U> {
         self.0.file_path.clone()
     }
 
-    pub(crate) fn add_import(&self, file: File<'a, U>) {
+    pub(crate) fn add_import(&self, file: File<'a>) {
         self.0.imports.borrow_mut().push(file.into());
     }
 
-    pub(crate) fn mark_import_as_used(&self, file: File<'a, U>) {
+    pub(crate) fn mark_import_as_used(&self, file: File<'a>) {
         self.0
             .used_imports
             .borrow_mut()
             .insert(file.fully_qualified_name());
     }
 
-    pub(crate) fn add_dependent(&self, file: File<'a, U>) {
+    pub(crate) fn add_dependent(&self, file: File<'a>) {
         self.0.dependents.borrow_mut().push(file.into());
     }
-    fn downgrade(&self) -> WeakFile<'a, U> {
+    fn downgrade(&self) -> WeakFile<'a> {
         WeakFile(Rc::downgrade(&self.0))
     }
-    pub fn all_nodes(&self) -> AllNodes<'a, U> {
+    pub fn all_nodes(&self) -> AllNodes<'a> {
         AllNodes::new(self.into())
     }
-    pub fn nodes(&self) -> Nodes<'a, U> {
+    pub fn nodes(&self) -> Nodes<'a> {
         Nodes::new(vec![
             self.enums().into(),
             self.messages().into(),
@@ -219,7 +218,7 @@ impl<'a, U> File<'a, U> {
         ])
     }
 
-    pub fn unused_imports(&self) -> Vec<File<'a, U>> {
+    pub fn unused_imports(&self) -> Vec<File<'a>> {
         let used_imports = self.0.used_imports.borrow();
         let mut unused_imports = Vec::new();
         for file in self.0.imports.borrow().iter() {
@@ -231,7 +230,7 @@ impl<'a, U> File<'a, U> {
     }
 
     #[cfg(test)]
-    pub fn add_node(&self, n: Node<'a, U>) {
+    pub fn add_node(&self, n: Node<'a>) {
         match n {
             Node::Message(m) => self.0.messages.borrow_mut().push(m),
             Node::Enum(e) => self.0.enums.borrow_mut().push(e),
@@ -245,7 +244,7 @@ impl<'a, U> File<'a, U> {
         self.0.syntax
     }
 
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a>> {
         if path.is_empty() {
             return Some(self.into());
         }
@@ -279,99 +278,94 @@ impl<'a, U> File<'a, U> {
     }
 }
 
-impl<'a, U> From<&WeakFile<'a, U>> for File<'a, U> {
-    fn from(weak: &WeakFile<'a, U>) -> Self {
+impl<'a> From<&WeakFile<'a>> for File<'a> {
+    fn from(weak: &WeakFile<'a>) -> Self {
         weak.upgrade()
     }
 }
-impl<'a, U> From<WeakFile<'a, U>> for File<'a, U> {
-    fn from(weak: WeakFile<'a, U>) -> Self {
+impl<'a> From<WeakFile<'a>> for File<'a> {
+    fn from(weak: WeakFile<'a>) -> Self {
         weak.upgrade()
     }
 }
-impl<'a, U> Clone for File<'a, U> {
+impl<'a> Clone for File<'a> {
     fn clone(&self) -> Self {
         File(self.0.clone())
     }
 }
-impl<'a, U> FullyQualified for File<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
-    }
-}
 
-impl<'a, U> PartialEq for File<'a, U> {
+impl<'a> PartialEq for File<'a> {
     fn eq(&self, other: &Self) -> bool {
         self.file_path() == other.file_path()
     }
 }
 
-impl<'a, U> PartialEq<WeakFile<'a, U>> for File<'a, U> {
-    fn eq(&self, other: &WeakFile<'a, U>) -> bool {
+impl<'a> PartialEq<WeakFile<'a>> for File<'a> {
+    fn eq(&self, other: &WeakFile<'a>) -> bool {
         self.file_path() == other.upgrade().file_path()
     }
 }
 
 #[derive(Debug)]
-pub(crate) struct WeakFile<'a, U>(Weak<FileDetail<'a, U>>);
+pub(crate) struct WeakFile<'a>(Weak<FileDetail<'a>>);
 
-impl<'a, U> WeakFile<'a, U> {
+impl<'a> WeakFile<'a> {
     pub fn fully_qualified_name(&self) -> String {
         self.upgrade().fully_qualified_name()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.upgrade().package()
     }
 
     pub fn build_target(&self) -> bool {
         self.upgrade().build_target()
     }
-    fn upgrade(&self) -> File<'a, U> {
+    fn upgrade(&self) -> File<'a> {
         File(self.0.upgrade().expect("Failed to upgrade weak file"))
     }
 }
 
-impl<'a, U> Clone for WeakFile<'a, U> {
+impl<'a> Clone for WeakFile<'a> {
     fn clone(&self) -> Self {
         WeakFile(self.0.clone())
     }
 }
-impl<'a, U> From<File<'a, U>> for WeakFile<'a, U> {
-    fn from(file: File<'a, U>) -> Self {
+impl<'a> From<File<'a>> for WeakFile<'a> {
+    fn from(file: File<'a>) -> Self {
         file.downgrade()
     }
 }
-impl<'a, U> From<&File<'a, U>> for WeakFile<'a, U> {
-    fn from(file: &File<'a, U>) -> Self {
+impl<'a> From<&File<'a>> for WeakFile<'a> {
+    fn from(file: &File<'a>) -> Self {
         file.downgrade()
     }
 }
-impl<'a, U> PartialEq<File<'a, U>> for WeakFile<'a, U> {
-    fn eq(&self, other: &File<'a, U>) -> bool {
+impl<'a> PartialEq<File<'a>> for WeakFile<'a> {
+    fn eq(&self, other: &File<'a>) -> bool {
         self.upgrade().file_path() == other.file_path()
     }
 }
-impl<'a, U> PartialEq for WeakFile<'a, U> {
+impl<'a> PartialEq for WeakFile<'a> {
     fn eq(&self, other: &Self) -> bool {
         self.upgrade().file_path() == other.upgrade().file_path()
     }
 }
 
 #[derive(Debug)]
-pub struct TransitiveImports<'a, U> {
-    queue: VecDeque<File<'a, U>>,
-    processed: HashSet<Name<U>>,
+pub struct TransitiveImports<'a> {
+    queue: VecDeque<File<'a>>,
+    processed: HashSet<Name>,
 }
-impl<'a, U> TransitiveImports<'a, U> {
-    pub(crate) fn new(files: Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
+impl<'a> TransitiveImports<'a> {
+    pub(crate) fn new(files: Rc<RefCell<Vec<WeakFile<'a>>>>) -> Self {
         Self {
             queue: VecDeque::from_iter(files.borrow().iter().map(|f| f.into())),
             processed: HashSet::new(),
         }
     }
 }
-impl<'a, U> Iterator for TransitiveImports<'a, U> {
-    type Item = File<'a, U>;
+impl<'a> Iterator for TransitiveImports<'a> {
+    type Item = File<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(file) = self.queue.pop_front() {
             if !self.processed.contains(&file.name()) {
@@ -387,11 +381,11 @@ impl<'a, U> Iterator for TransitiveImports<'a, U> {
 }
 
 /// An iterator that upgrades weak file references to `File`s.
-pub struct FileRefs<'a, U> {
-    files: Rc<RefCell<Vec<WeakFile<'a, U>>>>,
+pub struct FileRefs<'a> {
+    files: Rc<RefCell<Vec<WeakFile<'a>>>>,
     index: usize,
 }
-impl<'a, U> FileRefs<'a, U> {
+impl<'a> FileRefs<'a> {
     pub fn len(&self) -> usize {
         self.files.borrow().len()
     }
@@ -406,16 +400,16 @@ impl<'a, U> FileRefs<'a, U> {
     }
 }
 
-impl<'a, U> From<&Rc<RefCell<Vec<WeakFile<'a, U>>>>> for FileRefs<'a, U> {
-    fn from(files: &Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
+impl<'a> From<&Rc<RefCell<Vec<WeakFile<'a>>>>> for FileRefs<'a> {
+    fn from(files: &Rc<RefCell<Vec<WeakFile<'a>>>>) -> Self {
         FileRefs {
             files: files.clone(),
             index: 0,
         }
     }
 }
-impl<'a, U> From<Rc<RefCell<Vec<WeakFile<'a, U>>>>> for FileRefs<'a, U> {
-    fn from(files: Rc<RefCell<Vec<WeakFile<'a, U>>>>) -> Self {
+impl<'a> From<Rc<RefCell<Vec<WeakFile<'a>>>>> for FileRefs<'a> {
+    fn from(files: Rc<RefCell<Vec<WeakFile<'a>>>>) -> Self {
         FileRefs {
             files: files.clone(),
             index: 0,
@@ -423,8 +417,8 @@ impl<'a, U> From<Rc<RefCell<Vec<WeakFile<'a, U>>>>> for FileRefs<'a, U> {
     }
 }
 
-impl<'a, U> From<WeakFile<'a, U>> for FileRefs<'a, U> {
-    fn from(file: WeakFile<'a, U>) -> Self {
+impl<'a> From<WeakFile<'a>> for FileRefs<'a> {
+    fn from(file: WeakFile<'a>) -> Self {
         FileRefs {
             files: Rc::new(RefCell::new(vec![file])),
             index: 0,
@@ -432,13 +426,13 @@ impl<'a, U> From<WeakFile<'a, U>> for FileRefs<'a, U> {
     }
 }
 
-impl<'a, U> From<Option<WeakFile<'a, U>>> for FileRefs<'a, U> {
-    fn from(file: Option<WeakFile<'a, U>>) -> Self {
+impl<'a> From<Option<WeakFile<'a>>> for FileRefs<'a> {
+    fn from(file: Option<WeakFile<'a>>) -> Self {
         file.map_or(Self::empty(), Into::into)
     }
 }
-impl<'a, U> Iterator for FileRefs<'a, U> {
-    type Item = File<'a, U>;
+impl<'a> Iterator for FileRefs<'a> {
+    type Item = File<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         let files = self.files.borrow();
         if let Some(file) = files.get(self.index) {

@@ -1,4 +1,4 @@
-use crate::{DecodedInput, Input, Module, ModuleContanier};
+use crate::{DecodedInput, Input, Module};
 use anyhow::bail;
 use prost::Message;
 use std::{

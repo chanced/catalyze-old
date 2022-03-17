@@ -55,7 +55,7 @@ impl<T> From<&Rc<RefCell<Vec<T>>>> for Iter<T> {
 //         enums: Vec<Rc<Enum<'_, Generic>>>,
 //     ) -> Rc<Message<'_, Generic>> {
 //         Rc::new(Message {
-//             name: Name::new(name, Rc::new(RefCell::new(Generic {}))),
+//             name: name.into,
 //             messages,
 //             enums,
 //             ..Message::<'_, Generic>::default()
@@ -66,7 +66,7 @@ impl<T> From<&Rc<RefCell<Vec<T>>>> for Iter<T> {
 //             .iter()
 //             .map(|name| {
 //                 Rc::new(Enum {
-//                     name: Name::new(name, Generic),
+//                     name: name.into,
 //                     ..Enum::<'_, Generic>::default()
 //                 })
 //             })
@@ -156,7 +156,7 @@ impl<T> From<&Rc<RefCell<Vec<T>>>> for Iter<T> {
 
 //         let create_file = |name: &str, dep: Option<Rc<File<'_, Generic>>>| {
 //             let f = Rc::new(File {
-//                 name: Name::new(name, Generic),
+//                 name: name.into,
 //                 ..File::default()
 //             });
 //             pkg.add_file(f.clone());

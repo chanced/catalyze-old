@@ -9,24 +9,24 @@ use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
     proto::{EnumDescriptor, EnumDescriptorPath},
-    Comments, Dependents, EnumValue, File, FullyQualified, Message, Name, Node, Nodes, Package,
-    WeakFile, WeakMessage, WellKnownEnum, WellKnownType,
+    Comments, Dependents, EnumValue, File, Message, Name, Node, Nodes, Package, WeakFile,
+    WeakMessage, WellKnownEnum, WellKnownType,
 };
 
 #[derive(Debug, Clone)]
-struct EnumDetail<'a, U> {
-    name: Name<U>,
+struct EnumDetail<'a> {
+    name: Name,
     fqn: String,
     comments: RefCell<Comments<'a>>,
-    values: Rc<RefCell<Vec<EnumValue<'a, U>>>>,
-    container: WeakContainer<'a, U>,
-    dependents: Rc<RefCell<Vec<WeakMessage<'a, U>>>>,
-    util: Rc<U>,
+    values: Rc<RefCell<Vec<EnumValue<'a>>>>,
+    container: WeakContainer<'a>,
+    dependents: Rc<RefCell<Vec<WeakMessage<'a>>>>,
+
     descriptor: EnumDescriptor<'a>,
     wkt: Option<WellKnownEnum>,
 }
 
-impl<'a, U> EnumDetail<'a, U> {
+impl<'a> EnumDetail<'a> {
     pub fn comments(&self) -> Comments<'a> {
         *self.comments.borrow()
     }
@@ -36,13 +36,13 @@ impl<'a, U> EnumDetail<'a, U> {
     pub(crate) fn descriptor(&self) -> EnumDescriptor<'a> {
         self.descriptor
     }
-    pub fn container(&self) -> Container<'a, U> {
+    pub fn container(&self) -> Container<'a> {
         self.container.clone().into()
     }
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.container.file()
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.container().package()
     }
     pub fn is_well_known_type(&self) -> bool {
@@ -58,10 +58,10 @@ impl<'a, U> EnumDetail<'a, U> {
 }
 
 #[derive(Debug)]
-pub struct Enum<'a, U>(Rc<EnumDetail<'a, U>>);
+pub struct Enum<'a>(Rc<EnumDetail<'a>>);
 
-impl<'a, U> Enum<'a, U> {
-    pub(crate) fn new(desc: EnumDescriptor<'a>, container: Container<'a, U>) -> Self {
+impl<'a> Enum<'a> {
+    pub(crate) fn new(desc: EnumDescriptor<'a>, container: Container<'a>) -> Self {
         let util = container.util();
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
         let wkt = if container.package().is_well_known_type() {
@@ -70,12 +70,11 @@ impl<'a, U> Enum<'a, U> {
             None
         };
         let e = Enum(Rc::new(EnumDetail {
-            name: Name::new(desc.name(), util.clone()),
+            name: desc.name().into(),
             values: Rc::new(RefCell::new(Vec::with_capacity(desc.values().len()))),
             container: container.into(),
             dependents: Rc::new(RefCell::new(Vec::default())),
             fqn: fully_qualified_name,
-            util,
             descriptor: desc,
             comments: RefCell::new(Comments::default()),
             wkt,
@@ -90,6 +89,9 @@ impl<'a, U> Enum<'a, U> {
         e
     }
 
+    pub fn fully_qualified_name(&self) -> String {
+        self.0.fqn.clone()
+    }
     pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
         self.0.well_known_enum()
     }
@@ -103,26 +105,23 @@ impl<'a, U> Enum<'a, U> {
     pub fn descriptor(&self) -> EnumDescriptor<'a> {
         self.0.descriptor()
     }
-    pub fn container(&self) -> Container<'a, U> {
+    pub fn container(&self) -> Container<'a> {
         self.0.container.clone().into()
     }
-    pub fn file(&self) -> File<'a, U> {
+    pub fn file(&self) -> File<'a> {
         self.0.file()
     }
-    pub fn name(&self) -> Name<U> {
+    pub fn name(&self) -> Name {
         self.0.name.clone()
     }
-    pub fn util(&self) -> Rc<U> {
-        self.0.util.clone()
-    }
 
-    pub fn values(&self) -> Iter<EnumValue<'a, U>> {
+    pub fn values(&self) -> Iter<EnumValue<'a>> {
         Iter::from(&self.0.values)
     }
-    pub fn package(&self) -> Package<'a, U> {
+    pub fn package(&self) -> Package<'a> {
         self.0.package()
     }
-    fn downgrade(&self) -> WeakEnum<'a, U> {
+    fn downgrade(&self) -> WeakEnum<'a> {
         WeakEnum(Rc::downgrade(&self.0))
     }
     pub fn comments(&self) -> Comments<'a> {
@@ -133,20 +132,20 @@ impl<'a, U> Enum<'a, U> {
         self.0.set_comments(comments);
     }
 
-    pub(crate) fn weak_file(&self) -> WeakFile<'a, U> {
+    pub(crate) fn weak_file(&self) -> WeakFile<'a> {
         self.0.container.weak_file()
     }
 
-    pub fn nodes(&self) -> Nodes<'a, U> {
+    pub fn nodes(&self) -> Nodes<'a> {
         Nodes::new(vec![self.values().into()])
     }
-    pub fn dependents(&self) -> Dependents<'a, U> {
+    pub fn dependents(&self) -> Dependents<'a> {
         self.0.dependents.clone().into()
     }
-    pub(crate) fn add_dependent(&self, dep: Message<'a, U>) {
+    pub(crate) fn add_dependent(&self, dep: Message<'a>) {
         self.0.dependents.borrow_mut().push(dep.into());
     }
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a, U>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a>> {
         if path.is_empty() {
             return Some(Node::Enum(self.clone()));
         }
@@ -164,65 +163,60 @@ impl<'a, U> Enum<'a, U> {
     }
 }
 
-impl<'a, U> Clone for Enum<'a, U> {
+impl<'a> Clone for Enum<'a> {
     fn clone(&self) -> Self {
         Enum(self.0.clone())
     }
 }
 
-impl<'a, U> FullyQualified for Enum<'a, U> {
-    fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
-    }
-}
-impl<'a, U> From<WeakEnum<'a, U>> for Enum<'a, U> {
-    fn from(e: WeakEnum<'a, U>) -> Self {
+impl<'a> From<WeakEnum<'a>> for Enum<'a> {
+    fn from(e: WeakEnum<'a>) -> Self {
         e.upgrade()
     }
 }
-impl<'a, U> From<&WeakEnum<'a, U>> for Enum<'a, U> {
-    fn from(e: &WeakEnum<'a, U>) -> Self {
+impl<'a> From<&WeakEnum<'a>> for Enum<'a> {
+    fn from(e: &WeakEnum<'a>) -> Self {
         e.upgrade()
     }
 }
 #[derive(Debug)]
-pub(crate) struct WeakEnum<'a, U>(Weak<EnumDetail<'a, U>>);
-impl<'a, U> WeakEnum<'a, U> {
+pub(crate) struct WeakEnum<'a>(Weak<EnumDetail<'a>>);
+impl<'a> WeakEnum<'a> {
     pub(crate) fn empty() -> Self {
         WeakEnum(Weak::new())
     }
-    fn upgrade(&self) -> Enum<'a, U> {
+    fn upgrade(&self) -> Enum<'a> {
         Enum(self.0.upgrade().expect("Failed to upgrade WeakEnum"))
     }
-    pub(crate) fn weak_file(&self) -> WeakFile<'a, U> {
+    pub(crate) fn weak_file(&self) -> WeakFile<'a> {
         self.upgrade().weak_file()
     }
 }
-impl<'a, U> Clone for WeakEnum<'a, U> {
+impl<'a> Clone for WeakEnum<'a> {
     fn clone(&self) -> Self {
         WeakEnum(self.0.clone())
     }
 }
-impl<'a, U> From<Enum<'a, U>> for WeakEnum<'a, U> {
-    fn from(e: Enum<'a, U>) -> Self {
+impl<'a> From<Enum<'a>> for WeakEnum<'a> {
+    fn from(e: Enum<'a>) -> Self {
         e.downgrade()
     }
 }
-impl<'a, U> From<&Enum<'a, U>> for WeakEnum<'a, U> {
-    fn from(e: &Enum<'a, U>) -> Self {
+impl<'a> From<&Enum<'a>> for WeakEnum<'a> {
+    fn from(e: &Enum<'a>) -> Self {
         e.downgrade()
     }
 }
 
 #[derive(Debug)]
-pub struct AllEnums<'a, U> {
-    msgs: VecDeque<Message<'a, U>>,
-    enums: VecDeque<Enum<'a, U>>,
+pub struct AllEnums<'a> {
+    msgs: VecDeque<Message<'a>>,
+    enums: VecDeque<Enum<'a>>,
 }
-impl<'a, U> AllEnums<'a, U> {
+impl<'a> AllEnums<'a> {
     pub(crate) fn new(
-        enums: Rc<RefCell<Vec<Enum<'a, U>>>>,
-        msgs: Rc<RefCell<Vec<Message<'a, U>>>>,
+        enums: Rc<RefCell<Vec<Enum<'a>>>>,
+        msgs: Rc<RefCell<Vec<Message<'a>>>>,
     ) -> Self {
         Self {
             msgs: msgs.borrow().iter().cloned().collect(),
@@ -231,8 +225,8 @@ impl<'a, U> AllEnums<'a, U> {
     }
 }
 
-impl<'a, U> Iterator for AllEnums<'a, U> {
-    type Item = Enum<'a, U>;
+impl<'a> Iterator for AllEnums<'a> {
+    type Item = Enum<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(e) = self.enums.pop_front() {
             Some(e)

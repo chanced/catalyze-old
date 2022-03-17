@@ -55,18 +55,18 @@ impl<'a> From<Location<'a>> for Comments<'a> {
 }
 
 #[derive(Debug)]
-pub struct PackageComments<'a, U> {
-    files: Iter<File<'a, U>>,
+pub struct PackageComments<'a> {
+    files: Iter<File<'a>>,
 }
-impl<'a, U> PackageComments<'a, U> {
-    pub fn new(package: Package<'a, U>) -> Self {
+impl<'a> PackageComments<'a> {
+    pub fn new(package: Package<'a>) -> Self {
         Self {
             files: package.files(),
         }
     }
 }
-impl<'a, U> Iterator for PackageComments<'a, U> {
-    type Item = (File<'a, U>, Comments<'a>);
+impl<'a> Iterator for PackageComments<'a> {
+    type Item = (File<'a>, Comments<'a>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.files
@@ -77,12 +77,12 @@ impl<'a, U> Iterator for PackageComments<'a, U> {
 }
 
 // #[derive(Debug)]
-// pub struct CommentsIter<'a, U> {
+// pub struct CommentsIter<'a> {
 //     iter: std::slice::Iter<'a, prost_types::source_code_info::Location>,
 //     phantom: PhantomData<U>,
 // }
 
-// impl<'a> CommentsIter<'a, U> {
+// impl<'a> CommentsIter<'a> {
 //     pub fn len(&self) -> usize {
 //         self.iter.len()
 //     }
@@ -90,23 +90,23 @@ impl<'a, U> Iterator for PackageComments<'a, U> {
 //         self.len() == 0
 //     }
 // }
-// impl<'a> Iterator for CommentsIter<'a, U> {
+// impl<'a> Iterator for CommentsIter<'a> {
 //     type Item = Comments<'a>;
 
 //     fn next(&mut self) -> Option<Self::Item> {
 //         self.iter.next().map(Into::into)
 //     }
 // }
-// impl<'a> From<SourceCodeInfo<'a, U>> for CommentsIter<'a, U> {
-//     fn from(info: SourceCodeInfo<'a, U>) -> Self {
+// impl<'a> From<SourceCodeInfo<'a>> for CommentsIter<'a> {
+//     fn from(info: SourceCodeInfo<'a>) -> Self {
 //         CommentsIter {
 //             iter: info.info.location.iter(),
 //             phantom: PhantomData,
 //         }
 //     }
 // }
-// impl<'a> From<&SourceCodeInfo<'a, U>> for CommentsIter<'a, U> {
-//     fn from(info: &SourceCodeInfo<'a, U>) -> Self {
+// impl<'a> From<&SourceCodeInfo<'a>> for CommentsIter<'a> {
+//     fn from(info: &SourceCodeInfo<'a>) -> Self {
 //         CommentsIter {
 //             iter: info.info.location.iter(),
 //             phantom: PhantomData,
