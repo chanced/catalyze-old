@@ -57,12 +57,11 @@ impl<'a> EnumDetail<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Enum<'a>(Rc<EnumDetail<'a>>);
 
 impl<'a> Enum<'a> {
     pub(crate) fn new(desc: EnumDescriptor<'a>, container: Container<'a>) -> Self {
-        let util = container.util();
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
         let wkt = if container.package().is_well_known_type() {
             WellKnownEnum::from_str(desc.name()).ok()
@@ -111,8 +110,8 @@ impl<'a> Enum<'a> {
     pub fn file(&self) -> File<'a> {
         self.0.file()
     }
-    pub fn name(&self) -> Name {
-        self.0.name.clone()
+    pub fn name(&self) -> &Name {
+        &self.0.name
     }
 
     pub fn values(&self) -> Iter<EnumValue<'a>> {
@@ -163,12 +162,6 @@ impl<'a> Enum<'a> {
     }
 }
 
-impl<'a> Clone for Enum<'a> {
-    fn clone(&self) -> Self {
-        Enum(self.0.clone())
-    }
-}
-
 impl<'a> From<WeakEnum<'a>> for Enum<'a> {
     fn from(e: WeakEnum<'a>) -> Self {
         e.upgrade()
@@ -179,7 +172,7 @@ impl<'a> From<&WeakEnum<'a>> for Enum<'a> {
         e.upgrade()
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct WeakEnum<'a>(Weak<EnumDetail<'a>>);
 impl<'a> WeakEnum<'a> {
     pub(crate) fn empty() -> Self {
@@ -190,11 +183,6 @@ impl<'a> WeakEnum<'a> {
     }
     pub(crate) fn weak_file(&self) -> WeakFile<'a> {
         self.upgrade().weak_file()
-    }
-}
-impl<'a> Clone for WeakEnum<'a> {
-    fn clone(&self) -> Self {
-        WeakEnum(self.0.clone())
     }
 }
 impl<'a> From<Enum<'a>> for WeakEnum<'a> {
@@ -208,7 +196,7 @@ impl<'a> From<&Enum<'a>> for WeakEnum<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AllEnums<'a> {
     msgs: VecDeque<Message<'a>>,
     enums: VecDeque<Enum<'a>>,

@@ -15,7 +15,7 @@ struct MethodDetail<'a> {
     output: Rc<RefCell<WeakMessage<'a>>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Method<'a>(Rc<MethodDetail<'a>>);
 
 impl<'a> Method<'a> {
@@ -24,7 +24,7 @@ impl<'a> Method<'a> {
         let output = Rc::new(RefCell::new(WeakMessage::empty()));
         let fqn = format!("{}.{}", svc.fully_qualified_name(), desc.name());
         Method(Rc::new(MethodDetail {
-            name: desc.name().into,
+            name: desc.name().into(),
             desc,
             fqn,
             comments: RefCell::new(Comments::default()),
@@ -41,8 +41,8 @@ impl<'a> Method<'a> {
         self.0.output.replace(msg.clone().into());
     }
 
-    pub fn name(&self) -> Name {
-        self.0.name.clone()
+    pub fn name(&self) -> &Name {
+        &self.0.name
     }
     pub fn descriptor(&self) -> MethodDescriptor<'a> {
         self.0.desc
@@ -61,9 +61,6 @@ impl<'a> Method<'a> {
     }
     pub fn package(&self) -> Package<'a> {
         self.file().package()
-    }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
     }
 
     /// Indicates if this method allows clients to stream inputs.
@@ -95,11 +92,5 @@ impl<'a> Method<'a> {
         } else {
             None
         }
-    }
-}
-
-impl<'a> Clone for Method<'a> {
-    fn clone(&self) -> Self {
-        Method(self.0.clone())
     }
 }

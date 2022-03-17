@@ -33,7 +33,7 @@ struct FileDetail<'a> {
     syntax: Syntax,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct File<'a>(Rc<FileDetail<'a>>);
 
 impl<'a> File<'a> {
@@ -42,8 +42,7 @@ impl<'a> File<'a> {
         desc: FileDescriptor<'a>,
         pkg: Package<'a>,
     ) -> Result<Self, anyhow::Error> {
-        let util = pkg.util();
-        let name = desc.name().into;
+        let name = desc.name().into();
         let fqn = match desc.package() {
             "" => String::default(),
             p => format!(".{}", p),
@@ -121,8 +120,8 @@ impl<'a> File<'a> {
     pub fn fully_qualified_name(&self) -> String {
         self.0.fqn.clone()
     }
-    pub fn name(&self) -> Name {
-        self.0.name.clone()
+    pub fn name(&self) -> &Name {
+        &self.0.name
     }
     pub fn package(&self) -> Package<'a> {
         self.0.pkg.clone().into()
@@ -288,11 +287,6 @@ impl<'a> From<WeakFile<'a>> for File<'a> {
         weak.upgrade()
     }
 }
-impl<'a> Clone for File<'a> {
-    fn clone(&self) -> Self {
-        File(self.0.clone())
-    }
-}
 
 impl<'a> PartialEq for File<'a> {
     fn eq(&self, other: &Self) -> bool {
@@ -306,7 +300,7 @@ impl<'a> PartialEq<WeakFile<'a>> for File<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct WeakFile<'a>(Weak<FileDetail<'a>>);
 
 impl<'a> WeakFile<'a> {
@@ -325,11 +319,6 @@ impl<'a> WeakFile<'a> {
     }
 }
 
-impl<'a> Clone for WeakFile<'a> {
-    fn clone(&self) -> Self {
-        WeakFile(self.0.clone())
-    }
-}
 impl<'a> From<File<'a>> for WeakFile<'a> {
     fn from(file: File<'a>) -> Self {
         file.downgrade()
@@ -351,7 +340,7 @@ impl<'a> PartialEq for WeakFile<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TransitiveImports<'a> {
     queue: VecDeque<File<'a>>,
     processed: HashSet<Name>,
@@ -369,7 +358,7 @@ impl<'a> Iterator for TransitiveImports<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(file) = self.queue.pop_front() {
             if !self.processed.contains(&file.name()) {
-                self.processed.insert(file.name());
+                self.processed.insert(file.name().clone());
                 for d in file.imports() {
                     self.queue.push_back(d);
                 }

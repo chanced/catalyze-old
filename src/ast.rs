@@ -16,7 +16,7 @@ use anyhow::bail;
 
 /// Ast encapsulates the entirety of the input CodeGeneratorRequest from protoc,
 /// parsed to build the Node graph used by catalyze.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct AstDetail<'a> {
     files: HashMap<String, File<'a>>,
     file_list: Rc<RefCell<Vec<File<'a>>>>,
@@ -48,7 +48,7 @@ impl<'a> AstDetail<'a> {
         self.nodes.get(key).cloned()
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ast<'a>(Rc<AstDetail<'a>>);
 impl<'a> Ast<'a> {
     pub fn package(&self, name: &str) -> Option<Package<'a>> {
@@ -61,7 +61,7 @@ impl<'a> Ast<'a> {
         self.0.files()
     }
     pub fn target_files(&self) -> Iter<File<'a>> {
-        Iter::from(self.0.target_files)
+        Iter::from(&self.0.target_files)
     }
 
     pub fn packages(&self) -> Iter<Package<'a>> {
@@ -74,11 +74,7 @@ impl<'a> Ast<'a> {
         AllNodes::from(self)
     }
 }
-impl<'a> Clone for Ast<'a> {
-    fn clone(&self) -> Self {
-        Ast(self.0.clone())
-    }
-}
+
 impl<'a> Ast<'a> {
     pub fn new(input: Input<'a>) -> Result<Self, anyhow::Error> {
         let mut ast = AstDetail {

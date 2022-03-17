@@ -22,7 +22,7 @@ use crate::{
 };
 use std::{cell::RefCell, convert::From};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct FieldDetail<'a> {
     msg: WeakMessage<'a>,
     name: Name,
@@ -43,7 +43,7 @@ impl<'a> FieldDetail<'a> {
         msg: Message<'a>,
         oneof: Option<Oneof<'a>>,
     ) -> Result<Self, anyhow::Error> {
-        let name = desc.name().into;
+        let name = desc.name().into();
         let map_entry = if msg.is_map_entry() {
             Some(msg.clone())
         } else {
@@ -74,8 +74,8 @@ impl<'a> FieldDetail<'a> {
         })
     }
 
-    pub fn name(&self) -> Name {
-        self.name.clone()
+    pub fn name(&self) -> &Name {
+        &self.name
     }
     pub fn fully_qualified_name(&self) -> String {
         self.fqn.clone()
@@ -144,25 +144,7 @@ impl<'a> FieldDetail<'a> {
     // }
 }
 
-impl<'a> Clone for FieldDetail<'a> {
-    fn clone(&self) -> Self {
-        Self {
-            msg: self.msg.clone(),
-            name: self.name.clone(),
-            fqn: self.fqn.clone(),
-            syntax: self.syntax,
-            is_map: self.is_map,
-
-            desc: self.desc,
-            in_oneof: self.in_oneof,
-            comments: self.comments.clone(),
-            oneof: self.oneof.clone(),
-            map_entry: self.map_entry.clone(),
-        }
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Field<'a> {
     Embed(EmbedField<'a>),
     Enum(EnumField<'a>),
@@ -228,7 +210,7 @@ impl<'a> Field<'a> {
             Self::Scalar(f) => f.value_type(),
         }
     }
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         match self {
             Field::Embed(f) => f.name(),
             Field::Enum(f) => f.name(),
@@ -257,17 +239,6 @@ impl<'a> Field<'a> {
             Field::Oneof(f) => f.syntax(),
             Field::Repeated(f) => f.syntax(),
             Field::Scalar(f) => f.syntax(),
-        }
-    }
-
-    pub fn fully_qualified_name(&self) -> String {
-        match self {
-            Field::Embed(f) => f.fully_qualified_name(),
-            Field::Enum(f) => f.fully_qualified_name(),
-            Field::Map(f) => f.fully_qualified_name(),
-            Field::Oneof(f) => f.fully_qualified_name(),
-            Field::Repeated(f) => f.fully_qualified_name(),
-            Field::Scalar(f) => f.fully_qualified_name(),
         }
     }
 
@@ -664,18 +635,6 @@ impl<'a> Field<'a> {
             Field::Oneof(f) => f.uninterpreted_options(),
             Field::Repeated(f) => f.uninterpreted_options(),
             Field::Scalar(f) => f.uninterpreted_options(),
-        }
-    }
-}
-impl<'a> Clone for Field<'a> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Embed(f) => Self::Embed(f.clone()),
-            Self::Enum(f) => Self::Enum(f.clone()),
-            Self::Map(f) => Self::Map(f.clone()),
-            Self::Oneof(f) => Self::Oneof(f.clone()),
-            Self::Repeated(f) => Self::Repeated(f.clone()),
-            Self::Scalar(f) => Self::Scalar(f.clone()),
         }
     }
 }

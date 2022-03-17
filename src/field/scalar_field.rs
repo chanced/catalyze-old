@@ -10,7 +10,7 @@ use crate::{
     Comments, Field, File, Message, Name, Package, UninterpretedOptions,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct ScalarFieldDetail<'a> {
     detail: FieldDetail<'a>,
     scalar: Scalar,
@@ -21,7 +21,7 @@ impl<'a> ScalarFieldDetail<'a> {
         Self { detail, scalar }
     }
 
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -72,16 +72,7 @@ impl<'a> ScalarFieldDetail<'a> {
         self.detail.is_marked_optional()
     }
 }
-
-impl<'a> Clone for ScalarFieldDetail<'a> {
-    fn clone(&self) -> Self {
-        Self {
-            detail: self.detail.clone(),
-            scalar: self.scalar,
-        }
-    }
-}
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ScalarField<'a>(Rc<ScalarFieldDetail<'a>>);
 
 impl<'a> ScalarField<'a> {
@@ -98,7 +89,7 @@ impl<'a> ScalarField<'a> {
     pub fn scalar(&self) -> Scalar {
         self.0.scalar
     }
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.0.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -215,15 +206,6 @@ impl<'a> ScalarField<'a> {
 
     pub fn message(&self) -> Message<'a> {
         self.0.message()
-    }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.fully_qualified_name()
-    }
-}
-
-impl<'a> Clone for ScalarField<'a> {
-    fn clone(&self) -> Self {
-        ScalarField(self.0.clone())
     }
 }
 

@@ -8,7 +8,7 @@ use std::convert::From;
 use std::fmt::{self, Display};
 use std::marker::PhantomData;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Node<'a> {
     Package(Package<'a>),
     File(File<'a>),
@@ -23,7 +23,7 @@ pub enum Node<'a> {
 }
 
 impl<'a> Node<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         match self {
             Node::Package(p) => p.name(),
             Node::File(f) => f.name(),
@@ -165,23 +165,6 @@ impl<'a> Display for Node<'a> {
                 Field::Scalar(f) => write!(fmt, "ScalarField({})", f.fully_qualified_name()),
             },
             Node::Extension(e) => write!(fmt, "Extension({})", e.fully_qualified_name()),
-        }
-    }
-}
-
-impl<'a> Clone for Node<'a> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Package(p) => Self::Package(p.clone()),
-            Self::File(n) => Self::File(n.clone()),
-            Self::Message(n) => Self::Message(n.clone()),
-            Self::Oneof(n) => Self::Oneof(n.clone()),
-            Self::Enum(n) => Self::Enum(n.clone()),
-            Self::EnumValue(n) => Self::EnumValue(n.clone()),
-            Self::Service(n) => Self::Service(n.clone()),
-            Self::Method(n) => Self::Method(n.clone()),
-            Self::Field(n) => Self::Field(n.clone()),
-            Self::Extension(n) => Self::Extension(n.clone()),
         }
     }
 }
@@ -522,13 +505,10 @@ impl<'a> From<&Ast<'a>> for AllNodes<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
-
-    use crate::{proto::FileDescriptor, util::Generic, *};
+    use crate::*;
 
     #[test]
     fn test_nodes() {
-        let u = Rc::new(Generic {});
         let pkg = Package::new("pkg");
 
         let f = File::new(true, FileDescriptor::default(), pkg.clone()).unwrap();
@@ -545,7 +525,6 @@ mod tests {
     }
     #[test]
     fn test_all_nodes() {
-        let u = Rc::new(Generic {});
         let pkg = Package::new("pkg");
 
         let f = File::new(true, FileDescriptor::default(), pkg.clone()).unwrap();

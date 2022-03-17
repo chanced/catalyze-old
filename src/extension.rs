@@ -20,12 +20,11 @@ struct ExtensionDetail<'a> {
     comments: RefCell<Comments<'a>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Extension<'a>(Rc<ExtensionDetail<'a>>);
 
 impl<'a> Extension<'a> {
     pub(crate) fn new(desc: FieldDescriptor<'a>, container: Container<'a>) -> Self {
-        let util = container.util();
         let fqn = format!("{}.{}", container.fully_qualified_name(), desc.name());
         let ext = Self(Rc::new(ExtensionDetail {
             fqn,
@@ -36,8 +35,8 @@ impl<'a> Extension<'a> {
         }));
         ext
     }
-    pub fn name(&self) -> Name {
-        self.0.name.clone()
+    pub fn name(&self) -> &Name {
+        &self.0.name
     }
     pub fn fully_qualified_name(&self) -> String {
         self.0.fqn.clone()
@@ -71,18 +70,12 @@ impl<'a> Extension<'a> {
     }
 }
 
-impl<'a> Clone for Extension<'a> {
-    fn clone(&self) -> Self {
-        Extension(self.0.clone())
-    }
-}
-
 impl<'a> From<WeakExtension<'a>> for Extension<'a> {
     fn from(weak: WeakExtension<'a>) -> Self {
         weak.upgrade()
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct WeakExtension<'a>(Weak<ExtensionDetail<'a>>);
 impl<'a> WeakExtension<'a> {
     fn upgrade(&self) -> Extension<'a> {
@@ -92,11 +85,6 @@ impl<'a> WeakExtension<'a> {
 impl<'a> From<Extension<'a>> for WeakExtension<'a> {
     fn from(ext: Extension<'a>) -> Self {
         ext.downgrade()
-    }
-}
-impl<'a> Clone for WeakExtension<'a> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
     }
 }
 

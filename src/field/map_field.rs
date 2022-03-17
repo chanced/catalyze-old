@@ -51,7 +51,7 @@ impl<'a> TryFrom<Type<'a>> for Key {
 
 use super::FieldDetail;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct MapFieldDetail<'a> {
     key: Key,
     detail: FieldDetail<'a>,
@@ -66,7 +66,7 @@ impl<'a> MapFieldDetail<'a> {
             .ok_or_else(|| anyhow!("map entry {} is missing value field", &map_entry.name()))
     }
 
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.detail.name()
     }
 
@@ -115,16 +115,7 @@ impl<'a> MapFieldDetail<'a> {
     }
 }
 
-impl<'a> Clone for MapFieldDetail<'a> {
-    fn clone(&self) -> Self {
-        Self {
-            key: self.key,
-            detail: self.detail.clone(),
-        }
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MapField<'a> {
     Scalar(MappedScalarField<'a>),
     Enum(MappedEnumField<'a>),
@@ -132,7 +123,7 @@ pub enum MapField<'a> {
 }
 
 impl<'a> MapField<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         match self {
             MapField::Scalar(f) => f.name(),
             MapField::Enum(f) => f.name(),
@@ -430,22 +421,6 @@ impl<'a> MapField<'a> {
             MapField::Embed(f) => f.message(),
         }
     }
-    pub fn fully_qualified_name(&self) -> String {
-        match self {
-            MapField::Scalar(f) => f.fully_qualified_name(),
-            MapField::Enum(f) => f.fully_qualified_name(),
-            MapField::Embed(f) => f.fully_qualified_name(),
-        }
-    }
-}
-impl<'a> Clone for MapField<'a> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Scalar(f) => Self::Scalar(f.clone()),
-            Self::Enum(f) => Self::Enum(f.clone()),
-            Self::Embed(f) => Self::Embed(f.clone()),
-        }
-    }
 }
 
 impl<'a> From<MappedEnumField<'a>> for MapField<'a> {
@@ -487,16 +462,11 @@ pub(crate) struct MappedScalarFieldDetail<'a> {
     scalar: Scalar,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MappedScalarField<'a>(Rc<MappedScalarFieldDetail<'a>>);
-impl<'a> Clone for MappedScalarField<'a> {
-    fn clone(&self) -> Self {
-        MappedScalarField(self.0.clone())
-    }
-}
 
 impl<'a> MappedScalarField<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -619,12 +589,9 @@ impl<'a> MappedScalarField<'a> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.detail.fully_qualified_name()
-    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct MappedEmbedFieldDetail<'a> {
     embed: RefCell<WeakMessage<'a>>,
     detail: MapFieldDetail<'a>,
@@ -638,20 +605,11 @@ impl<'a> MappedEmbedFieldDetail<'a> {
     }
 }
 
-impl<'a> Clone for MappedEmbedFieldDetail<'a> {
-    fn clone(&self) -> Self {
-        Self {
-            embed: self.embed.clone(),
-            detail: self.detail.clone(),
-        }
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MappedEmbedField<'a>(Rc<MappedEmbedFieldDetail<'a>>);
 
 impl<'a> MappedEmbedField<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -813,15 +771,6 @@ impl<'a> MappedEmbedField<'a> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.detail.fully_qualified_name()
-    }
-}
-
-impl<'a> Clone for MappedEmbedField<'a> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -839,15 +788,11 @@ impl<'a> MappedEnumFieldDetail<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MappedEnumField<'a>(Rc<MappedEnumFieldDetail<'a>>);
-impl<'a> Clone for MappedEnumField<'a> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
-}
+
 impl<'a> MappedEnumField<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -1009,9 +954,4 @@ impl<'a> MappedEnumField<'a> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.detail.fully_qualified_name()
-    }
-
 }
-

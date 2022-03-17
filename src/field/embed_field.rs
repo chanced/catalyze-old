@@ -11,13 +11,13 @@ use crate::{
 
 use super::FieldDetail;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct EmbedFieldDetail<'a> {
     pub detail: FieldDetail<'a>,
     pub embed: RefCell<WeakMessage<'a>>,
 }
 impl<'a> EmbedFieldDetail<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.detail.name()
     }
     pub fn embed(&self) -> Message<'a> {
@@ -76,20 +76,11 @@ impl<'a> EmbedFieldDetail<'a> {
     }
 }
 
-impl<'a> Clone for EmbedFieldDetail<'a> {
-    fn clone(&self) -> Self {
-        Self {
-            detail: self.detail.clone(),
-            embed: self.embed.clone(),
-        }
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EmbedField<'a>(Rc<EmbedFieldDetail<'a>>);
 
 impl<'a> EmbedField<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.0.name()
     }
     pub fn comments(&self) -> Comments<'a> {
@@ -135,9 +126,7 @@ impl<'a> EmbedField<'a> {
     pub fn imports(&self) -> FileRefs<'a> {
         self.0.imports()
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.fully_qualified_name()
-    }
+
     pub fn is_repeated(&self) -> bool {
         self.0.is_repeated()
     }
@@ -245,10 +234,5 @@ impl<'a> EmbedField<'a> {
     /// Options the parser does not recognize.
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
-    }
-}
-impl<'a> Clone for EmbedField<'a> {
-    fn clone(&self) -> Self {
-        EmbedField(self.0.clone())
     }
 }

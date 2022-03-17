@@ -1,15 +1,10 @@
-#[cfg(test)]
-use crate::util::Generic;
-use crate::ToCase;
 use heck::{
-    AsLowerCamelCase, ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase,
-    ToShoutySnakeCase, ToSnakeCase,
+    ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase, ToShoutySnakeCase, ToSnakeCase,
 };
 
 use std::fmt::Write;
 use std::hash::{Hash, Hasher};
 use std::ops;
-use std::rc::Rc;
 
 use std::{fmt, ops::Add};
 
@@ -17,7 +12,7 @@ pub struct Name {
     val: String,
 }
 
-impl<'a> Clone for Name {
+impl Clone for Name {
     fn clone(&self) -> Self {
         Self {
             val: self.val.clone(),
@@ -25,13 +20,13 @@ impl<'a> Clone for Name {
     }
 }
 
-impl<'a> Hash for Name {
+impl Hash for Name {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.val.hash(state);
     }
 }
-impl<'a> Eq for Name {}
-impl<'a> Name {
+impl Eq for Name {}
+impl Name {
     pub fn new(val: &str) -> Self {
         Self {
             val: val.to_owned(),
@@ -75,42 +70,32 @@ impl<'a> Name {
     }
 }
 
-impl<'a> PartialEq for Name {
-    fn eq(&self, other: &Self) -> bool {
-        PartialEq::eq(&self.val, &other.val)
-    }
-}
-impl<'a> PartialEq<String> for Name {
-    fn eq(&self, other: &String) -> bool {
-        PartialEq::eq(&self.val, other)
-    }
-}
-impl<'a> PartialEq<str> for Name {
-    fn eq(&self, other: &str) -> bool {
-        PartialEq::eq(self.as_str(), other)
-    }
-}
-
-impl<'a> Write for Name {
+impl Write for Name {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.val.write_str(s)
     }
 }
 
-impl<'a> ops::Deref for Name {
+impl ops::Deref for Name {
     type Target = str;
     fn deref(&self) -> &Self::Target {
         &self.val
     }
 }
 
-impl<'a> Name {
+impl Name {
     pub fn as_str(&self) -> &str {
         self.val.as_str()
     }
 }
 
-impl<'a> Add<Self> for Name {
+impl From<&str> for Name {
+    fn from(val: &str) -> Self {
+        Self { val: val.to_string() }
+    }
+}
+
+impl Add<Self> for Name {
     type Output = Self;
     fn add(self, other: Self) -> Self {
         Self {
@@ -118,114 +103,97 @@ impl<'a> Add<Self> for Name {
         }
     }
 }
-impl<'a> Add<&str> for Name {
+impl Add<&str> for Name {
     type Output = Self;
     fn add(self, rhs: &str) -> Self::Output {
-        Name::new(&(self.val + rhs), self.util)
+        (self.val + rhs).into()
     }
 }
 
-impl<'a> Add<String> for Name {
+impl Add<&String> for Name {
+    type Output = Self;
+    fn add(self, rhs: &String) -> Self::Output {
+        self.add(rhs.as_str())
+    }
+}
+
+impl Add<String> for Name {
     type Output = Self;
     fn add(self, rhs: String) -> Self::Output {
-        Name::new(&(self.val + rhs.as_str()), self.util)
+        self.add(rhs.as_str())
     }
 }
 
-pub trait ToScreamingSnakeCase: ToOwned {
-    fn to_screaming_snake_case(&self) -> Self::Owned;
-}
-
-pub trait ToScreamingKebabCase: ToOwned {
-    fn to_screaming_kebab_case(&self) -> Self::Owned;
-}
-
-impl<T: ToShoutySnakeCase> ToScreamingSnakeCase for T {
-    fn to_screaming_snake_case(&self) -> Self::Owned {
-        self.to_shouty_snake_case()
-    }
-}
-impl<T: ToShoutyKebabCase> ToScreamingKebabCase for T {
-    fn to_screaming_kebab_case(&self) -> Self::Owned {
-        self.to_shouty_kebab_case()
+impl PartialEq<str> for Name {
+    fn eq(&self, other: &str) -> bool {
+        PartialEq::eq(&self.val, other)
     }
 }
 
-impl<T: ToLowerCamelCase> ToCamelCase for T {
-    fn to_camel_case(&self) -> Self::Owned {
-        self.to_lower_camel_case()
-    }
-}
-impl ToCamelCase for str {
-    fn to_camel_case(&self) -> String {
-        AsLowerCamelCase(self).to_string()
+impl PartialEq<Name> for str {
+    fn eq(&self, other: &Name) -> bool {
+        PartialEq::eq(self, &other.val)
     }
 }
 
-impl<U: ToCase> Name {
+impl PartialEq<Name> for String {
+    fn eq(&self, other: &Name) -> bool {
+        PartialEq::eq(&self.as_str(), &other.val)
+    }
+}
+impl PartialEq for Name {
+    fn eq(&self, other: &Self) -> bool {
+        PartialEq::eq(&self.val, &other.val)
+    }
+}
+impl PartialEq<String> for Name {
+    fn eq(&self, other: &String) -> bool {
+        PartialEq::eq(&self.val, other)
+    }
+}
+
+impl Name {
     pub fn to_camel_case(&self) -> Self {
-        self.util().to_camel_case(self)
-    }
-    pub fn to_snake_case(&self) -> Self {
-        self.util().to_snake_case(self)
+        self.val.to_lower_camel_case().into()
     }
     pub fn to_kebab_case(&self) -> Self {
-        self.util().to_kebab_case(self)
-    }
-    pub fn to_screaming_snake_case(&self) -> Self {
-        self.util().to_screaming_snake_case(self)
+        self.val.to_kebab_case().into()
     }
     pub fn to_screaming_kebab_case(&self) -> Self {
-        self.util().to_screaming_kebab_case(self)
+        self.val.to_shouty_kebab_case().into()
+    }
+    pub fn to_snake_case(&self) -> Self {
+        self.val.to_snake_case().into()
+    }
+    pub fn to_screaming_snake_case(&self) -> Self {
+        self.val.to_shouty_snake_case().into()
     }
     pub fn to_pascal_case(&self) -> Self {
-        self.util().to_pascal_case(self)
+        self.val.to_pascal_case().into()
     }
 }
 
-pub trait ToCamelCase: ToOwned {
-    fn to_camel_case(&self) -> Self::Owned;
-}
-
-impl<U: ToCase> ToKebabCase for Name {
-    fn to_kebab_case(&self) -> Self {
-        self.util.to_kebab_case(self)
-    }
-}
-impl<U: ToCase> ToSnakeCase for Name {
-    fn to_snake_case(&self) -> Self {
-        self.util.to_snake_case(self)
-    }
-}
-
-impl<U: ToCase> ToPascalCase for Name {
-    fn to_pascal_case(&self) -> Self {
-        self.util.to_pascal_case(self)
-    }
-}
-
-impl<U: ToCase> ToScreamingSnakeCase for Name {
-    fn to_screaming_snake_case(&self) -> Self {
-        self.util.to_screaming_snake_case(self)
-    }
-}
-
-impl<'a> fmt::Debug for Name {
+impl fmt::Debug for Name {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.val)
     }
 }
 
-impl<'a> fmt::Display for Name {
+impl fmt::Display for Name {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.val)
     }
 }
 
-#[cfg(test)]
-impl Default for Name<Generic> {
+impl From<String> for Name {
+    fn from(val: String) -> Self {
+        Name::new(&val)
+    }
+}
+
+impl Default for Name {
     fn default() -> Self {
-        Name::new("", Rc::new(Generic {}))
+        Name::new("")
     }
 }
 
@@ -237,18 +205,16 @@ impl Default for Name<Generic> {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
 
     use super::*;
-    use crate::util::Rust;
     #[test]
     fn test_to_kebab() {
-        let n = Name::new("hello_world", Rc::new(Rust {}));
+        let n = Name::new("hello_world");
         assert_eq!(n.to_kebab_case().to_string(), "hello-world".to_string());
     }
     #[test]
     fn test_to_pascal() {
-        let n = Name::new("hello_world", Rc::new(RefCell::new(Rust {})));
+        let n = Name::new("hello_world");
         assert_eq!(n.to_pascal_case(), "HelloWorld".to_string());
     }
 }

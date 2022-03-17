@@ -20,14 +20,14 @@ pub(crate) struct OneofDetail<'a> {
     imports: Rc<RefCell<Vec<WeakFile<'a>>>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Oneof<'a>(Rc<OneofDetail<'a>>);
 
 impl<'a> Oneof<'a> {
     pub fn new(desc: OneofDescriptor<'a>, msg: Message<'a>) -> Self {
         let fully_qualified_name = format!("{}.{}", msg.fully_qualified_name(), desc.name());
         Oneof(Rc::new(OneofDetail {
-            name: desc.name().into,
+            name: desc.name().into(),
             desc,
             fqn: fully_qualified_name,
             fields: Rc::new(RefCell::new(Vec::default())),
@@ -40,8 +40,8 @@ impl<'a> Oneof<'a> {
     pub fn fully_qualified_name(&self) -> String {
         self.0.fqn.clone()
     }
-    pub fn name(&self) -> Name {
-        self.0.name.clone()
+    pub fn name(&self) -> &Name {
+        &self.0.name
     }
     pub fn fields(&self) -> Iter<Field<'a>> {
         Iter::from(&self.0.fields)
@@ -94,12 +94,6 @@ impl<'a> Oneof<'a> {
     }
 }
 
-impl<'a> Clone for Oneof<'a> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
-}
-
 impl<'a> From<WeakOneof<'a>> for Oneof<'a> {
     fn from(oneof: WeakOneof<'a>) -> Self {
         oneof.upgrade()
@@ -111,13 +105,8 @@ impl<'a> From<&WeakOneof<'a>> for Oneof<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct WeakOneof<'a>(Weak<OneofDetail<'a>>);
-impl<'a> Clone for WeakOneof<'a> {
-    fn clone(&self) -> Self {
-        WeakOneof(self.0.clone())
-    }
-}
 
 impl<'a> WeakOneof<'a> {
     fn upgrade(&self) -> Oneof<'a> {

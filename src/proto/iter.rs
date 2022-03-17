@@ -1,7 +1,7 @@
 use super::*;
 use std::slice;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EnumDescriptorIter<'a> {
     iter: slice::Iter<'a, prost_types::EnumDescriptorProto>,
 }
@@ -26,7 +26,7 @@ impl<'a> From<&'a Vec<prost_types::EnumDescriptorProto>> for EnumDescriptorIter<
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileDescriptorIter<'a> {
     iter: std::slice::Iter<'a, prost_types::FileDescriptorProto>,
 }
@@ -53,7 +53,7 @@ impl<'a> From<&'a Vec<prost_types::FileDescriptorProto>> for FileDescriptorIter<
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EnumValueDescriptorIter<'a> {
     iter: std::slice::Iter<'a, prost_types::EnumValueDescriptorProto>,
 }
@@ -80,7 +80,7 @@ impl<'a> EnumValueDescriptorIter<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FieldDescriptorIter<'a> {
     iter: std::slice::Iter<'a, prost_types::FieldDescriptorProto>,
 }
@@ -108,7 +108,7 @@ impl<'a> From<&'a Vec<prost_types::FieldDescriptorProto>> for FieldDescriptorIte
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MessageDescriptorIter<'a> {
     iter: std::slice::Iter<'a, prost_types::DescriptorProto>,
 }
@@ -132,7 +132,7 @@ impl<'a> From<&'a Vec<prost_types::DescriptorProto>> for MessageDescriptorIter<'
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ServiceDescriptorIter<'a> {
     iter: std::slice::Iter<'a, prost_types::ServiceDescriptorProto>,
 }
@@ -157,7 +157,7 @@ impl<'a> ServiceDescriptorIter<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MethodDescriptorIter<'a> {
     iter: std::slice::Iter<'a, prost_types::MethodDescriptorProto>,
 }
@@ -182,7 +182,7 @@ impl<'a> From<&'a Vec<prost_types::MethodDescriptorProto>> for MethodDescriptorI
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OneofDescriptorIter<'a> {
     iter: std::slice::Iter<'a, prost_types::OneofDescriptorProto>,
 }
@@ -207,7 +207,7 @@ impl<'a> From<&'a Vec<prost_types::OneofDescriptorProto>> for OneofDescriptorIte
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EnumReservedRangeIter<'a> {
     iter: std::slice::Iter<'a, prost_types::enum_descriptor_proto::EnumReservedRange>,
 }
@@ -234,7 +234,7 @@ impl<'a> From<&'a [prost_types::enum_descriptor_proto::EnumReservedRange]>
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExtensionRangeIter<'a> {
     iter: std::slice::Iter<'a, prost_types::descriptor_proto::ExtensionRange>,
 }
@@ -259,7 +259,7 @@ impl<'a> ExtensionRangeIter<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ReservedRangeIter<'a> {
     iter: std::slice::Iter<'a, prost_types::descriptor_proto::ReservedRange>,
 }
@@ -284,7 +284,7 @@ impl<'a> From<&'a [prost_types::descriptor_proto::ReservedRange]> for ReservedRa
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UninterpretedOptionsIter<'a> {
     iter: std::slice::Iter<'a, prost_types::UninterpretedOption>,
 }
@@ -317,7 +317,7 @@ impl<'a> UninterpretedOptionsIter<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LocationIter<'a> {
     iter: std::slice::Iter<'a, prost_types::source_code_info::Location>,
 }
@@ -341,12 +341,5 @@ impl<'a> Iterator for LocationIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|l| l.into())
-    }
-}
-impl<'a> Clone for LocationIter<'a> {
-    fn clone(&self) -> Self {
-        LocationIter {
-            iter: self.iter.clone(),
-        }
     }
 }

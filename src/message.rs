@@ -19,7 +19,7 @@ use crate::{Package, WellKnownType};
 
 use std::collections::{HashSet, VecDeque};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Message describes a proto message. Messages can be contained in either
 /// another Message or a File, and may house further Messages and/or Enums. While
 /// all Fields technically live on the Message, some may be contained within
@@ -27,11 +27,6 @@ use std::collections::{HashSet, VecDeque};
 ///
 /// Fields within Oneof blocks fields will be accessible on both the Message and the Oneof.
 pub struct Message<'a>(Rc<MessageDetail<'a>>);
-impl<'a> Clone for Message<'a> {
-    fn clone(&self) -> Self {
-        Message(self.0.clone())
-    }
-}
 
 #[derive(Debug, Clone)]
 pub(crate) struct MessageDetail<'a> {
@@ -63,7 +58,6 @@ impl<'a> Message<'a> {
         desc: MessageDescriptor<'a>,
         container: Container<'a>,
     ) -> Result<Self, anyhow::Error> {
-        let util = container.util();
         let fqn = format!("{}.{}", container.fully_qualified_name(), desc.name());
 
         let wkt = if container.package().is_well_known_type() {
@@ -73,7 +67,7 @@ impl<'a> Message<'a> {
         };
 
         let msg = Message(Rc::new(MessageDetail {
-            name: desc.name().into,
+            name: desc.name().into(),
             container: RefCell::new(container.into()),
             fqn,
             descriptor: desc,
@@ -145,8 +139,8 @@ impl<'a> Message<'a> {
         }
         Ok(msg)
     }
-    pub fn name(&self) -> Name {
-        self.0.name.clone()
+    pub fn name(&self) -> &Name {
+        &self.0.name
     }
     pub fn map_entries(&self) -> Iter<Message<'a>> {
         Iter::from(&self.0.maps)
@@ -340,7 +334,7 @@ impl<'a> TryFrom<Container<'a>> for Message<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct WeakMessage<'a>(Weak<MessageDetail<'a>>);
 
 impl<'a> WeakMessage<'a> {
@@ -353,7 +347,7 @@ impl<'a> WeakMessage<'a> {
     // pub fn container(&self) -> Container<'a> {
     //     self.upgrade().container()
     // }
-    // pub fn name(&self) -> Name {
+    // pub fn name(&self) -> &Name {
     //     self.upgrade().name()
     // }
     pub fn package(&self) -> Package<'a> {
@@ -391,12 +385,6 @@ impl<'a> From<&Message<'a>> for WeakMessage<'a> {
 impl<'a> From<Message<'a>> for WeakMessage<'a> {
     fn from(m: Message<'a>) -> Self {
         WeakMessage(Rc::downgrade(&m.0))
-    }
-}
-
-impl<'a> Clone for WeakMessage<'a> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
     }
 }
 

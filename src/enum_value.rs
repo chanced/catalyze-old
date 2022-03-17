@@ -15,8 +15,8 @@ struct EnumValueDetail<'a> {
 }
 
 impl<'a> EnumValueDetail<'a> {
-    pub fn name(&self) -> Name {
-        self.name.clone()
+    pub fn name(&self) -> &Name {
+        &self.name
     }
     pub fn fully_qualified_name(&self) -> String {
         self.fqn.clone()
@@ -37,7 +37,7 @@ impl<'a> EnumValueDetail<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EnumValue<'a>(Rc<EnumValueDetail<'a>>);
 
 impl<'a> EnumValue<'a> {
@@ -51,7 +51,7 @@ impl<'a> EnumValue<'a> {
             comments: RefCell::new(Comments::default()),
         }))
     }
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.0.name()
     }
 
@@ -100,8 +100,3 @@ impl<'a> EnumValue<'a> {
     }
 }
 
-impl<'a> Clone for EnumValue<'a> {
-    fn clone(&self) -> Self {
-        EnumValue(self.0.clone())
-    }
-}

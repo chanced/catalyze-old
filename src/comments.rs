@@ -1,16 +1,10 @@
 use crate::{iter::Iter, File, Location, Package};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Comments<'a> {
     loc: Location<'a>,
 }
 
-impl<'a> Copy for Comments<'a> {}
-impl<'a> Clone for Comments<'a> {
-    fn clone(&self) -> Self {
-        Comments { loc: self.loc }
-    }
-}
 impl<'a> From<&Location<'a>> for Comments<'a> {
     fn from(loc: &Location<'a>) -> Self {
         Comments { loc: *loc }
@@ -54,7 +48,7 @@ impl<'a> From<Location<'a>> for Comments<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PackageComments<'a> {
     files: Iter<File<'a>>,
 }
@@ -76,7 +70,7 @@ impl<'a> Iterator for PackageComments<'a> {
     }
 }
 
-// #[derive(Debug)]
+// #[derive(Debug, Clone)]
 // pub struct CommentsIter<'a> {
 //     iter: std::slice::Iter<'a, prost_types::source_code_info::Location>,
 //     phantom: PhantomData<U>,

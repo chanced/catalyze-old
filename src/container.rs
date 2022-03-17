@@ -9,19 +9,10 @@ use crate::{AllEnums, AllMessages, Enum, File, Message, Name, Node, Package, Wea
 
 // }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Container<'a> {
     File(File<'a>),
     Message(Message<'a>),
-}
-
-impl<'a> Clone for Container<'a> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::File(f) => Self::File(f.clone()),
-            Self::Message(m) => Self::Message(m.clone()),
-        }
-    }
 }
 
 impl<'a> Container<'a> {
@@ -31,7 +22,7 @@ impl<'a> Container<'a> {
             Container::Message(m) => Node::Message(m.clone()),
         }
     }
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         match self {
             Container::File(f) => f.name(),
             Container::Message(m) => m.name(),
@@ -126,7 +117,7 @@ impl<'a> From<&WeakContainer<'a>> for Container<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum WeakContainer<'a> {
     File(WeakFile<'a>),
     Message(WeakMessage<'a>),
@@ -141,8 +132,8 @@ impl<'a> WeakContainer<'a> {
     }
     pub fn fully_qualified_name(&self) -> String {
         match self {
-            Container::File(f) => f.fully_qualified_name(),
-            Container::Message(m) => m.fully_qualified_name(),
+            WeakContainer::File(f) => f.fully_qualified_name(),
+            WeakContainer::Message(m) => m.fully_qualified_name(),
         }
     }
     pub fn build_target(&self) -> bool {
@@ -199,14 +190,6 @@ impl<'a> From<&Container<'a>> for WeakContainer<'a> {
         match c {
             Container::File(f) => f.into(),
             Container::Message(m) => m.into(),
-        }
-    }
-}
-impl<'a> Clone for WeakContainer<'a> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::File(arg0) => Self::File(arg0.clone()),
-            Self::Message(arg0) => Self::Message(arg0.clone()),
         }
     }
 }

@@ -97,7 +97,7 @@ impl<'a> EnumFieldDetail<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EnumField<'a>(Rc<EnumFieldDetail<'a>>);
 
 impl<'a> EnumField<'a> {
@@ -113,7 +113,7 @@ impl<'a> EnumField<'a> {
         Ok(Field::Enum(f))
     }
 
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -268,14 +268,5 @@ impl<'a> EnumField<'a> {
     /// Options the parser does not recognize.
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
-    }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.detail.fully_qualified_name()
-    }
-}
-
-impl<'a> Clone for EnumField<'a> {
-    fn clone(&self) -> Self {
-        EnumField(self.0.clone())
     }
 }

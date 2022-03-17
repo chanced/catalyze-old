@@ -239,5 +239,5 @@ where
         let is_standalone = self.workflow.is_standalone();
         Ok(())
     }
-    fn generate_plugin(&mut self) -> Result<(), anyhow::Error> {}
+    // fn generate_plugin(&mut self) -> Result<(), anyhow::Error> {}
 }

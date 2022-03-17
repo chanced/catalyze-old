@@ -18,15 +18,14 @@ struct ServiceDetail<'a> {
     file: WeakFile<'a>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Service<'a>(Rc<ServiceDetail<'a>>);
 
 impl<'a> Service<'a> {
     pub(crate) fn new(desc: ServiceDescriptor<'a>, file: File<'a>) -> Self {
-        let util = file.util();
         let fully_qualified_name = format!("{}.{}", file.fully_qualified_name(), desc.name());
         let svc = Service(Rc::new(ServiceDetail {
-            name: desc.name().into,
+            name: desc.name().into(),
             fqn: fully_qualified_name,
             methods: Rc::new(RefCell::new(Vec::with_capacity(desc.methods().len()))),
             comments: RefCell::new(Comments::default()),
@@ -58,8 +57,8 @@ impl<'a> Service<'a> {
     pub fn methods(&self) -> Iter<Method<'a>> {
         Iter::from(&self.0.methods)
     }
-    pub fn name(&self) -> Name {
-        self.0.name.clone()
+    pub fn name(&self) -> &Name {
+        &self.0.name
     }
     fn downgrade(&self) -> WeakService<'a> {
         WeakService(Rc::downgrade(&self.0))
@@ -92,19 +91,13 @@ impl<'a> Service<'a> {
     }
 }
 
-impl<'a> Clone for Service<'a> {
-    fn clone(&self) -> Self {
-        Service(self.0.clone())
-    }
-}
-
 impl<'a> From<WeakService<'a>> for Service<'a> {
     fn from(weak: WeakService<'a>) -> Self {
         weak.upgrade()
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct WeakService<'a>(Weak<ServiceDetail<'a>>);
 
 impl<'a> WeakService<'a> {
@@ -121,10 +114,5 @@ impl<'a> From<&Service<'a>> for WeakService<'a> {
 impl<'a> From<Service<'a>> for WeakService<'a> {
     fn from(service: Service<'a>) -> Self {
         service.downgrade()
-    }
-}
-impl<'a> Clone for WeakService<'a> {
-    fn clone(&self) -> Self {
-        WeakService(self.0.clone())
     }
 }

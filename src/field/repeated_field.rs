@@ -12,7 +12,7 @@ use crate::{
 
 /// Represents a field marked as `repeated`. The field can hold
 /// a scalar value, an enum, or a message.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RepeatedField<'a> {
     Scalar(RepeatedScalarField<'a>),
     Enum(RepeatedEnumField<'a>),
@@ -20,7 +20,7 @@ pub enum RepeatedField<'a> {
 }
 
 impl<'a> RepeatedField<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         match self {
             RepeatedField::Scalar(f) => f.name(),
             RepeatedField::Enum(f) => f.name(),
@@ -306,22 +306,6 @@ impl<'a> RepeatedField<'a> {
             RepeatedField::Embed(f) => f.uninterpreted_options(),
         }
     }
-    pub fn fully_qualified_name(&self) -> String {
-        match self {
-            RepeatedField::Scalar(f) => f.fully_qualified_name(),
-            RepeatedField::Enum(f) => f.fully_qualified_name(),
-            RepeatedField::Embed(f) => f.fully_qualified_name(),
-        }
-    }
-}
-impl<'a> Clone for RepeatedField<'a> {
-    fn clone(&self) -> Self {
-        match self {
-            RepeatedField::Scalar(f) => RepeatedField::Scalar(f.clone()),
-            RepeatedField::Enum(f) => RepeatedField::Enum(f.clone()),
-            RepeatedField::Embed(f) => RepeatedField::Embed(f.clone()),
-        }
-    }
 }
 
 impl<'a> From<RepeatedScalarField<'a>> for RepeatedField<'a> {
@@ -360,11 +344,11 @@ impl<'a> From<&RepeatedEmbedField<'a>> for RepeatedField<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RepeatedEmbedField<'a>(Rc<EmbedFieldDetail<'a>>);
 
 impl<'a> RepeatedEmbedField<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -507,17 +491,11 @@ impl<'a> RepeatedEmbedField<'a> {
     }
 }
 
-impl<'a> Clone for RepeatedEmbedField<'a> {
-    fn clone(&self) -> Self {
-        RepeatedEmbedField(self.0.clone())
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RepeatedEnumField<'a>(Rc<EnumFieldDetail<'a>>);
 
 impl<'a> RepeatedEnumField<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -658,21 +636,13 @@ impl<'a> RepeatedEnumField<'a> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.detail.fully_qualified_name()
-    }
-}
-impl<'a> Clone for RepeatedEnumField<'a> {
-    fn clone(&self) -> Self {
-        RepeatedEnumField(self.0.clone())
-    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RepeatedScalarField<'a>(Rc<ScalarFieldDetail<'a>>);
 
 impl<'a> RepeatedScalarField<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.0.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -787,14 +757,5 @@ impl<'a> RepeatedScalarField<'a> {
     /// Options the parser does not recognize.
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
-    }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.fully_qualified_name()
-    }
-}
-
-impl<'a> Clone for RepeatedScalarField<'a> {
-    fn clone(&self) -> Self {
-        RepeatedScalarField(self.0.clone())
     }
 }

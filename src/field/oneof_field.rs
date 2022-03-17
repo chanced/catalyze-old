@@ -11,13 +11,13 @@ use crate::{
 };
 
 use super::FieldDetail;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct OneofFieldDetail<'a> {
     pub detail: FieldDetail<'a>,
     pub oneof: WeakOneof<'a>,
 }
 impl<'a> OneofFieldDetail<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.detail.name()
     }
     pub fn descriptor(&self) -> FieldDescriptor<'a> {
@@ -60,32 +60,16 @@ impl<'a> OneofFieldDetail<'a> {
         self.oneof().is_synthetic()
     }
 }
-impl<'a> Clone for OneofFieldDetail<'a> {
-    fn clone(&self) -> Self {
-        Self {
-            detail: self.detail.clone(),
-            oneof: self.oneof.clone(),
-        }
-    }
-}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum OneofField<'a> {
     Scalar(OneofScalarField<'a>),
     Enum(OneofEnumField<'a>),
     Embed(OneofEmbedField<'a>),
 }
-impl<'a> Clone for OneofField<'a> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Scalar(f) => Self::Scalar(f.clone()),
-            Self::Enum(f) => Self::Enum(f.clone()),
-            Self::Embed(f) => Self::Embed(f.clone()),
-        }
-    }
-}
+
 impl<'a> OneofField<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         match self {
             OneofField::Scalar(f) => f.name(),
             OneofField::Enum(f) => f.name(),
@@ -385,13 +369,6 @@ impl<'a> OneofField<'a> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
-    pub fn fully_qualified_name(&self) -> String {
-        match self {
-            OneofField::Scalar(f) => f.fully_qualified_name(),
-            OneofField::Enum(f) => f.fully_qualified_name(),
-            OneofField::Embed(f) => f.fully_qualified_name(),
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -399,11 +376,11 @@ pub(crate) struct OneofEnumFieldDetail<'a> {
     detail: OneofFieldDetail<'a>,
     enumeration: RefCell<WeakEnum<'a>>,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OneofEnumField<'a>(Rc<OneofEnumFieldDetail<'a>>);
 
 impl<'a> OneofEnumField<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.0.detail.name()
     }
 
@@ -552,15 +529,6 @@ impl<'a> OneofEnumField<'a> {
     pub fn is_deprecated(&self) -> bool {
         self.descriptor().options().is_deprecated()
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.detail.fully_qualified_name()
-    }
-}
-
-impl<'a> Clone for OneofEnumField<'a> {
-    fn clone(&self) -> Self {
-        OneofEnumField(self.0.clone())
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -569,11 +537,11 @@ pub struct OneofScalarFieldDetail<'a> {
     detail: OneofFieldDetail<'a>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OneofScalarField<'a>(Rc<OneofScalarFieldDetail<'a>>);
 
 impl<'a> OneofScalarField<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.0.detail.name()
     }
     pub fn oneof(&self) -> Oneof<'a> {
@@ -695,15 +663,6 @@ impl<'a> OneofScalarField<'a> {
     pub fn is_deprecated(&self) -> bool {
         self.descriptor().options().is_deprecated()
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.detail.fully_qualified_name()
-    }
-}
-
-impl<'a> Clone for OneofScalarField<'a> {
-    fn clone(&self) -> Self {
-        OneofScalarField(self.0.clone())
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -712,15 +671,10 @@ pub(crate) struct OneofEmbedFieldDetail<'a> {
     embed: RefCell<WeakMessage<'a>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OneofEmbedField<'a>(Rc<OneofEmbedFieldDetail<'a>>);
-impl<'a> Clone for OneofEmbedField<'a> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
-}
 impl<'a> OneofEmbedField<'a> {
-    pub fn name(&self) -> Name {
+    pub fn name(&self) -> &Name {
         self.0.detail.name()
     }
     pub fn fully_qualified_name(&self) -> String {
@@ -863,8 +817,5 @@ impl<'a> OneofEmbedField<'a> {
     /// is a formalization for deprecating fields.
     pub fn is_deprecated(&self) -> bool {
         self.descriptor().options().is_deprecated()
-    }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.detail.fully_qualified_name()
     }
 }
