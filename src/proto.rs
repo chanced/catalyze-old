@@ -1646,7 +1646,9 @@ impl<'a> Location<'a> {
 }
 
 #[cfg(test)]
+
 mod test_data {
+
     lazy_static::lazy_static! {
         pub static ref DEFAULT_FILE_DESCRIPTOR_PROTO:prost_types::FileDescriptorProto = prost_types::FileDescriptorProto::default();
         pub static ref DEFAULT_DESCRIPTOR_PROTO:prost_types::DescriptorProto = prost_types::DescriptorProto::default();

@@ -67,15 +67,15 @@ pub enum DecodedInput {
     FileDescriptorSet(prost_types::FileDescriptorSet),
 }
 #[derive(Clone, Debug)]
-pub struct Input<'a> {
-    pub files: &'a [prost_types::FileDescriptorProto],
+pub struct Input {
+    pub files: Vec<prost_types::FileDescriptorProto>,
     pub targets: Vec<String>,
     pub parmeters: Parameters,
     pub protoc_version: Option<semver::Version>,
 }
 
-impl<'a> Input<'a> {
-    pub fn new(files: &'a [prost_types::FileDescriptorProto], params: &str) -> Self {
+impl Input {
+    pub fn new(files: Vec<prost_types::FileDescriptorProto>, params: &str) -> Self {
         let parmeters = Parameters::new(params);
         Self {
             files,
@@ -84,7 +84,7 @@ impl<'a> Input<'a> {
             protoc_version: None,
         }
     }
-    pub fn files(&self) -> std::slice::Iter<'a, prost_types::FileDescriptorProto> {
+    pub fn files(&self) -> std::slice::Iter<prost_types::FileDescriptorProto> {
         self.files.iter()
     }
 }

@@ -1,15 +1,18 @@
-use crate::{DecodedInput, Input, Module};
-use anyhow::bail;
+use crate::{Ast, DecodedInput, Input, Module};
+use anyhow::{anyhow, bail};
 use prost::Message;
+use prost_types::compiler::CodeGeneratorRequest;
+
 use std::{
+    collections::HashMap,
     fs::File,
     io::{self, stdin},
     io::{stdout, BufReader, BufWriter, Cursor, Read, Stdin, Stdout, Write},
     path::Path,
 };
+
 pub trait Workflow: Sized {
     fn decode_input<I: Read>(input: &mut BufReader<I>) -> Result<DecodedInput, io::Error>;
-    fn is_standalone(&self) -> bool;
 }
 /// The `Standalone` workflow reads a `FileDescriptorSet`, typically from the
 /// contents of a saved output from `protoc`, and generates based on a list of
@@ -23,9 +26,6 @@ impl Workflow for Standalone {
         let buf = Cursor::new(buf);
         let fds = prost_types::FileDescriptorSet::decode(buf)?;
         Ok(DecodedInput::FileDescriptorSet(fds))
-    }
-    fn is_standalone(&self) -> bool {
-        true
     }
 }
 
@@ -43,9 +43,6 @@ impl Workflow for ProtocPlugin {
         let cgr = prost_types::compiler::CodeGeneratorRequest::decode(buf)?;
         Ok(DecodedInput::CodeGeneratorRequest(cgr))
     }
-    fn is_standalone(&self) -> bool {
-        false
-    }
 }
 
 pub struct Generator<'a, W = ProtocPlugin, I = Stdin, O = Stdout>
@@ -60,8 +57,8 @@ where
     modules: Vec<Box<dyn Module<'a>>>,
     targets: Vec<String>,
     workflow: Box<W>,
-    file_desc_set: Option<prost_types::FileDescriptorSet>,
-    code_gen_req: Option<prost_types::compiler::CodeGeneratorRequest>,
+    has_rendered: bool,
+    parsed_input: Option<Input>,
 }
 
 impl<'a> Generator<'a> {
@@ -75,8 +72,8 @@ impl<'a> Generator<'a> {
             targets: Vec::new(),
             workflow: Box::new(ProtocPlugin {}),
             output_path: None,
-            file_desc_set: None,
-            code_gen_req: None,
+            has_rendered: false,
+            parsed_input: None,
         }
     }
 }
@@ -94,8 +91,8 @@ where
             workflow: self.workflow,
             output_path: self.output_path,
             output: self.output,
-            file_desc_set: self.file_desc_set,
-            code_gen_req: self.code_gen_req,
+            has_rendered: self.has_rendered,
+            parsed_input: self.parsed_input,
         }
     }
     pub fn with_output<W: Write>(self, output: W) -> Generator<'a, ProtocPlugin, I, W> {
@@ -106,8 +103,8 @@ where
             workflow: self.workflow,
             output_path: self.output_path,
             output: Some(BufWriter::new(output)),
-            file_desc_set: self.file_desc_set,
-            code_gen_req: self.code_gen_req,
+            has_rendered: self.has_rendered,
+            parsed_input: self.parsed_input,
         }
     }
     pub fn output_path(&mut self, path: &str) -> &mut Self {
@@ -132,15 +129,13 @@ where
             let path = path.as_ref();
             let p = path
                 .to_str()
-                .ok_or_else(|| anyhow::anyhow!("provided path is not valid UTF-8: {:?}", path))?;
+                .ok_or_else(|| anyhow!("provided path is not valid UTF-8: {:?}", path))?;
             targets.push(p.to_string());
         }
         let output_path = output_path.as_ref();
         let output_path = output_path
             .to_str()
-            .ok_or_else(|| {
-                anyhow::anyhow!("provided output path is not valid UTF-8: {:?}", output_path)
-            })?
+            .ok_or_else(|| anyhow!("provided output path is not valid UTF-8: {:?}", output_path))?
             .to_string();
 
         Ok(Generator {
@@ -150,8 +145,8 @@ where
             workflow: Box::new(Standalone {}),
             output_path: Some(output_path),
             output: None,
-            file_desc_set: None,
-            code_gen_req: None,
+            has_rendered: false,
+            parsed_input: None,
         })
     }
 }
@@ -162,55 +157,38 @@ where
     I: Read,
     O: Write,
 {
-    fn parse_input(&'_ mut self) -> Result<Input<'_>, anyhow::Error> {
-        match W::decode_input(&mut self.input)? {
+    fn parse_input(
+        buf: &mut BufReader<I>,
+        output_path: Option<String>,
+    ) -> Result<Input, anyhow::Error> {
+        match W::decode_input(buf)? {
             DecodedInput::FileDescriptorSet(fds) => {
-                self.file_desc_set = Some(fds);
-                let fds = self.file_desc_set.as_ref().unwrap();
-                let files = fds.file.as_slice();
-                let mut input = Input::new(files, "");
-                let output_path = self
-                    .output_path
-                    .clone()
-                    .ok_or(anyhow::anyhow!("no output path provided"))?;
-                if output_path.is_empty() {
-                    bail!("no output path provided");
-                }
+                let mut input = Input::new(fds.file, "");
+                let output_path = output_path.ok_or_else(|| anyhow!("output path not provided"))?;
                 input.parmeters.set_output_path(output_path);
                 Ok(input)
             }
             DecodedInput::CodeGeneratorRequest(cgr) => {
-                self.code_gen_req = Some(cgr);
-                let cgr = self.code_gen_req.as_ref().unwrap();
-                let files = cgr.proto_file.as_slice();
-                self.targets = cgr.file_to_generate.clone();
-                let mut input = Input::new(files, cgr.parameter());
-                let op = self
-                    .output_path
-                    .clone()
-                    .ok_or(anyhow::anyhow!("no output path provided"))?;
-                if op.is_empty() {
-                    bail!("no output path provided");
+                let mut input = Input::new(cgr.proto_file.clone(), cgr.parameter());
+                if let Some(op) = output_path {
+                    input.parmeters.set_output_path(op);
                 }
-                input.parmeters.set_output_path(op);
+                input.protoc_version = Self::parse_compiler_vers(cgr.compiler_version.as_ref())?;
                 Ok(input)
             }
         }
     }
 
-    fn parse_compiler_vers(&self) -> Result<Option<semver::Version>, anyhow::Error> {
-        let vers = self
-            .code_gen_req
-            .as_ref()
-            .and_then(|cgr| cgr.compiler_version.as_ref());
-        if let Some(vers) = vers {
+    fn parse_compiler_vers(
+        vers: Option<&prost_types::compiler::Version>,
+    ) -> Result<Option<semver::Version>, anyhow::Error> {
+        vers.map_or(Ok(None), |vers| {
             let suffix = vers.suffix();
             let pre = if !suffix.is_empty() {
                 semver::Prerelease::new(suffix)?
             } else {
                 semver::Prerelease::EMPTY
             };
-
             let vers = semver::Version {
                 major: vers.major().try_into()?,
                 minor: vers.minor().try_into()?,
@@ -219,25 +197,28 @@ where
                 build: semver::BuildMetadata::EMPTY,
             };
             Ok(Some(vers))
-        } else {
-            Ok(None)
+        })
+    }
+
+    pub fn render(&'a mut self) -> Result<(), anyhow::Error> {
+        if self.has_rendered {
+            bail!("generator has already rendered")
         }
-    }
+        for m in self.modules.iter_mut() {
+            m.init();
+        }
+        let input = Self::parse_input(&mut self.input, self.output_path.clone())?;
 
-    pub fn generate(&mut self) -> Result<(), anyhow::Error> {
-        let input = self.parse_input()?;
-        let compiler_vers = self.parse_compiler_vers()?;
-        let mut output = self.output.take().unwrap();
-        let is_standalone = self.workflow.is_standalone();
+        self.parsed_input = Some(input);
+        let ast = Ast::new(self.parsed_input.as_ref().unwrap())?;
+
+        let mut artifacts = vec![];
+        for m in self.modules.iter_mut() {
+            let mut res = m.execute(ast.target_file_map(), ast.clone());
+            artifacts.append(&mut res);
+        }
+
+        self.has_rendered = true;
         Ok(())
     }
-
-    fn generate_standalone(&mut self) -> Result<(), anyhow::Error> {
-        let input = self.parse_input()?;
-        let compiler_vers = self.parse_compiler_vers()?;
-        let mut output = self.output.take().unwrap();
-        let is_standalone = self.workflow.is_standalone();
-        Ok(())
-    }
-    // fn generate_plugin(&mut self) -> Result<(), anyhow::Error> {}
 }

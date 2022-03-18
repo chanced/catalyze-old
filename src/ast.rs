@@ -63,6 +63,15 @@ impl<'a> Ast<'a> {
     pub fn target_files(&self) -> Iter<File<'a>> {
         self.0.target_files()
     }
+    pub(crate) fn target_file_map(&self) -> HashMap<String, File<'a>> {
+        let targets = self.target_files();
+        let mut map = HashMap::with_capacity(targets.len());
+        for target in targets {
+            map.insert(target.name().to_string(), target);
+        }
+        map
+    }
+
     pub fn packages(&self) -> Iter<Package<'a>> {
         self.0.packages()
     }
@@ -75,7 +84,7 @@ impl<'a> Ast<'a> {
 }
 
 impl<'a> Ast<'a> {
-    pub fn new(input: Input<'a>) -> Result<Self, anyhow::Error> {
+    pub fn new(input: &'a Input) -> Result<Self, anyhow::Error> {
         let mut ast = AstDetail {
             packages: HashMap::default(),
             files: HashMap::default(),
