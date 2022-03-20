@@ -19,7 +19,7 @@ semver = "1.0"
 which = { version = "4.2" }
 
 [workspace]
-members = ["catalyze-build", "catalyze-prost", "catalyze-codec"]
+members = ["catalyze-build", "catalyze-prost", "catalyze-codec", "tests"]
 
 [features]
 

@@ -1,0 +1,10 @@
+[package]
+name = "catalyze-tests"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+catalyze = { path = "../" }
+catalyze-build = { path = "../catalyze-build" }
+catalyze-prost = { path = "../catalyze-prost" }
+catalyze-codec = { path = "../catalyze-codec" }

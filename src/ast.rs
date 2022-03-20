@@ -89,7 +89,7 @@ impl<'a> Ast<'a> {
             packages: HashMap::default(),
             files: HashMap::default(),
             file_list: Rc::new(RefCell::new(Vec::new())),
-            targets: HashMap::with_capacity(input.targets.len()),
+            targets: HashMap::with_capacity(input.targets().len()),
             defined_extensions: Extensions::new(),
             nodes: HashMap::default(),
             package_list: Rc::new(RefCell::new(Vec::new())),
@@ -110,7 +110,7 @@ impl<'a> Ast<'a> {
                     })
                     .clone()
             };
-            let build_target = input.targets.contains(&fd.name().to_string());
+            let build_target = input.targets().contains(&fd.name().to_string());
             let file = File::new(build_target, fd.to_owned(), pkg.clone())?;
             for d in fd.dependencies() {
                 let dep = ast
@@ -232,17 +232,5 @@ impl<'a> Ast<'a> {
         }
         let ast = Ast(Rc::new(ast));
         Ok(ast)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn nodes_issue() {
-        let pkg = crate::Package::new("foo");
-
-        for n in pkg.nodes() {
-            println!("{:?}", n);
-        }
     }
 }

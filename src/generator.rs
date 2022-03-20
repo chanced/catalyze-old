@@ -1,18 +1,18 @@
-use crate::{Ast, DecodedInput, Input, Module};
+use crate::{Ast, Input, Module, ParamMutatorFn, Parameters, Source};
 use anyhow::{anyhow, bail};
 use prost::Message;
-use prost_types::compiler::CodeGeneratorRequest;
 
 use std::{
-    collections::HashMap,
-    fs::File,
+    cell::RefCell,
+    fs,
     io::{self, stdin},
     io::{stdout, BufReader, BufWriter, Cursor, Read, Stdin, Stdout, Write},
     path::Path,
+    rc::Rc,
 };
 
 pub trait Workflow: Sized {
-    fn decode_input<I: Read>(input: &mut BufReader<I>) -> Result<DecodedInput, io::Error>;
+    fn decode_source<I: Read>(input: &mut BufReader<I>) -> Result<Source, io::Error>;
 }
 /// The `Standalone` workflow reads a `FileDescriptorSet`, typically from the
 /// contents of a saved output from `protoc`, and generates based on a list of
@@ -20,12 +20,12 @@ pub trait Workflow: Sized {
 /// path.
 pub struct Standalone {}
 impl Workflow for Standalone {
-    fn decode_input<I: Read>(input: &mut BufReader<I>) -> Result<DecodedInput, io::Error> {
+    fn decode_source<I: Read>(input: &mut BufReader<I>) -> Result<Source, io::Error> {
         let mut buf = Vec::new();
         input.read_to_end(&mut buf)?;
         let buf = Cursor::new(buf);
         let fds = prost_types::FileDescriptorSet::decode(buf)?;
-        Ok(DecodedInput::FileDescriptorSet(fds))
+        Ok(Source::FileDescriptorSet(fds))
     }
 }
 
@@ -36,12 +36,12 @@ impl Workflow for Standalone {
 /// reader and writer respectively.
 pub struct ProtocPlugin {}
 impl Workflow for ProtocPlugin {
-    fn decode_input<I: Read>(input: &mut BufReader<I>) -> Result<DecodedInput, io::Error> {
+    fn decode_source<I: Read>(input: &mut BufReader<I>) -> Result<Source, io::Error> {
         let mut buf = Vec::new();
         input.read_to_end(&mut buf)?;
         let buf = Cursor::new(buf);
         let cgr = prost_types::compiler::CodeGeneratorRequest::decode(buf)?;
-        Ok(DecodedInput::CodeGeneratorRequest(cgr))
+        Ok(Source::CodeGeneratorRequest(cgr))
     }
 }
 
@@ -59,6 +59,7 @@ where
     workflow: Box<W>,
     has_rendered: bool,
     parsed_input: Option<Input>,
+    param_mutators: Vec<ParamMutatorFn>,
 }
 
 impl<'a> Generator<'a> {
@@ -74,6 +75,7 @@ impl<'a> Generator<'a> {
             output_path: None,
             has_rendered: false,
             parsed_input: None,
+            param_mutators: Vec::new(),
         }
     }
 }
@@ -83,7 +85,7 @@ where
     I: Read,
     O: Write,
 {
-    pub fn with_input<R: Read>(self, input: R) -> Generator<'a, ProtocPlugin, R, O> {
+    pub fn input<R: Read>(self, input: R) -> Generator<'a, ProtocPlugin, R, O> {
         Generator {
             input: BufReader::new(input),
             modules: self.modules,
@@ -93,9 +95,10 @@ where
             output: self.output,
             has_rendered: self.has_rendered,
             parsed_input: self.parsed_input,
+            param_mutators: self.param_mutators,
         }
     }
-    pub fn with_output<W: Write>(self, output: W) -> Generator<'a, ProtocPlugin, I, W> {
+    pub fn output<W: Write>(self, output: W) -> Generator<'a, ProtocPlugin, I, W> {
         Generator {
             input: self.input,
             modules: self.modules,
@@ -105,6 +108,7 @@ where
             output: Some(BufWriter::new(output)),
             has_rendered: self.has_rendered,
             parsed_input: self.parsed_input,
+            param_mutators: self.param_mutators,
         }
     }
     pub fn output_path(&mut self, path: &str) -> &mut Self {
@@ -113,17 +117,16 @@ where
     }
 }
 
-impl<'a, W, I> Generator<'a, W, I>
+impl<'a, I> Generator<'a, Standalone, I>
 where
-    W: Workflow,
     I: Read,
 {
     /// Returns a new `Generator` with the `Standalone` workflow.
-    pub fn new_stand_alone(
+    pub fn new_standalone(
         input: I,
         target_protos: &[impl AsRef<Path>],
         output_path: impl AsRef<Path>,
-    ) -> Result<Generator<'a, Standalone, I, File>, anyhow::Error> {
+    ) -> Result<Generator<'a, Standalone, I, fs::File>, anyhow::Error> {
         let mut targets = Vec::with_capacity(target_protos.len());
         for path in target_protos {
             let path = path.as_ref();
@@ -147,6 +150,7 @@ where
             output: None,
             has_rendered: false,
             parsed_input: None,
+            param_mutators: Vec::new(),
         })
     }
 }
@@ -157,68 +161,60 @@ where
     I: Read,
     O: Write,
 {
-    fn parse_input(
-        buf: &mut BufReader<I>,
-        output_path: Option<String>,
-    ) -> Result<Input, anyhow::Error> {
-        match W::decode_input(buf)? {
-            DecodedInput::FileDescriptorSet(fds) => {
-                let mut input = Input::new(fds.file, "");
-                let output_path = output_path.ok_or_else(|| anyhow!("output path not provided"))?;
-                input.parmeters.set_output_path(output_path);
-                Ok(input)
-            }
-            DecodedInput::CodeGeneratorRequest(cgr) => {
-                let mut input = Input::new(cgr.proto_file.clone(), cgr.parameter());
-                if let Some(op) = output_path {
-                    input.parmeters.set_output_path(op);
-                }
-                input.protoc_version = Self::parse_compiler_vers(cgr.compiler_version.as_ref())?;
-                Ok(input)
-            }
-        }
+    pub fn parameters_mutator(&mut self, mutator: impl FnMut(&mut Parameters) + 'static) {
+        self.param_mutators.push(Rc::new(RefCell::new(mutator)));
     }
 
-    fn parse_compiler_vers(
-        vers: Option<&prost_types::compiler::Version>,
-    ) -> Result<Option<semver::Version>, anyhow::Error> {
-        vers.map_or(Ok(None), |vers| {
-            let suffix = vers.suffix();
-            let pre = if !suffix.is_empty() {
-                semver::Prerelease::new(suffix)?
-            } else {
-                semver::Prerelease::EMPTY
-            };
-            let vers = semver::Version {
-                major: vers.major().try_into()?,
-                minor: vers.minor().try_into()?,
-                patch: vers.patch().try_into()?,
-                pre,
-                build: semver::BuildMetadata::EMPTY,
-            };
-            Ok(Some(vers))
-        })
-    }
-
-    pub fn render(&'a mut self) -> Result<(), anyhow::Error> {
+    pub fn render(&mut self) -> Result<(), anyhow::Error> {
         if self.has_rendered {
             bail!("generator has already rendered")
         }
+        let input = Self::parse_input(
+            &mut self.input,
+            self.output_path.clone(),
+            self.targets.clone(),
+            self.param_mutators.as_slice(),
+        )?;
+        self.parsed_input = Some(input);
+
         for m in self.modules.iter_mut() {
             m.init();
         }
-        let input = Self::parse_input(&mut self.input, self.output_path.clone())?;
+        {
+            let ast = Ast::new(self.parsed_input.as_ref().expect("input not parsed"))?;
 
-        self.parsed_input = Some(input);
-        let ast = Ast::new(self.parsed_input.as_ref().unwrap())?;
-
-        let mut artifacts = vec![];
-        for m in self.modules.iter_mut() {
-            let mut res = m.execute(ast.target_file_map(), ast.clone());
-            artifacts.append(&mut res);
+            let mut artifacts = vec![];
+            for m in self.modules.iter_mut() {
+                let mut res = m.execute(ast.target_file_map(), ast.clone());
+                artifacts.append(&mut res);
+            }
         }
-
         self.has_rendered = true;
         Ok(())
+    }
+    fn parse_input(
+        buf: &mut BufReader<I>,
+        output_path: Option<String>,
+        targets: Vec<String>,
+        mutators: &[ParamMutatorFn],
+    ) -> Result<Input, io::Error> {
+        let source = W::decode_source(buf)?;
+        let mut input = Input::new(source, output_path, targets);
+        input.mutate(mutators);
+        Ok(input)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+    use std::fs;
+    use std::io::prelude::*;
+
+    #[test]
+    fn test_new_standalone_generator() {
+        let kitchen = fs::File::open("../proto_op/kitchen.bin").unwrap();
+        let mut gen = Generator::new_standalone(&kitchen, &["kitchen.proto"], "").unwrap();
+        let res = gen.render().unwrap();
     }
 }
