@@ -16,7 +16,13 @@ impl Source {
     }
 }
 
-#[derive(Clone, Debug)]
+impl Default for Source {
+    fn default() -> Self {
+        Source::CodeGeneratorRequest(prost_types::compiler::CodeGeneratorRequest::default())
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct Input {
     src: Source,
     targets: Vec<String>,
@@ -57,7 +63,7 @@ impl Input {
         }
     }
 
-    pub fn files(&self) -> &[prost_types::FileDescriptorProto] {
+    pub fn files<'a>(&'a self) -> &'a [prost_types::FileDescriptorProto] {
         self.src.files()
     }
     pub fn targets(&self) -> &[String] {

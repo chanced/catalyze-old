@@ -58,7 +58,7 @@ where
     targets: Vec<String>,
     workflow: Box<W>,
     has_rendered: bool,
-    parsed_input: Option<Input>,
+    parsed_input: Input,
     param_mutators: Vec<ParamMutatorFn>,
 }
 
@@ -74,7 +74,7 @@ impl<'a> Generator<'a> {
             workflow: Box::new(ProtocPlugin {}),
             output_path: None,
             has_rendered: false,
-            parsed_input: None,
+            parsed_input: Input::default(),
             param_mutators: Vec::new(),
         }
     }
@@ -149,7 +149,7 @@ where
             output_path: Some(output_path),
             output: None,
             has_rendered: false,
-            parsed_input: None,
+            parsed_input: Default::default(),
             param_mutators: Vec::new(),
         })
     }
@@ -165,7 +165,7 @@ where
         self.param_mutators.push(Rc::new(RefCell::new(mutator)));
     }
 
-    pub fn render(&mut self) -> Result<(), anyhow::Error> {
+    pub fn render(&'a mut self) -> Result<(), anyhow::Error> {
         if self.has_rendered {
             bail!("generator has already rendered")
         }
@@ -175,19 +175,16 @@ where
             self.targets.clone(),
             self.param_mutators.as_slice(),
         )?;
-        self.parsed_input = Some(input);
+        self.parsed_input = input;
 
         for m in self.modules.iter_mut() {
             m.init();
         }
-        {
-            let ast = Ast::new(self.parsed_input.as_ref().expect("input not parsed"))?;
-
-            let mut artifacts = vec![];
-            for m in self.modules.iter_mut() {
-                let mut res = m.execute(ast.target_file_map(), ast.clone());
-                artifacts.append(&mut res);
-            }
+        let ast = Ast::new(&self.parsed_input)?;
+        let mut artifacts = vec![];
+        for m in self.modules.iter_mut() {
+            let mut res = m.execute(ast.target_file_map(), ast.clone());
+            artifacts.append(&mut res);
         }
         self.has_rendered = true;
         Ok(())
