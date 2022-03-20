@@ -67,10 +67,16 @@ impl<'a> Oneof<'a> {
     }
     pub(crate) fn add_field(&self, field: Field<'a>) {
         self.0.fields.borrow_mut().push(field.clone());
-        field
-            .imports()
-            .for_each(|i| self.0.imports.borrow_mut().push(i.into()))
     }
+
+    pub(crate) fn update_imports(&self) {
+        for field in self.fields() {
+            field
+                .imports()
+                .for_each(|i| self.0.imports.borrow_mut().push(i.into()))
+        }
+    }
+
     pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.comments.replace(comments);
     }

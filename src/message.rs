@@ -314,13 +314,13 @@ impl<'a> Message<'a> {
 
 impl<'a> From<&WeakMessage<'a>> for Message<'a> {
     fn from(weak: &WeakMessage<'a>) -> Self {
-        Message(weak.0.upgrade().unwrap())
+        Message(weak.0.upgrade().expect("message was dropped"))
     }
 }
 
 impl<'a> From<WeakMessage<'a>> for Message<'a> {
     fn from(weak: WeakMessage<'a>) -> Self {
-        Message(weak.0.upgrade().unwrap())
+        Message(weak.0.upgrade().expect("Message was dropped"))
     }
 }
 

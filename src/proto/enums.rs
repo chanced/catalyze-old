@@ -24,16 +24,16 @@ impl<'a> Type<'a> {
         matches!(self, Self::Enum(_))
     }
 }
-impl<'a> fmt::Display for Type<'a> {
-    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Type::Scalar(_s) => todo!(),
-            Type::Enum(_) => todo!(),
-            Type::Message(_) => todo!(),
-            Type::Group => todo!(),
-        }
-    }
-}
+// impl<'a> fmt::Display for Type<'a> {
+//     fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         match self {
+//             Type::Scalar(_s) => todo!(),
+//             Type::Enum(_) => todo!(),
+//             Type::Message(_) => todo!(),
+//             Type::Group => todo!(),
+//         }
+//     }
+// }
 
 impl<'a> From<&'a prost_types::FieldDescriptorProto> for Type<'a> {
     fn from(fd: &'a prost_types::FieldDescriptorProto) -> Self {

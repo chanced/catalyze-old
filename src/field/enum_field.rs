@@ -102,8 +102,8 @@ pub struct EnumField<'a>(Rc<EnumFieldDetail<'a>>);
 
 impl<'a> EnumField<'a> {
     pub(crate) fn new(detail: FieldDetail<'a>) -> Result<Field<'a>, anyhow::Error> {
-        if matches!(detail.value_type(), Type::Enum(_)) {
-            bail!("expected Enum, received {}", detail.value_type());
+        if !matches!(detail.value_type(), Type::Enum(_)) {
+            bail!("expected Enum, received {:?}", detail.value_type());
         }
         let e = EnumFieldDetail {
             detail,

@@ -38,25 +38,29 @@ pub(crate) struct FieldDetail<'a> {
 impl<'a> FieldDetail<'a> {
     pub fn new(desc: FieldDescriptor<'a>, msg: Message<'a>) -> Result<Self, anyhow::Error> {
         let name = desc.name().into();
-        let map_entry = if msg.is_map_entry() {
-            Some(msg.clone())
-        } else {
-            None
-        };
-        let msg = if msg.is_map_entry() {
-            match msg.container() {
-                Container::Message(m) => m,
-                _ => bail!("map container must be a Message"),
-            }
-        } else {
-            msg
-        };
+
+        // let is_map_entry = desc;
+        // let map_entry = if is_map_entry {
+        //     Some(msg.clone())
+        // } else {
+        //     None
+        // };
+
+        // let msg = if msg.is_map_entry() {
+        //     match msg.container() {
+        //         Container::Message(m) => m,
+        //         _ => bail!("map container must be a Message"),
+        //     }
+        // } else {
+        //     msg
+        // };
 
         let fqn = format!("{}.{}", msg.fully_qualified_name(), &name);
+
         Ok(Self {
             name,
             fqn,
-            map_entry: map_entry.map(Into::into),
+            map_entry: None,
             syntax: msg.syntax(),
             is_map: msg.is_map_entry(),
 
@@ -153,13 +157,15 @@ impl<'a> Field<'a> {
         oneof: Option<Oneof<'a>>,
     ) -> Result<Field<'a>, anyhow::Error> {
         let detail = FieldDetail::new(desc, msg)?;
+
         if desc.proto_type().is_group() {
             bail!("Group is not supported")
         }
+
         if detail.is_map {
             MapField::new(detail)
         } else if oneof.is_some() {
-            OneofField::new(detail, oneof.unwrap())
+            OneofField::new(detail, oneof.expect("oneof is none"))
         } else if detail.is_repeated() {
             RepeatedField::new(detail)
         } else {
@@ -245,6 +251,7 @@ impl<'a> Field<'a> {
         }
     }
     pub fn has_import(&self) -> bool {
+        println!("has_import called for {:?}", self.fully_qualified_name());
         match self {
             Field::Embed(f) => f.has_import(),
             Field::Enum(f) => f.has_import(),
@@ -481,6 +488,7 @@ impl<'a> Field<'a> {
     }
 
     pub(crate) fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
+        println!("set_value called on {:?}", self.fully_qualified_name());
         match self {
             Field::Embed(f) => f.set_value(value),
             Field::Enum(f) => f.set_value(value),

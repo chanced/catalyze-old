@@ -18,6 +18,7 @@ pub trait Workflow: Sized {
 /// contents of a saved output from `protoc`, and generates based on a list of
 /// target (proto) files. The output is saved to disk at the specified output
 /// path.
+
 pub struct Standalone {}
 impl Workflow for Standalone {
     fn decode_source<I: Read>(input: &mut BufReader<I>) -> Result<Source, io::Error> {
@@ -45,7 +46,7 @@ impl Workflow for ProtocPlugin {
     }
 }
 
-pub struct Generator<'a, W = ProtocPlugin, I = Stdin, O = Stdout>
+pub struct Generator<W = ProtocPlugin, I = Stdin, O = Stdout>
 where
     W: Workflow,
     I: Read,
@@ -54,7 +55,7 @@ where
     input: BufReader<I>,
     output: Option<BufWriter<O>>,
     output_path: Option<String>,
-    modules: Vec<Box<dyn Module<'a>>>,
+    modules: Vec<Box<dyn Module + 'static>>,
     targets: Vec<String>,
     workflow: Box<W>,
     has_rendered: bool,
@@ -62,8 +63,8 @@ where
     param_mutators: Vec<ParamMutatorFn>,
 }
 
-impl<'a> Generator<'a> {
-    pub fn new_protoc_plugin() -> Generator<'a, ProtocPlugin, Stdin, Stdout> {
+impl<'a> Generator {
+    pub fn new_protoc_plugin() -> Generator<ProtocPlugin, Stdin, Stdout> {
         let input = BufReader::new(stdin());
         let output = Some(BufWriter::new(stdout()));
         Generator {
@@ -80,12 +81,12 @@ impl<'a> Generator<'a> {
     }
 }
 
-impl<'a, I, O> Generator<'a, ProtocPlugin, I, O>
+impl<'a, I, O> Generator<ProtocPlugin, I, O>
 where
     I: Read,
     O: Write,
 {
-    pub fn input<R: Read>(self, input: R) -> Generator<'a, ProtocPlugin, R, O> {
+    pub fn input<R: Read>(self, input: R) -> Generator<ProtocPlugin, R, O> {
         Generator {
             input: BufReader::new(input),
             modules: self.modules,
@@ -98,7 +99,7 @@ where
             param_mutators: self.param_mutators,
         }
     }
-    pub fn output<W: Write>(self, output: W) -> Generator<'a, ProtocPlugin, I, W> {
+    pub fn output<W: Write>(self, output: W) -> Generator<ProtocPlugin, I, W> {
         Generator {
             input: self.input,
             modules: self.modules,
@@ -117,7 +118,7 @@ where
     }
 }
 
-impl<'a, I> Generator<'a, Standalone, I>
+impl<'a, I> Generator<Standalone, I>
 where
     I: Read,
 {
@@ -126,7 +127,7 @@ where
         input: I,
         target_protos: &[impl AsRef<Path>],
         output_path: impl AsRef<Path>,
-    ) -> Result<Generator<'a, Standalone, I, fs::File>, anyhow::Error> {
+    ) -> Result<Generator<Standalone, I, fs::File>, anyhow::Error> {
         let mut targets = Vec::with_capacity(target_protos.len());
         for path in target_protos {
             let path = path.as_ref();
@@ -155,16 +156,12 @@ where
     }
 }
 
-impl<'a, W, I, O> Generator<'a, W, I, O>
+impl<'a, W, I, O> Generator<W, I, O>
 where
     W: Workflow,
     I: Read,
     O: Write,
 {
-    pub fn parameters_mutator(&mut self, mutator: impl FnMut(&mut Parameters) + 'static) {
-        self.param_mutators.push(Rc::new(RefCell::new(mutator)));
-    }
-
     pub fn render(&'a mut self) -> Result<(), anyhow::Error> {
         if self.has_rendered {
             bail!("generator has already rendered")
@@ -176,11 +173,12 @@ where
             self.param_mutators.as_slice(),
         )?;
         self.parsed_input = input;
-
         for m in self.modules.iter_mut() {
             m.init();
         }
+
         let ast = Ast::new(&self.parsed_input)?;
+
         let mut artifacts = vec![];
         for m in self.modules.iter_mut() {
             let mut res = m.execute(ast.target_file_map(), ast.clone());
@@ -200,18 +198,27 @@ where
         input.mutate(mutators);
         Ok(input)
     }
+    pub fn parameters_mutator(&mut self, mutator: impl FnMut(&mut Parameters) + 'static) {
+        self.param_mutators.push(Rc::new(RefCell::new(mutator)));
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use std::fs;
-    use std::io::prelude::*;
+    use std::{env, fs};
 
     #[test]
     fn test_new_standalone_generator() {
-        let kitchen = fs::File::open("../proto_op/kitchen.bin").unwrap();
-        let mut gen = Generator::new_standalone(&kitchen, &["kitchen.proto"], "").unwrap();
-        let res = gen.render().unwrap();
+        println!("{}", file!());
+        println!("{}", env::current_dir().unwrap().display());
+        let input = fs::File::open(
+            env::current_dir()
+                .unwrap()
+                .join("tests/proto_op/kitchen.bin"),
+        )
+        .unwrap();
+        let mut gen = Generator::new_standalone(input, &["kitchen.proto"], "").unwrap();
+        gen.render().unwrap();
     }
 }

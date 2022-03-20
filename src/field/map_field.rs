@@ -44,7 +44,7 @@ impl<'a> TryFrom<Type<'a>> for Key {
                 Scalar::Sint64 => Ok(Key::Sint64),
                 _ => bail!("invalid map key type: {}", s),
             },
-            _ => bail!("invalid map key type: {}", t),
+            _ => bail!("invalid map key type: {:?}", t),
         }
     }
 }
@@ -601,7 +601,10 @@ impl<'a> MappedEmbedFieldDetail<'a> {
         self.embed.borrow().clone()
     }
     pub(crate) fn value_type(&self) -> Type<'a> {
-        self.detail.value_field().unwrap().value_type()
+        self.detail
+            .value_field()
+            .expect("value_field is None")
+            .value_type()
     }
 }
 
@@ -784,7 +787,10 @@ impl<'a> MappedEnumFieldDetail<'a> {
         self.enumeration.borrow().clone().into()
     }
     pub(crate) fn value_type(&self) -> Type<'a> {
-        self.detail.value_field().unwrap().value_type()
+        self.detail
+            .value_field()
+            .expect("value_field is None")
+            .value_type()
     }
 }
 

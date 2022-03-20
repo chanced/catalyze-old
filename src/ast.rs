@@ -26,6 +26,7 @@ pub(crate) struct AstDetail<'a> {
     package_list: Rc<RefCell<Vec<Package<'a>>>>,
     defined_extensions: Extensions<'a>,
     nodes: HashMap<String, Node<'a>>,
+    map_entries: HashMap<String, Node<'a>>,
 }
 impl<'a> AstDetail<'a> {
     pub fn package(&self, name: &str) -> Option<Package<'a>> {
@@ -94,6 +95,7 @@ impl<'a> Ast<'a> {
             nodes: HashMap::default(),
             package_list: Rc::new(RefCell::new(Vec::new())),
             target_files: Rc::new(RefCell::new(Vec::new())),
+            map_entries: HashMap::default(),
         };
 
         for fd in input.files() {
@@ -135,55 +137,61 @@ impl<'a> Ast<'a> {
 
             for node in file.all_nodes() {
                 ast.nodes.insert(node.fully_qualified_name(), node.clone());
-                if let Node::Method(mth) = node.clone() {
-                    if !mth.output_type().is_empty() {
-                        let output = ast.node(mth.output_type()).ok_or_else(|| {
-                            anyhow!(
-                                "method {} has an invalid output type {}",
-                                mth.fully_qualified_name(),
-                                mth.output_type()
-                            )
-                        })?;
+                match node.clone() {
+                    Node::Method(mth) => {
+                        if !mth.output_type().is_empty() {
+                            let output = ast.node(mth.output_type()).ok_or_else(|| {
+                                anyhow!(
+                                    "method {} has an invalid output type {}",
+                                    mth.fully_qualified_name(),
+                                    mth.output_type()
+                                )
+                            })?;
 
-                        if let Node::Message(output) = output {
-                            mth.set_output(output);
-                        } else {
-                            bail!(
-                                "method {} has an invalid output type {}",
-                                mth.fully_qualified_name(),
-                                mth.output_type()
-                            )
+                            if let Node::Message(output) = output {
+                                mth.set_output(output);
+                            } else {
+                                bail!(
+                                    "method {} has an invalid output type {}",
+                                    mth.fully_qualified_name(),
+                                    mth.output_type()
+                                )
+                            }
+                        }
+                        if !mth.input_type().is_empty() {
+                            let input = ast.node(mth.output_type()).ok_or_else(|| {
+                                anyhow!(
+                                    "method {} has an invalid output type {}",
+                                    mth.fully_qualified_name(),
+                                    mth.output_type()
+                                )
+                            })?;
+                            if let Node::Message(input) = input {
+                                mth.set_input(input);
+                            } else {
+                                bail!(
+                                    "method {} has an invalid input type {}",
+                                    mth.fully_qualified_name(),
+                                    mth.output_type()
+                                )
+                            }
                         }
                     }
-                    if !mth.input_type().is_empty() {
-                        let input = ast.node(mth.output_type()).ok_or_else(|| {
-                            anyhow!(
-                                "method {} has an invalid output type {}",
-                                mth.fully_qualified_name(),
-                                mth.output_type()
-                            )
-                        })?;
-                        if let Node::Message(input) = input {
-                            mth.set_input(input);
-                        } else {
-                            bail!(
-                                "method {} has an invalid input type {}",
-                                mth.fully_qualified_name(),
-                                mth.output_type()
-                            )
-                        }
-                    }
-                }
-
-                if let Node::Field(field) = node.clone() {
-                    match field.value_type() {
+                    Node::Field(field) => match field.value_type() {
                         Type::Enum(path) | Type::Message(path) => {
                             let msg = field.message();
-                            let node = ast
-                                .nodes
-                                .get(path)
-                                .cloned()
-                                .ok_or_else(|| anyhow!("Node {} not found", path))?;
+                            let node = if field.is_map() {
+                                ast.map_entries
+                                    .get(path)
+                                    .cloned()
+                                    .ok_or_else(|| anyhow!("Map Entry {} not found", path))
+                            } else {
+                                ast.nodes
+                                    .get(path)
+                                    .cloned()
+                                    .ok_or_else(|| anyhow!("Node {} not found", path))
+                            }?;
+
                             node.add_dependent(msg.clone());
                             field.set_value(node.clone())?;
                             let node_file = match node {
@@ -193,10 +201,15 @@ impl<'a> Ast<'a> {
                             };
                             msg.register_import(node_file)
                         }
-                        _ => continue,
-                    }
+                        val => {
+                            println!("{:?}: {:?}", field.fully_qualified_name(), val);
+                            continue;
+                        }
+                    },
+                    _ => continue,
                 }
             }
+            ast.files.insert(file.name().to_string(), file);
         }
         for file in ast.files() {
             for ext in file.defined_extensions() {

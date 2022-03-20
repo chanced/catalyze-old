@@ -244,7 +244,12 @@ impl<'a> FieldDescriptor<'a> {
     pub fn label(&self) -> Label {
         Label::from(self.desc.label())
     }
-
+    pub fn is_lazy(&self) -> bool {
+        self.options().is_lazy()
+    }
+    pub fn is_deprecated(&self) -> bool {
+        self.options().is_deprecated()
+    }
     /// alias for `r#type`
     ///
     /// If type_name is set, this need not be set.  If both this and type_name
