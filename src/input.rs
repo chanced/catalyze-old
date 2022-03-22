@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{parameters, Parameters};
+use crate::Parameters;
 
 #[derive(Clone, Debug)]
 pub enum Source {
@@ -63,7 +63,7 @@ impl Input {
         }
     }
 
-    pub fn files<'a>(&'a self) -> &'a [prost_types::FileDescriptorProto] {
+    pub fn files(&self) -> &[prost_types::FileDescriptorProto] {
         self.src.files()
     }
     pub fn targets(&self) -> &[String] {

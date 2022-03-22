@@ -15,131 +15,11 @@ pub use repeated_field::*;
 pub use scalar_field::*;
 
 use crate::{
-    container::Container,
     proto::{FieldDescriptor, Scalar, Syntax, Type},
     CType, Comments, Enum, File, FileRefs, JsType, Message, Name, Node, Oneof, Package,
     UninterpretedOptions, WeakMessage, WellKnownType,
 };
 use std::{cell::RefCell, convert::From};
-
-#[derive(Debug, Clone)]
-pub(crate) struct FieldDetail<'a> {
-    msg: WeakMessage<'a>,
-    name: Name,
-    fqn: String,
-    syntax: Syntax,
-    is_map: bool,
-
-    desc: FieldDescriptor<'a>,
-    comments: RefCell<Comments<'a>>,
-    map_entry: Option<WeakMessage<'a>>,
-}
-
-impl<'a> FieldDetail<'a> {
-    pub fn new(desc: FieldDescriptor<'a>, msg: Message<'a>) -> Result<Self, anyhow::Error> {
-        let name = desc.name().into();
-
-        // let is_map_entry = desc;
-        // let map_entry = if is_map_entry {
-        //     Some(msg.clone())
-        // } else {
-        //     None
-        // };
-
-        // let msg = if msg.is_map_entry() {
-        //     match msg.container() {
-        //         Container::Message(m) => m,
-        //         _ => bail!("map container must be a Message"),
-        //     }
-        // } else {
-        //     msg
-        // };
-
-        let fqn = format!("{}.{}", msg.fully_qualified_name(), &name);
-
-        Ok(Self {
-            name,
-            fqn,
-            map_entry: None,
-            syntax: msg.syntax(),
-            is_map: msg.is_map_entry(),
-
-            desc,
-            msg: msg.clone().into(),
-            comments: RefCell::new(Comments::default()),
-        })
-    }
-
-    pub fn name(&self) -> &Name {
-        &self.name
-    }
-    pub fn fully_qualified_name(&self) -> String {
-        self.fqn.clone()
-    }
-    pub fn message(&self) -> Message<'a> {
-        self.msg.clone().into()
-    }
-
-    pub fn map_entry(&self) -> Result<Message<'a>, anyhow::Error> {
-        self.map_entry
-            .clone()
-            .map(Into::into)
-            .ok_or_else(|| anyhow!("field is not a map entry"))
-    }
-    pub fn syntax(&self) -> Syntax {
-        self.syntax
-    }
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
-        self.desc
-    }
-    pub fn is_map(&self) -> bool {
-        self.is_map
-    }
-    pub fn is_repeated(&self) -> bool {
-        self.desc.is_repeated()
-    }
-    pub fn is_marked_optional(&self) -> bool {
-        self.desc.is_marked_optional(self.syntax)
-    }
-    pub fn is_marked_required(&self) -> bool {
-        self.desc.is_marked_required(self.syntax)
-    }
-    pub fn value_type(&self) -> Type {
-        self.desc.r#type()
-    }
-
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
-        self.comments.replace(comments);
-    }
-    pub fn comments(&self) -> Comments<'a> {
-        *self.comments.borrow()
-    }
-    pub fn file(&self) -> File<'a> {
-        self.msg.file()
-    }
-    pub fn package(&self) -> Package<'a> {
-        self.file().package()
-    }
-    pub fn build_target(&self) -> bool {
-        self.file().build_target()
-    }
-    pub fn map_key(&self) -> Result<Key, anyhow::Error> {
-        let f = self
-            .map_entry()?
-            .fields()
-            .get(0)
-            .ok_or_else(|| anyhow!("key_type field not found in map entry"))?;
-        f.value_type().try_into()
-    }
-
-    // pub fn map_value(&self) -> Result<Field<'a>, anyhow::Error> {
-    //     self.map_entry()?
-    //         .fields()
-    //         .get(1)
-    //         .ok_or_else(|| anyhow!("value_type field not found in map entry"))
-    // }
-}
-
 #[derive(Debug, Clone)]
 pub enum Field<'a> {
     Embed(EmbedField<'a>),
@@ -156,16 +36,14 @@ impl<'a> Field<'a> {
         msg: Message<'a>,
         oneof: Option<Oneof<'a>>,
     ) -> Result<Field<'a>, anyhow::Error> {
-        let detail = FieldDetail::new(desc, msg)?;
+        let detail = FieldDetail::new(desc, msg, None)?;
 
         if desc.proto_type().is_group() {
             bail!("Group is not supported")
         }
 
-        if detail.is_map {
-            MapField::new(detail)
-        } else if oneof.is_some() {
-            OneofField::new(detail, oneof.expect("oneof is none"))
+        if let Some(oneof) = oneof {
+            OneofField::new(detail, oneof)
         } else if detail.is_repeated() {
             RepeatedField::new(detail)
         } else {
@@ -637,6 +515,25 @@ impl<'a> Field<'a> {
             Field::Scalar(f) => f.uninterpreted_options(),
         }
     }
+    pub(crate) fn into_map(self) -> anyhow::Result<Self> {
+        let embed = self.embed().ok_or_else(|| {
+            anyhow!(
+                "err: {} does not contain an embeded MapEntry",
+                self.fully_qualified_name()
+            )
+        })?;
+        if !embed.is_map_entry() {
+            anyhow::bail!(
+                "err: {} does not contain an embeded MapEntry",
+                self.fully_qualified_name()
+            );
+        }
+        let desc = self.descriptor();
+        let msg = self.message();
+        let fd = FieldDetail::new(desc, msg, Some(embed))?;
+        let mf = MapField::new(fd)?;
+        Ok(Field::Map(mf))
+    }
 }
 
 impl<'a> From<ScalarField<'a>> for Field<'a> {
@@ -670,4 +567,105 @@ impl<'a> From<&MapField<'a>> for Field<'a> {
     fn from(f: &MapField<'a>) -> Self {
         f.clone().into()
     }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct FieldDetail<'a> {
+    msg: WeakMessage<'a>,
+    name: Name,
+    fqn: String,
+    syntax: Syntax,
+    desc: FieldDescriptor<'a>,
+    comments: RefCell<Comments<'a>>,
+    map_entry: Option<WeakMessage<'a>>,
+}
+
+impl<'a> FieldDetail<'a> {
+    pub fn new(
+        desc: FieldDescriptor<'a>,
+        msg: Message<'a>,
+        map_entry: Option<Message<'a>>,
+    ) -> Result<Self, anyhow::Error> {
+        let name = desc.name().into();
+
+        let fqn = format!("{}.{}", msg.fully_qualified_name(), &name);
+        // let key = embed.fields().get(0).ok_or(anyhow!(
+        //     "err: {} does not contain a key",
+        //     embed.fully_qualified_name()
+        // ))?;
+        // let val = embed.fields().get(1).ok_or(anyhow!(
+        //     "err: {} does not contain a value",
+        //     embed.fully_qualified_name()
+        // ))?;
+        Ok(Self {
+            name,
+            fqn,
+            map_entry: map_entry.map(Into::into),
+            syntax: msg.syntax(),
+            desc,
+            msg: msg.clone().into(),
+            comments: RefCell::new(Comments::default()),
+        })
+    }
+
+    pub fn name(&self) -> &Name {
+        &self.name
+    }
+    pub fn fully_qualified_name(&self) -> String {
+        self.fqn.clone()
+    }
+    pub fn message(&self) -> Message<'a> {
+        self.msg.clone().into()
+    }
+
+    pub fn map_entry(&self) -> Result<Message<'a>, anyhow::Error> {
+        self.map_entry
+            .clone()
+            .map(Into::into)
+            .ok_or_else(|| anyhow!("field is not a map entry"))
+    }
+    pub fn syntax(&self) -> Syntax {
+        self.syntax
+    }
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+        self.desc
+    }
+    pub fn is_map(&self) -> bool {
+        self.map_entry.is_some()
+    }
+    pub fn is_repeated(&self) -> bool {
+        self.desc.is_repeated()
+    }
+    pub fn is_marked_optional(&self) -> bool {
+        self.desc.is_marked_optional(self.syntax)
+    }
+    pub fn is_marked_required(&self) -> bool {
+        self.desc.is_marked_required(self.syntax)
+    }
+    pub fn value_type(&self) -> Type {
+        self.desc.r#type()
+    }
+
+    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+        self.comments.replace(comments);
+    }
+    pub fn comments(&self) -> Comments<'a> {
+        *self.comments.borrow()
+    }
+    pub fn file(&self) -> File<'a> {
+        self.msg.file()
+    }
+    pub fn package(&self) -> Package<'a> {
+        self.file().package()
+    }
+    pub fn build_target(&self) -> bool {
+        self.file().build_target()
+    }
+
+    // pub fn map_value(&self) -> Result<Field<'a>, anyhow::Error> {
+    //     self.map_entry()?
+    //         .fields()
+    //         .get(1)
+    //         .ok_or_else(|| anyhow!("value_type field not found in map entry"))
+    // }
 }

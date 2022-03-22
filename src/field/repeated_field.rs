@@ -200,24 +200,25 @@ impl<'a> RepeatedField<'a> {
     }
 
     pub(crate) fn new(detail: FieldDetail<'a>) -> Result<Field<'a>, anyhow::Error> {
-        match detail.value_type() {
-            Type::Scalar(s) => Ok(Field::Repeated(RepeatedField::Scalar(RepeatedScalarField(
+        let field = match detail.value_type() {
+            Type::Scalar(s) => Field::Repeated(RepeatedField::Scalar(RepeatedScalarField(
                 Rc::new(ScalarFieldDetail::new(detail, s)),
-            )))),
-            Type::Enum(_) => Ok(Field::Repeated(RepeatedField::Enum(RepeatedEnumField(
-                Rc::new(EnumFieldDetail {
+            ))),
+            Type::Enum(_) => Field::Repeated(RepeatedField::Enum(RepeatedEnumField(Rc::new(
+                EnumFieldDetail {
                     detail,
                     enumeration: RefCell::new(WeakEnum::empty()),
-                }),
+                },
             )))),
-            Type::Message(_) => Ok(Field::Repeated(RepeatedField::Embed(RepeatedEmbedField(
-                Rc::new(EmbedFieldDetail {
+            Type::Message(_) => Field::Repeated(RepeatedField::Embed(RepeatedEmbedField(Rc::new(
+                EmbedFieldDetail {
                     detail,
-                    embed: RefCell::new(WeakMessage::empty()),
-                }),
+                    embed: RefCell::new(WeakMessage::new()),
+                },
             )))),
             Type::Group => bail!("Group is not supported. Use an embedded message instead."),
-        }
+        };
+        Ok(field)
     }
     /// The jstype option determines the JavaScript type used for values of the
     /// field.  The option is permitted only for 64 bit integral and fixed types

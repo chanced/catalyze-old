@@ -3,6 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use anyhow::{anyhow, bail};
 
+use super::FieldDetail;
 use crate::{
     proto::{FieldDescriptor, Type},
     proto::{Scalar, Syntax},
@@ -46,72 +47,6 @@ impl<'a> TryFrom<Type<'a>> for Key {
             },
             _ => bail!("invalid map key type: {:?}", t),
         }
-    }
-}
-
-use super::FieldDetail;
-
-#[derive(Debug, Clone)]
-pub(crate) struct MapFieldDetail<'a> {
-    key: Key,
-    detail: FieldDetail<'a>,
-}
-
-impl<'a> MapFieldDetail<'a> {
-    fn value_field(&self) -> Result<Field<'a>, anyhow::Error> {
-        let map_entry = self.detail.map_entry()?;
-        map_entry
-            .fields()
-            .get(1)
-            .ok_or_else(|| anyhow!("map entry {} is missing value field", &map_entry.name()))
-    }
-
-    pub fn name(&self) -> &Name {
-        self.detail.name()
-    }
-
-    pub fn key(&self) -> Key {
-        self.key
-    }
-
-    pub fn fully_qualified_name(&self) -> String {
-        self.detail.fully_qualified_name()
-    }
-    pub fn is_repeated(&self) -> bool {
-        self.detail.is_repeated()
-    }
-    pub fn is_map(&self) -> bool {
-        self.detail.is_map()
-    }
-    pub fn message(&self) -> Message<'a> {
-        self.detail.message()
-    }
-    pub fn syntax(&self) -> Syntax {
-        self.detail.syntax()
-    }
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
-        self.detail.descriptor()
-    }
-    pub fn comments(&self) -> Comments<'a> {
-        self.detail.comments()
-    }
-    pub fn set_comments(&self, comments: Comments<'a>) {
-        self.detail.comments.replace(comments);
-    }
-
-    pub fn file(&self) -> File<'a> {
-        self.detail.file()
-    }
-    pub fn package(&self) -> Package<'a> {
-        self.detail.package()
-    }
-
-    pub fn build_target(&self) -> bool {
-        self.detail.build_target()
-    }
-
-    pub fn is_marked_required(&self) -> bool {
-        self.detail.is_marked_required()
     }
 }
 
@@ -299,33 +234,40 @@ impl<'a> MapField<'a> {
         }
     }
 
-    pub(crate) fn new(detail: FieldDetail<'a>) -> Result<Field<'a>, anyhow::Error> {
-        if !detail.is_map() {
-            bail!("Field is not a map")
-        }
-        let key = detail.map_key()?;
-        match detail.value_type() {
-            Type::Scalar(s) => Ok(Field::Map(MapField::Scalar(MappedScalarField(Rc::new(
-                MappedScalarFieldDetail {
-                    detail: MapFieldDetail { detail, key },
-                    scalar: s,
-                },
-            ))))),
-            Type::Enum(_) => Ok(Field::Map(MapField::Enum(MappedEnumField(Rc::new(
-                MappedEnumFieldDetail {
-                    detail: MapFieldDetail { detail, key },
-                    enumeration: RefCell::new(WeakEnum::empty()),
-                },
-            ))))),
-            Type::Message(_) => Ok(Field::Map(MapField::Embed(MappedEmbedField(Rc::new(
-                MappedEmbedFieldDetail {
-                    detail: MapFieldDetail { detail, key },
-                    embed: RefCell::new(WeakMessage::empty()),
-                },
-            ))))),
-            Type::Group => bail!("group is not a map"),
-        }
+    pub(crate) fn new(detail: FieldDetail<'a>) -> Result<Self, anyhow::Error> {
+        let map_entry = detail.map_entry()?;
+        let fields = map_entry.fields();
+
+        let key = fields.get(0).ok_or_else(|| {
+            anyhow!(
+                "map entry {} key is missing a key field",
+                map_entry.fully_qualified_name()
+            )
+        })?;
+
+        let value = fields.get(1).ok_or_else(|| {
+            anyhow!(
+                "map entry {} is missing a value field",
+                map_entry.fully_qualified_name()
+            )
+        })?;
+
+        let key = key.value_type().try_into()?;
+        let fd = MapFieldDetail { key, detail };
+
+        let map_field = match value.value_type() {
+            Type::Scalar(s) => MapField::Scalar(MappedScalarField::new(fd, s)),
+            Type::Enum(_) => MapField::Enum(MappedEnumField::new(fd, value.enumeration())?),
+            Type::Message(_) => MapField::Embed(MappedEmbedField::new(fd, value.embed())?),
+            Type::Group => bail!("group is not supported"),
+        };
+        Ok(map_field)
     }
+
+    pub fn as_field(self) -> Field<'a> {
+        Field::Map(self)
+    }
+
     /// The jstype option determines the JavaScript type used for values of the
     /// field.  The option is permitted only for 64 bit integral and fixed types
     /// (int64, uint64, sint64, fixed64, sfixed64).  A field with jstype JS_STRING
@@ -457,6 +399,70 @@ impl<'a> From<&MappedEmbedField<'a>> for MapField<'a> {
 }
 
 #[derive(Debug, Clone)]
+pub(crate) struct MapFieldDetail<'a> {
+    key: Key,
+    detail: FieldDetail<'a>,
+}
+
+impl<'a> MapFieldDetail<'a> {
+    fn value_field(&self) -> Result<Field<'a>, anyhow::Error> {
+        let map_entry = self.detail.map_entry()?;
+        map_entry
+            .fields()
+            .get(1)
+            .ok_or_else(|| anyhow!("map entry {} is missing value field", &map_entry.name()))
+    }
+
+    pub fn name(&self) -> &Name {
+        self.detail.name()
+    }
+
+    pub fn key(&self) -> Key {
+        self.key
+    }
+
+    pub fn fully_qualified_name(&self) -> String {
+        self.detail.fully_qualified_name()
+    }
+    pub fn is_repeated(&self) -> bool {
+        self.detail.is_repeated()
+    }
+    pub fn is_map(&self) -> bool {
+        self.detail.is_map()
+    }
+    pub fn message(&self) -> Message<'a> {
+        self.detail.message()
+    }
+    pub fn syntax(&self) -> Syntax {
+        self.detail.syntax()
+    }
+    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+        self.detail.descriptor()
+    }
+    pub fn comments(&self) -> Comments<'a> {
+        self.detail.comments()
+    }
+    pub fn set_comments(&self, comments: Comments<'a>) {
+        self.detail.comments.replace(comments);
+    }
+
+    pub fn file(&self) -> File<'a> {
+        self.detail.file()
+    }
+    pub fn package(&self) -> Package<'a> {
+        self.detail.package()
+    }
+
+    pub fn build_target(&self) -> bool {
+        self.detail.build_target()
+    }
+
+    pub fn is_marked_required(&self) -> bool {
+        self.detail.is_marked_required()
+    }
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct MappedScalarFieldDetail<'a> {
     detail: MapFieldDetail<'a>,
     scalar: Scalar,
@@ -466,6 +472,9 @@ pub(crate) struct MappedScalarFieldDetail<'a> {
 pub struct MappedScalarField<'a>(Rc<MappedScalarFieldDetail<'a>>);
 
 impl<'a> MappedScalarField<'a> {
+    pub(crate) fn new(detail: MapFieldDetail<'a>, scalar: Scalar) -> Self {
+        MappedScalarField(Rc::new(MappedScalarFieldDetail { detail, scalar }))
+    }
     pub fn name(&self) -> &Name {
         self.0.detail.name()
     }
@@ -612,6 +621,17 @@ impl<'a> MappedEmbedFieldDetail<'a> {
 pub struct MappedEmbedField<'a>(Rc<MappedEmbedFieldDetail<'a>>);
 
 impl<'a> MappedEmbedField<'a> {
+    fn new(detail: MapFieldDetail<'a>, embed: Option<Message<'a>>) -> anyhow::Result<Self> {
+        embed
+            .map(|e| {
+                Self(Rc::new(MappedEmbedFieldDetail {
+                    embed: RefCell::new(e.into()),
+                    detail,
+                }))
+            })
+            .ok_or_else(|| anyhow!("expected Embed, received None"))
+    }
+
     pub fn name(&self) -> &Name {
         self.0.detail.name()
     }
@@ -798,6 +818,15 @@ impl<'a> MappedEnumFieldDetail<'a> {
 pub struct MappedEnumField<'a>(Rc<MappedEnumFieldDetail<'a>>);
 
 impl<'a> MappedEnumField<'a> {
+    fn new(detail: MapFieldDetail<'a>, e: Option<Enum<'a>>) -> anyhow::Result<Self> {
+        e.map(|e| {
+            Self(Rc::new(MappedEnumFieldDetail {
+                enumeration: RefCell::new(e.into()),
+                detail,
+            }))
+        })
+        .ok_or_else(|| anyhow!("expected Enum, received None"))
+    }
     pub fn name(&self) -> &Name {
         self.0.detail.name()
     }

@@ -201,12 +201,32 @@ where
     pub fn parameters_mutator(&mut self, mutator: impl FnMut(&mut Parameters) + 'static) {
         self.param_mutators.push(Rc::new(RefCell::new(mutator)));
     }
+    pub fn module(&mut self, module: impl Module + 'static) -> &mut Self {
+        self.modules.push(Box::new(module));
+        self
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use std::{env, fs};
+    use std::{collections::HashMap, env, fs};
+
+    struct Mod {}
+    impl Module for Mod {
+        fn name(&self) -> &'static str {
+            "mod"
+        }
+
+        fn init(&mut self) {
+            println!("init");
+        }
+
+        fn execute(&mut self, targets: HashMap<String, File>, ast: Ast) -> Vec<Artifact> {
+            println!("{:?}", targets.keys());
+            vec![]
+        }
+    }
 
     #[test]
     fn test_new_standalone_generator() {
@@ -218,7 +238,7 @@ mod tests {
                 .join("tests/proto_op/kitchen.bin"),
         )
         .unwrap();
-        let mut gen = Generator::new_standalone(input, &["kitchen.proto"], "").unwrap();
-        gen.render().unwrap();
+        let mut gen = Generator::new_standalone(input, &["kitchen/kitchen.proto"], "").unwrap();
+        gen.module(Mod {}).render().unwrap();
     }
 }

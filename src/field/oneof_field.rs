@@ -283,7 +283,7 @@ impl<'a> OneofField<'a> {
                         detail,
                         oneof: oneof.into(),
                     },
-                    embed: RefCell::new(WeakMessage::empty()),
+                    embed: RefCell::new(WeakMessage::new()),
                 },
             ))))),
             Type::Group => bail!("Group is not supported. Use an embedded Message instead."),

@@ -1,3 +1,4 @@
+use std::fmt;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::proto::MethodDescriptor;
@@ -20,8 +21,8 @@ pub struct Method<'a>(Rc<MethodDetail<'a>>);
 
 impl<'a> Method<'a> {
     pub(crate) fn new(desc: MethodDescriptor<'a>, svc: Service<'a>) -> Self {
-        let input = Rc::new(RefCell::new(WeakMessage::empty()));
-        let output = Rc::new(RefCell::new(WeakMessage::empty()));
+        let input = Rc::new(RefCell::new(WeakMessage::new()));
+        let output = Rc::new(RefCell::new(WeakMessage::new()));
         let fqn = format!("{}.{}", svc.fully_qualified_name(), desc.name());
         Method(Rc::new(MethodDetail {
             name: desc.name().into(),
@@ -91,6 +92,42 @@ impl<'a> Method<'a> {
             Some(self.into())
         } else {
             None
+        }
+    }
+
+    pub(crate) fn io(&self) -> (MethodIO<'_>, MethodIO<'_>) {
+        (
+            MethodIO::Input(self.input_type()),
+            MethodIO::Output(self.output_type()),
+        )
+    }
+}
+
+pub(crate) enum MethodIO<'a> {
+    Input(&'a str),
+    Output(&'a str),
+}
+
+impl MethodIO<'_> {
+    pub(crate) fn is_empty(&self) -> bool {
+        match self {
+            Self::Input(s) => s.is_empty(),
+            Self::Output(s) => s.is_empty(),
+        }
+    }
+    pub(crate) fn node_name(&self) -> &str {
+        match self {
+            Self::Input(s) => s,
+            Self::Output(s) => s,
+        }
+    }
+}
+
+impl fmt::Display for MethodIO<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            MethodIO::Input(_) => write!(f, "input"),
+            MethodIO::Output(_) => write!(f, "output"),
         }
     }
 }

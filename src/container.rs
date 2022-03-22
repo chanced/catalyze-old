@@ -1,3 +1,4 @@
+use crate::Extension;
 use crate::Iter;
 use crate::Syntax;
 use crate::WeakFile;
@@ -63,7 +64,12 @@ impl<'a> Container<'a> {
             Container::Message(m) => m.syntax(),
         }
     }
-
+    pub fn defined_extensions(&self) -> Iter<Extension<'a>> {
+        match self {
+            Container::File(f) => f.defined_extensions(),
+            Container::Message(m) => m.defined_extensions(),
+        }
+    }
     pub fn fully_qualified_name(&self) -> String {
         match self {
             Container::File(f) => f.fully_qualified_name(),

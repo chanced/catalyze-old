@@ -17,7 +17,7 @@ use crate::{
 use crate::{DescriptorPath, MessageDescriptor};
 use crate::{Package, WellKnownType};
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug, Clone)]
 /// Message describes a proto message. Messages can be contained in either
@@ -44,7 +44,7 @@ pub(crate) struct MessageDetail<'a> {
     imports: Rc<RefCell<Vec<WeakFile<'a>>>>,
     import_set: Rc<RefCell<HashSet<String>>>,
     container: RefCell<WeakContainer<'a>>,
-    maps: Rc<RefCell<Vec<Message<'a>>>>,
+    maps: Rc<RefCell<HashMap<String, Message<'a>>>>,
     /// `Extension`s defined by this message.
     defined_extensions: Rc<RefCell<Vec<Extension<'a>>>>,
     /// `Extension`s applied to this `Message`
@@ -53,25 +53,19 @@ pub(crate) struct MessageDetail<'a> {
     wkt: Option<WellKnownMessage>,
 }
 
-impl<'a> Message<'a> {
-    pub fn new(
-        desc: MessageDescriptor<'a>,
-        container: Container<'a>,
-    ) -> Result<Self, anyhow::Error> {
+impl<'a> MessageDetail<'a> {
+    fn new(desc: MessageDescriptor<'a>, container: Container<'a>) -> Rc<Self> {
         let fqn = format!("{}.{}", container.fully_qualified_name(), desc.name());
-
         let wkt = if container.package().is_well_known_type() {
             WellKnownMessage::from_str(desc.name()).ok()
         } else {
             None
         };
-
-        let msg = Message(Rc::new(MessageDetail {
+        Rc::new(Self {
             name: desc.name().into(),
             container: RefCell::new(container.into()),
             fqn,
             descriptor: desc,
-
             wkt,
             enums: Rc::new(RefCell::new(Vec::with_capacity(desc.enums().len()))),
             fields: Rc::new(RefCell::new(Vec::with_capacity(desc.fields().len()))),
@@ -79,72 +73,41 @@ impl<'a> Message<'a> {
             real_oneofs: Rc::new(RefCell::new(Vec::new())),
             synthetic_oneofs: Rc::new(RefCell::new(Vec::new())),
             messages: Rc::new(RefCell::new(Vec::new())),
-            maps: Rc::new(RefCell::new(Vec::new())),
+            maps: Rc::new(RefCell::new(HashMap::new())),
             dependents: Rc::new(RefCell::new(Vec::new())),
             applied_extensions: Rc::new(RefCell::new(Vec::new())),
             defined_extensions: Rc::new(RefCell::new(Vec::with_capacity(desc.extensions().len()))),
             comments: RefCell::new(Comments::default()),
             imports: Rc::new(RefCell::new(Vec::new())),
             import_set: Rc::new(RefCell::new(HashSet::new())),
-        }));
+        })
+    }
+}
 
-        {
-            let container = Container::Message(msg.clone());
-            let mut msgs = msg.0.messages.borrow_mut();
-            let mut maps = msg.0.maps.borrow_mut();
-            for md in desc.nested_messages() {
-                let m = Message::new(md, container.clone())?;
-                if m.is_map_entry() {
-                    maps.push(m);
-                } else {
-                    msgs.push(m);
-                }
-            }
-            let mut enums = msg.0.enums.borrow_mut();
-            for ed in desc.enums() {
-                let e = Enum::new(ed, container.clone());
-                enums.push(e);
-            }
-            let mut oneofs = msg.0.oneofs.borrow_mut();
-            let mut real_oneofs = msg.0.real_oneofs.borrow_mut();
-            let mut synthetic_oneofs = msg.0.synthetic_oneofs.borrow_mut();
-            for od in desc.oneofs() {
-                let o = Oneof::new(od, msg.clone());
-                oneofs.push(o.clone());
-                if o.is_real() {
-                    real_oneofs.push(o);
-                } else {
-                    synthetic_oneofs.push(o);
-                }
-            }
-            let mut def_exts = msg.0.defined_extensions.borrow_mut();
-            for xd in desc.extensions() {
-                let ext = Extension::new(xd, container.clone());
-                def_exts.push(ext);
-            }
-
-            let mut fields = msg.0.fields.borrow_mut();
-            for fd in desc.fields() {
-                let oneof = fd
-                    .oneof_index()
-                    .map(|i| oneofs.get(i as usize).expect("Oneof index out of bounds"))
-                    .cloned();
-                let f = Field::new(fd, msg.clone(), oneof.clone())?;
-                if let Some(oneof) = oneof {
-                    oneof.add_field(f.clone());
-                }
-
-                fields.push(f);
-            }
-        }
+impl<'a> Message<'a> {
+    pub fn new(
+        desc: MessageDescriptor<'a>,
+        container: Container<'a>,
+    ) -> Result<Self, anyhow::Error> {
+        let msg = Self(MessageDetail::new(desc, container))
+            .hydrate_nested_msgs()?
+            .hydrate_enums()
+            .hydrate_exts()
+            .hydrate_oneofs()
+            .hydrate_fields()?;
         Ok(msg)
+    }
+
+    pub fn as_container(&self) -> Container<'a> {
+        self.into()
+    }
+    pub fn descriptor(&self) -> MessageDescriptor<'a> {
+        self.0.descriptor
     }
     pub fn name(&self) -> &Name {
         &self.0.name
     }
-    pub fn map_entries(&self) -> Iter<Message<'a>> {
-        Iter::from(&self.0.maps)
-    }
+
     pub fn dependents(&self) -> Dependents<'a> {
         self.0.dependents.clone().into()
     }
@@ -176,7 +139,14 @@ impl<'a> Message<'a> {
     pub fn file(&self) -> File<'a> {
         self.0.container.borrow().file()
     }
-
+    pub(crate) fn maps(&self) -> HashMap<String, Message<'a>> {
+        self.0
+            .maps
+            .borrow()
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect()
+    }
     pub fn fields(&self) -> Iter<Field<'a>> {
         Iter::from(&self.0.fields)
     }
@@ -215,7 +185,14 @@ impl<'a> Message<'a> {
     pub fn comments(&self) -> Comments<'a> {
         *self.0.comments.borrow()
     }
-
+    pub fn field(&self, name: &str) -> Option<Field<'a>> {
+        self.0
+            .fields
+            .borrow()
+            .iter()
+            .find(|f| f.name() == name)
+            .cloned()
+    }
     pub fn nodes(&self) -> Nodes<'a> {
         Nodes::new(vec![
             self.enums().into(),
@@ -255,6 +232,10 @@ impl<'a> Message<'a> {
 
     pub(crate) fn weak_file(&self) -> WeakFile<'a> {
         self.0.container.borrow().weak_file()
+    }
+
+    pub(crate) fn replace_field(&self, idx: usize, field: Field<'a>) {
+        self.0.fields.borrow_mut()[idx] = field;
     }
 
     pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a>> {
@@ -299,6 +280,84 @@ impl<'a> Message<'a> {
         })
     }
 
+    fn hydrate_fields(self) -> anyhow::Result<Message<'a>> {
+        {
+            let oneofs = self.0.oneofs.borrow_mut();
+            let mut fields = self.0.fields.borrow_mut();
+            for fd in self.descriptor().fields() {
+                let oneof = fd
+                    .oneof_index()
+                    .map(|i| oneofs.get(i as usize).expect("Oneof index out of bounds"))
+                    .cloned();
+                let f = Field::new(fd, self.clone(), oneof.clone())?;
+                if let Some(oneof) = oneof {
+                    oneof.add_field(f.clone());
+                }
+
+                fields.push(f);
+            }
+        }
+        Ok(self)
+    }
+
+    fn hydrate_exts(self) -> Self {
+        {
+            let container = self.as_container();
+            let mut def_exts = self.0.defined_extensions.borrow_mut();
+            for xd in self.descriptor().extensions() {
+                let ext = Extension::new(xd, container.clone());
+                def_exts.push(ext);
+            }
+        }
+        self
+    }
+
+    fn hydrate_oneofs(self) -> Self {
+        {
+            let mut oneofs = self.0.oneofs.borrow_mut();
+            let mut real_oneofs = self.0.real_oneofs.borrow_mut();
+            let mut synthetic_oneofs = self.0.synthetic_oneofs.borrow_mut();
+            for od in self.descriptor().oneofs() {
+                let o = Oneof::new(od, self.clone());
+                oneofs.push(o.clone());
+                if o.is_real() {
+                    real_oneofs.push(o);
+                } else {
+                    synthetic_oneofs.push(o);
+                }
+            }
+        }
+        self
+    }
+    fn hydrate_enums(self) -> Self {
+        {
+            let container = self.as_container();
+            let mut enums = self.0.enums.borrow_mut();
+            for ed in self.descriptor().enums() {
+                let e = Enum::new(ed, container.clone());
+                enums.push(e);
+            }
+        }
+        self
+    }
+
+    fn hydrate_nested_msgs(self) -> anyhow::Result<Self> {
+        {
+            let container = self.as_container();
+            let mut msgs = self.0.messages.borrow_mut();
+            let mut maps = self.0.maps.borrow_mut();
+            for md in self.descriptor().nested_messages() {
+                let m = Message::new(md, container.clone())?;
+                if m.is_map_entry() {
+                    maps.insert(m.fully_qualified_name(), m);
+                } else {
+                    msgs.push(m);
+                }
+            }
+        }
+        Ok(self)
+    }
+
     #[cfg(test)]
     pub fn add_node(&self, n: Node<'a>) {
         match n {
@@ -338,7 +397,7 @@ impl<'a> TryFrom<Container<'a>> for Message<'a> {
 pub(crate) struct WeakMessage<'a>(Weak<MessageDetail<'a>>);
 
 impl<'a> WeakMessage<'a> {
-    pub(crate) fn empty() -> WeakMessage<'a> {
+    pub(crate) fn new() -> WeakMessage<'a> {
         WeakMessage(Weak::new())
     }
     pub fn build_target(&self) -> bool {
@@ -437,5 +496,10 @@ impl<'a> From<Rc<RefCell<Vec<WeakMessage<'a>>>>> for Dependents<'a> {
             idx: 0,
             _marker: PhantomData,
         }
+    }
+}
+impl<'a> From<WeakMessage<'a>> for Option<Message<'a>> {
+    fn from(msg: WeakMessage<'a>) -> Self {
+        msg.0.upgrade().map(Message)
     }
 }

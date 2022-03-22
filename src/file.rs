@@ -33,25 +33,16 @@ struct FileDetail<'a> {
     syntax: Syntax,
 }
 
-#[derive(Debug, Clone)]
-pub struct File<'a>(Rc<FileDetail<'a>>);
-
-impl<'a> File<'a> {
-    pub(crate) fn new(
-        build_target: bool,
-        desc: FileDescriptor<'a>,
-        pkg: Package<'a>,
-    ) -> Result<Self, anyhow::Error> {
+impl<'a> FileDetail<'a> {
+    pub fn new(build_target: bool, desc: FileDescriptor<'a>, pkg: Package<'a>) -> Rc<Self> {
         let name = desc.name().into();
         let fqn = match desc.package() {
             "" => String::default(),
             p => format!(".{}", p),
         };
-
-        let file = Self(Rc::new(FileDetail {
+        Rc::new(Self {
             name,
             desc,
-
             pkg: pkg.into(),
             build_target,
             fqn,
@@ -66,45 +57,37 @@ impl<'a> File<'a> {
             pkg_comments: RefCell::new(Comments::default()),
             comments: RefCell::new(Comments::default()),
             used_imports: Rc::new(RefCell::new(HashSet::new())),
-        }));
+        })
+    }
+}
 
-        let container: Container<'a> = file.clone().into();
+#[derive(Debug, Clone)]
+pub struct File<'a>(Rc<FileDetail<'a>>);
+
+impl<'a> File<'a> {
+    pub(crate) fn new(
+        build_target: bool,
+        desc: FileDescriptor<'a>,
+        pkg: Package<'a>,
+    ) -> Result<Self, anyhow::Error> {
+        let file = Self(FileDetail::new(build_target, desc, pkg))
+            .hydrate_msgs()?
+            .hydrate_enums()
+            .hydrate_services()
+            .hydrate_exts()
+            .assign_comments();
+        Ok(file)
+    }
+
+    fn assign_comments(self) -> Self {
         {
-            let mut msgs = file.0.messages.borrow_mut();
-            for md in desc.messages() {
-                let msg = Message::new(md, container.clone())?;
-                msgs.push(msg);
-            }
-        }
-        {
-            let mut enums = file.0.enums.borrow_mut();
-            for ed in desc.enums() {
-                let e = Enum::new(ed, container.clone());
-                enums.push(e);
-            }
-        }
-        {
-            let mut services = file.0.services.borrow_mut();
-            for sd in desc.services() {
-                let svc = Service::new(sd, file.clone());
-                services.push(svc);
-            }
-        }
-        {
-            let mut exts = file.0.defined_extensions.borrow_mut();
-            for ed in desc.extensions() {
-                let ext = Extension::new(ed, container.clone());
-                exts.push(ext);
-            }
-        }
-        {
-            for loc in desc.source_code_info() {
+            for loc in self.descriptor().source_code_info() {
                 match loc.file_descriptor_path() {
                     Ok(p) => match p {
-                        FileDescriptorPath::Package => file.set_package_comments(loc.into()),
-                        FileDescriptorPath::Syntax => file.set_comments(loc.into()),
+                        FileDescriptorPath::Package => self.set_package_comments(loc.into()),
+                        FileDescriptorPath::Syntax => self.set_comments(loc.into()),
                         _ => {
-                            let n = file.node_at_path(loc.path());
+                            let n = self.node_at_path(loc.path());
                             if let Some(n) = n {
                                 n.set_comments(loc.into())
                             }
@@ -114,11 +97,58 @@ impl<'a> File<'a> {
                 }
             }
         }
+        self
+    }
 
-        Ok(file)
+    fn hydrate_exts(self) -> Self {
+        {
+            let mut exts = self.0.defined_extensions.borrow_mut();
+            let container = self.as_container();
+            for ed in self.descriptor().extensions() {
+                let ext = Extension::new(ed, container.clone());
+                exts.push(ext);
+            }
+        }
+        self
+    }
+    fn hydrate_msgs(self) -> anyhow::Result<Self> {
+        {
+            let container = self.clone().as_container();
+            let mut msgs = self.0.messages.borrow_mut();
+            for md in self.descriptor().messages() {
+                let msg = Message::new(md, container.clone())?;
+                msgs.push(msg);
+            }
+        }
+        Ok(self)
+    }
+    fn hydrate_enums(self) -> Self {
+        {
+            let container = self.as_container();
+
+            let mut enums = self.0.enums.borrow_mut();
+            for ed in self.descriptor().enums() {
+                let e = Enum::new(ed, container.clone());
+                enums.push(e);
+            }
+        }
+        self
+    }
+    fn hydrate_services(self) -> Self {
+        {
+            let mut services = self.0.services.borrow_mut();
+            for sd in self.descriptor().services() {
+                let svc = Service::new(sd, self.clone());
+                services.push(svc);
+            }
+        }
+        self
     }
     pub fn fully_qualified_name(&self) -> String {
         self.0.fqn.clone()
+    }
+    pub fn as_container(&self) -> Container<'a> {
+        self.clone().into()
     }
     pub fn name(&self) -> &Name {
         &self.0.name

@@ -1,15 +1,22 @@
+use crate::container::Container;
 use crate::iter::Iter;
 use crate::AllNodes;
 use crate::Extensions;
+use crate::Field;
 use crate::FileDescriptor;
 use crate::Input;
+use crate::Message;
+use crate::Method;
+use crate::MethodIO;
 use crate::Node;
 use crate::Type;
 use crate::{File, Package};
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::rc::Rc;
+use std::slice;
 
 use anyhow::anyhow;
 use anyhow::bail;
@@ -20,13 +27,13 @@ use anyhow::bail;
 pub(crate) struct AstDetail<'a> {
     files: HashMap<String, File<'a>>,
     file_list: Rc<RefCell<Vec<File<'a>>>>,
+    target_list: HashSet<String>,
     targets: HashMap<String, File<'a>>,
-    target_files: Rc<RefCell<Vec<File<'a>>>>,
+    target_files: Rc<RefCell<Vec<File<'a>>>>, // todo: remove
     packages: HashMap<String, Package<'a>>,
     package_list: Rc<RefCell<Vec<Package<'a>>>>,
     defined_extensions: Extensions<'a>,
     nodes: HashMap<String, Node<'a>>,
-    map_entries: HashMap<String, Node<'a>>,
 }
 impl<'a> AstDetail<'a> {
     pub fn package(&self, name: &str) -> Option<Package<'a>> {
@@ -47,6 +54,197 @@ impl<'a> AstDetail<'a> {
     }
     pub fn node(&self, key: &str) -> Option<Node<'a>> {
         self.nodes.get(key).cloned()
+    }
+    fn connect_file_dep(&mut self, file: File<'a>, dep: &str) -> anyhow::Result<()> {
+        let dep = self
+            .file(dep)
+            .ok_or_else(|| anyhow!("dependency {} has not been hydrated", dep))?;
+
+        file.add_import(dep.clone());
+        dep.add_dependent(file.clone());
+        Ok(())
+    }
+    fn hydrate_extensions(&self, container: Container<'a>) -> anyhow::Result<()> {
+        for ext in container.defined_extensions() {
+            let extendee = self
+                .node(ext.descriptor().extendee())
+                .ok_or_else(|| anyhow!("extendee {} not found", ext.descriptor().extendee()))?;
+
+            if let Node::Message(m) = extendee {
+                m.add_applied_extension(ext.clone());
+            } else {
+                bail!(
+                    "unexpected extendee type. Expected Message, received {}",
+                    extendee
+                )
+            }
+        }
+        Ok(())
+    }
+
+    fn connect_file_deps(
+        &mut self,
+        file: File<'a>,
+        deps: slice::Iter<String>,
+    ) -> anyhow::Result<()> {
+        for d in deps {
+            self.connect_file_dep(file.clone(), d)?;
+        }
+        Ok(())
+    }
+    fn load_pkg(&mut self, fd: FileDescriptor<'a>) -> Package<'a> {
+        self.packages
+            .entry(fd.name().to_string())
+            .or_insert_with(|| {
+                let pkg = Package::new(fd.name());
+                self.package_list.borrow_mut().push(pkg.clone());
+                pkg
+            })
+            .clone()
+    }
+    fn is_build_target(&self, fd: FileDescriptor<'a>) -> bool {
+        self.target_list.contains(&fd.name().to_string())
+    }
+    // fn hydrate_maps(&mut self, msg: Message<'a>) -> anyhow::Result<()> {
+    //     let maps = msg.maps().borrow();
+    //     for map in maps.values().cloned() {
+
+    //     }
+    //     Ok(())
+    // }
+    fn hydrate_method(&self, meth: Method<'a>) -> anyhow::Result<()> {
+        let hydrate = |p: MethodIO| {
+            if p.is_empty() {
+                // todo: should this return an error?
+                return Ok(());
+            }
+            let node = self.node(p.node_name()).ok_or_else(|| {
+                anyhow!(
+                    "method {} {} type {} is not hydrated",
+                    meth.fully_qualified_name(),
+                    p,
+                    p.node_name()
+                )
+            })?;
+            if let Node::Message(msg) = node {
+                match p {
+                    MethodIO::Input(_) => {
+                        meth.set_input(msg);
+                    }
+                    MethodIO::Output(_) => {
+                        meth.set_output(msg);
+                    }
+                }
+                Ok(())
+            } else {
+                bail!(
+                    "method {} has an invalid {} type {}",
+                    meth.fully_qualified_name(),
+                    p,
+                    node
+                )
+            }
+        };
+
+        let (i, o) = meth.io();
+
+        hydrate(i)?;
+        hydrate(o)?;
+        Ok(())
+    }
+
+    fn get_node(&self, fqn: &str) -> anyhow::Result<Node<'a>> {
+        self.node(fqn)
+            .ok_or_else(|| anyhow!("node {} not found", fqn))
+    }
+
+    fn hydrate_enum_field(&self, field: Field<'a>, node: Node<'a>) -> anyhow::Result<()> {
+        let enm = match node.clone() {
+            Node::Enum(enm) => enm,
+            _ => bail!("node {} is not an enum", node.fully_qualified_name()),
+        };
+        let msg = field.message();
+        field.set_value(node.clone())?;
+        node.add_dependent(msg.clone());
+        msg.register_import(enm.file());
+        Ok(())
+    }
+    fn hydrate_embed_field(
+        &self,
+        idx: usize,
+        field: Field<'a>,
+        node: Node<'a>,
+    ) -> anyhow::Result<()> {
+        let embed = node.clone().as_message()?;
+        let msg = field.message();
+        field.set_value(node.clone())?;
+        if embed.is_map_entry() {
+            msg.replace_field(idx, field.into_map()?);
+        }
+        node.add_dependent(msg.clone());
+        msg.register_import(embed.file());
+        Ok(())
+    }
+
+    fn hydrate_field(&self, idx: usize, field: Field<'a>) -> anyhow::Result<()> {
+        match field.value_type() {
+            Type::Enum(path) => self.hydrate_enum_field(field.clone(), self.get_node(path)?),
+            Type::Message(path) => {
+                self.hydrate_embed_field(idx, field.clone(), self.get_node(path)?)
+            }
+            _ => Ok(()),
+        }
+    }
+    fn hydrate_files(
+        mut self,
+        files: slice::Iter<'a, prost_types::FileDescriptorProto>,
+    ) -> anyhow::Result<Self> {
+        for fd in files {
+            println!("initializing file: {}", fd.name());
+            let file = self.init_file(fd.into())?;
+            self.nodes
+                .insert(file.name().to_string(), file.clone().into());
+            self.files.insert(file.name().to_string(), file.clone());
+            if file.build_target() {
+                self.targets.insert(file.name().to_string(), file.clone());
+                self.target_files.borrow_mut().push(file.clone());
+            }
+        }
+        for file in self.files() {
+            self.hydrate_extensions(file.clone().into())?;
+            for msg in file.all_messages() {
+                self.hydrate_extensions(msg.clone().into())?;
+                for (idx, field) in msg.fields().enumerate() {
+                    self.hydrate_field(idx, field)?;
+                }
+            }
+            for svc in file.services() {
+                for meth in svc.methods() {
+                    self.hydrate_method(meth)?;
+                }
+            }
+        }
+        Ok(self)
+    }
+
+    fn init_file(&mut self, fd: FileDescriptor<'a>) -> anyhow::Result<File<'a>> {
+        let pkg = self.load_pkg(fd);
+        let build_target = self.is_build_target(fd);
+        let file = File::new(build_target, fd.to_owned(), pkg.clone())?;
+        self.connect_file_deps(file.clone(), fd.dependencies())?;
+        for ext in file.defined_extensions() {
+            self.defined_extensions.insert(ext)
+        }
+        pkg.add_file(file.clone());
+        for node in file.all_nodes() {
+            self.nodes.insert(node.fully_qualified_name(), node.clone());
+            if let Node::Message(msg) = node {
+                for (fqn, map) in msg.maps() {
+                    self.nodes.insert(fqn, map.into());
+                }
+            }
+        }
+        Ok(file)
     }
 }
 #[derive(Debug, Clone)]
@@ -86,7 +284,7 @@ impl<'a> Ast<'a> {
 
 impl<'a> Ast<'a> {
     pub fn new(input: &'a Input) -> Result<Self, anyhow::Error> {
-        let mut ast = AstDetail {
+        let ast = AstDetail {
             packages: HashMap::default(),
             files: HashMap::default(),
             file_list: Rc::new(RefCell::new(Vec::new())),
@@ -95,155 +293,14 @@ impl<'a> Ast<'a> {
             nodes: HashMap::default(),
             package_list: Rc::new(RefCell::new(Vec::new())),
             target_files: Rc::new(RefCell::new(Vec::new())),
-            map_entries: HashMap::default(),
-        };
-
-        for fd in input.files() {
-            let fd: FileDescriptor<'a> = fd.into();
-
-            let pkg = {
-                let name = fd.package();
-                ast.packages
-                    .entry(name.to_string())
-                    .or_insert_with(|| {
-                        let pkg = Package::new(name);
-                        ast.package_list.borrow_mut().push(pkg.clone());
-                        pkg
-                    })
-                    .clone()
-            };
-            let build_target = input.targets().contains(&fd.name().to_string());
-            let file = File::new(build_target, fd.to_owned(), pkg.clone())?;
-            for d in fd.dependencies() {
-                let dep = ast
-                    .file(d)
-                    .ok_or_else(|| anyhow!("dependency {} has not been hydrated", d))?;
-
-                file.add_import(dep.clone());
-                dep.add_dependent(file.clone());
-
-                if build_target {
-                    ast.targets.insert(file.name().to_string(), file.clone());
-                    ast.target_files.borrow_mut().push(file.clone());
-                }
-                ast.files.insert(file.name().to_string(), file.clone());
-                for ext in file.defined_extensions() {
-                    ast.defined_extensions.insert(ext)
-                }
-                pkg.add_file(file.clone());
-            }
-            ast.nodes
-                .insert(file.name().to_string(), file.clone().into());
-
-            for node in file.all_nodes() {
-                ast.nodes.insert(node.fully_qualified_name(), node.clone());
-                match node.clone() {
-                    Node::Method(mth) => {
-                        if !mth.output_type().is_empty() {
-                            let output = ast.node(mth.output_type()).ok_or_else(|| {
-                                anyhow!(
-                                    "method {} has an invalid output type {}",
-                                    mth.fully_qualified_name(),
-                                    mth.output_type()
-                                )
-                            })?;
-
-                            if let Node::Message(output) = output {
-                                mth.set_output(output);
-                            } else {
-                                bail!(
-                                    "method {} has an invalid output type {}",
-                                    mth.fully_qualified_name(),
-                                    mth.output_type()
-                                )
-                            }
-                        }
-                        if !mth.input_type().is_empty() {
-                            let input = ast.node(mth.output_type()).ok_or_else(|| {
-                                anyhow!(
-                                    "method {} has an invalid output type {}",
-                                    mth.fully_qualified_name(),
-                                    mth.output_type()
-                                )
-                            })?;
-                            if let Node::Message(input) = input {
-                                mth.set_input(input);
-                            } else {
-                                bail!(
-                                    "method {} has an invalid input type {}",
-                                    mth.fully_qualified_name(),
-                                    mth.output_type()
-                                )
-                            }
-                        }
-                    }
-                    Node::Field(field) => match field.value_type() {
-                        Type::Enum(path) | Type::Message(path) => {
-                            let msg = field.message();
-                            let node = if field.is_map() {
-                                ast.map_entries
-                                    .get(path)
-                                    .cloned()
-                                    .ok_or_else(|| anyhow!("Map Entry {} not found", path))
-                            } else {
-                                ast.nodes
-                                    .get(path)
-                                    .cloned()
-                                    .ok_or_else(|| anyhow!("Node {} not found", path))
-                            }?;
-
-                            node.add_dependent(msg.clone());
-                            field.set_value(node.clone())?;
-                            let node_file = match node {
-                                Node::Message(m) => m.file(),
-                                Node::Enum(e) => e.file(),
-                                _ => bail!("Node {} is not a message or enum", path),
-                            };
-                            msg.register_import(node_file)
-                        }
-                        val => {
-                            println!("{:?}: {:?}", field.fully_qualified_name(), val);
-                            continue;
-                        }
-                    },
-                    _ => continue,
-                }
-            }
-            ast.files.insert(file.name().to_string(), file);
+            target_list: input.targets().iter().cloned().collect(),
         }
-        for file in ast.files() {
-            for ext in file.defined_extensions() {
-                let extendee = ast
-                    .node(ext.descriptor().extendee())
-                    .ok_or_else(|| anyhow!("extendee {} not found", ext.descriptor().extendee()))?;
-
-                if let Node::Message(m) = extendee {
-                    m.add_applied_extension(ext.clone());
-                } else {
-                    bail!(
-                        "unexpected extendee type. Expected Message, received {}",
-                        extendee
-                    )
-                }
-            }
-            for msg in file.all_messages() {
-                for ext in msg.defined_extensions() {
-                    let extendee = ast.node(ext.descriptor().extendee()).ok_or_else(|| {
-                        anyhow!("extendee {} not found", ext.descriptor().extendee())
-                    })?;
-
-                    if let Node::Message(m) = extendee {
-                        m.add_applied_extension(ext.clone());
-                    } else {
-                        bail!(
-                            "unexpected extendee type. Expected Message, received {}",
-                            extendee
-                        )
-                    }
-                }
-            }
-        }
+        .hydrate_files(input.files().iter())?;
+        println!("{:#?}", ast.target_list);
         let ast = Ast(Rc::new(ast));
+        for file in ast.files() {
+            println!("{:?}", file.name());
+        }
         Ok(ast)
     }
 }

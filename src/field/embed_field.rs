@@ -164,7 +164,7 @@ impl<'a> EmbedField<'a> {
     pub(crate) fn new(detail: FieldDetail<'a>) -> Result<Field<'a>, anyhow::Error> {
         let detail = Rc::new(EmbedFieldDetail {
             detail,
-            embed: RefCell::new(WeakMessage::empty()),
+            embed: RefCell::new(WeakMessage::new()),
         });
         Ok(Field::Embed(EmbedField(detail)))
     }

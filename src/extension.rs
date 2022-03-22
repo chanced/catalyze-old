@@ -8,7 +8,7 @@ use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
     proto::FieldDescriptor,
-    Comments, File, Name, Node, Package,
+    Comments, File, Message, Name, Node, Package, WeakMessage,
 };
 
 #[derive(Debug, Clone)]
@@ -18,6 +18,7 @@ struct ExtensionDetail<'a> {
     fqn: String,
     container: WeakContainer<'a>,
     comments: RefCell<Comments<'a>>,
+    extendee: RefCell<WeakMessage<'a>>,
 }
 
 #[derive(Debug, Clone)]
@@ -32,8 +33,17 @@ impl<'a> Extension<'a> {
             desc,
             container: container.into(),
             comments: RefCell::new(Comments::default()),
+            extendee: RefCell::new(WeakMessage::new()),
         }));
         ext
+    }
+    /// Returns the Container where the Extension is defined
+    pub fn defined_in(&self) -> Container<'a> {
+        self.0.container.clone().into()
+    }
+    /// Returns the Message that the Extension is extending.
+    pub fn extendee(&self) -> Option<Message<'a>> {
+        self.0.extendee.borrow().clone().into()
     }
     pub fn name(&self) -> &Name {
         &self.0.name
@@ -60,7 +70,9 @@ impl<'a> Extension<'a> {
             None
         }
     }
-
+    pub(crate) fn set_extendee(&self, msg: Message<'a>) {
+        self.0.extendee.replace(msg.clone().into());
+    }
     pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.comments.replace(comments);
     }

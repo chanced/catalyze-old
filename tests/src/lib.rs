@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use catalyze;
     use std::fs;
-    use std::io::prelude::*;
 
     #[test]
     fn test_new_standalone_generator() {

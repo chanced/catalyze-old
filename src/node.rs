@@ -1,3 +1,5 @@
+use anyhow::bail;
+
 use crate::{
     iter::Iter, Comments, Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof,
     Package, Service,
@@ -62,7 +64,66 @@ impl<'a> Node<'a> {
             Node::Extension(e) => e.fully_qualified_name(),
         }
     }
-
+    pub fn as_package(self) -> anyhow::Result<Package<'a>> {
+        match self {
+            Node::Package(p) => Ok(p),
+            _ => bail!("err: {} is not a Package", self),
+        }
+    }
+    pub fn as_file(self) -> anyhow::Result<File<'a>> {
+        match self {
+            Node::File(f) => Ok(f),
+            _ => bail!("err: {} is not a File", self),
+        }
+    }
+    pub fn as_message(self) -> anyhow::Result<Message<'a>> {
+        match self {
+            Node::Message(m) => Ok(m),
+            _ => bail!("err: {} is not a Message", self),
+        }
+    }
+    pub fn as_oneof(self) -> anyhow::Result<Oneof<'a>> {
+        match self {
+            Node::Oneof(o) => Ok(o),
+            _ => bail!("err: {} is not a Oneof", self),
+        }
+    }
+    pub fn as_enum(self) -> anyhow::Result<Enum<'a>> {
+        match self {
+            Node::Enum(e) => Ok(e),
+            _ => bail!("err: {} is not a Enum", self),
+        }
+    }
+    pub fn as_enum_value(self) -> anyhow::Result<EnumValue<'a>> {
+        match self {
+            Node::EnumValue(ev) => Ok(ev),
+            _ => bail!("err: {} is not a EnumValue", self),
+        }
+    }
+    pub fn as_service(self) -> anyhow::Result<Service<'a>> {
+        match self {
+            Node::Service(s) => Ok(s),
+            _ => bail!("err: {} is not a Service", self),
+        }
+    }
+    pub fn as_method(self) -> anyhow::Result<Method<'a>> {
+        match self {
+            Node::Method(m) => Ok(m),
+            _ => bail!("err: {} is not a Method", self),
+        }
+    }
+    pub fn as_field(self) -> anyhow::Result<Field<'a>> {
+        match self {
+            Node::Field(f) => Ok(f),
+            _ => bail!("err: {} is not a Field", self),
+        }
+    }
+    pub fn as_extension(self) -> anyhow::Result<Extension<'a>> {
+        match self {
+            Node::Extension(e) => Ok(e),
+            _ => bail!("err: {} is not a Extension", self),
+        }
+    }
     pub(crate) fn set_comments(&self, c: Comments<'a>) {
         match self {
             Node::Message(m) => m.set_comments(c),
