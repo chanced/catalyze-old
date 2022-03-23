@@ -240,9 +240,6 @@ impl<'a> OneofField<'a> {
     }
 
     pub(crate) fn set_value(&self, value: crate::Node<'a>) -> Result<(), anyhow::Error> {
-        println!("set_value called");
-        println!("========================");
-        println!("{:?}", value);
         match self {
             OneofField::Enum(f) => f.set_value(value),
             OneofField::Embed(f) => f.set_value(value),
@@ -701,7 +698,6 @@ impl<'a> OneofEmbedField<'a> {
         self.0.embed.borrow().clone().into()
     }
     pub fn has_import(&self) -> bool {
-        println!("has_import for: {:?}", self.fully_qualified_name());
         self.0.embed.borrow().file() != self.file()
     }
     pub fn imports(&self) -> FileRefs<'a> {
@@ -750,9 +746,6 @@ impl<'a> OneofEmbedField<'a> {
     }
 
     fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
-        println!("set_value called");
-        println!("========================");
-        println!("{:?}", value);
         match value {
             Node::Message(v) => {
                 self.0.embed.replace(v.into());

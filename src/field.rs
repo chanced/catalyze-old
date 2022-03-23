@@ -129,7 +129,6 @@ impl<'a> Field<'a> {
         }
     }
     pub fn has_import(&self) -> bool {
-        println!("has_import called for {:?}", self.fully_qualified_name());
         match self {
             Field::Embed(f) => f.has_import(),
             Field::Enum(f) => f.has_import(),
@@ -366,7 +365,6 @@ impl<'a> Field<'a> {
     }
 
     pub(crate) fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
-        println!("set_value called on {:?}", self.fully_qualified_name());
         match self {
             Field::Embed(f) => f.set_value(value),
             Field::Enum(f) => f.set_value(value),

@@ -16,21 +16,21 @@ enum Style {
 }
 
 message Kitchen {
-    Style style      = 1;
-    Sink  sink       = 2;
+    Style style = 1;
+    Sink sink   = 2;
 
-    repeated string     utensils    = 4;
+    repeated string utensils        = 4;
     map<string, uint32> dish_counts = 5;
 
-    repeated Color wall_colors = 6;
+    repeated Color wall_colors          = 6;
     map<string, Color> appliance_colors = 7;
 }
 
 message Color {
     oneof model {
         string pantone = 1;
-        RGB    rgb     = 2;
-        CMYK   cmyk    = 3;
+        RGB rgb        = 2;
+        CMYK cmyk      = 3;
     }
 
     double alpha = 4;

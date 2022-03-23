@@ -178,7 +178,12 @@ impl<'a> File<'a> {
     pub(crate) fn set_package_comments(&self, comments: Comments<'a>) {
         *self.0.pkg_comments.borrow_mut() = comments;
     }
-
+    pub fn message(&self, name: &str) -> Option<Message<'a>> {
+        let name = name.to_lowercase();
+        self.all_messages().find(|m| {
+            m.name().to_lowercase() == name || m.fully_qualified_name().to_lowercase() == name
+        })
+    }
     pub fn messages(&self) -> Iter<Message<'a>> {
         Iter::from(&self.0.messages)
     }

@@ -5,7 +5,6 @@ use crate::Extensions;
 use crate::Field;
 use crate::FileDescriptor;
 use crate::Input;
-use crate::Message;
 use crate::Method;
 use crate::MethodIO;
 use crate::Node;
@@ -20,9 +19,63 @@ use std::slice;
 
 use anyhow::anyhow;
 use anyhow::bail;
-
 /// Ast encapsulates the entirety of the input CodeGeneratorRequest from protoc,
 /// parsed to build the Node graph used by catalyze.
+#[derive(Debug, Clone)]
+pub struct Ast<'a>(Rc<AstDetail<'a>>);
+impl<'a> Ast<'a> {
+    pub fn package(&self, name: &str) -> Option<Package<'a>> {
+        self.0.package(name)
+    }
+    pub fn file(&self, name: &str) -> Option<File<'a>> {
+        self.0.file(name)
+    }
+    pub fn files(&self) -> Iter<File<'a>> {
+        self.0.files()
+    }
+    pub fn target_files(&self) -> Iter<File<'a>> {
+        self.0.target_files()
+    }
+    pub(crate) fn target_file_map(&self) -> HashMap<String, File<'a>> {
+        let targets = self.target_files();
+
+        let mut map = HashMap::with_capacity(targets.len());
+        for target in targets {
+            map.insert(target.name().to_string(), target);
+        }
+        map
+    }
+
+    pub fn packages(&self) -> Iter<Package<'a>> {
+        self.0.packages()
+    }
+    pub fn node(&self, key: &str) -> Option<Node<'a>> {
+        self.0.node(key)
+    }
+    pub fn all_nodes(&self) -> AllNodes<'a> {
+        AllNodes::from(self)
+    }
+}
+
+impl<'a> Ast<'a> {
+    pub fn new(input: &'a Input) -> Result<Self, anyhow::Error> {
+        let ast = AstDetail {
+            packages: HashMap::default(),
+            files: HashMap::default(),
+            file_list: Rc::new(RefCell::new(Vec::new())),
+            targets: HashMap::with_capacity(input.targets().len()),
+            defined_extensions: Extensions::new(),
+            nodes: HashMap::default(),
+            package_list: Rc::new(RefCell::new(Vec::new())),
+            target_files: Rc::new(RefCell::new(Vec::new())),
+            target_list: input.targets().iter().cloned().collect(),
+        }
+        .hydrate_files(input.files().iter())?;
+        let ast = Ast(Rc::new(ast));
+        Ok(ast)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct AstDetail<'a> {
     files: HashMap<String, File<'a>>,
@@ -47,7 +100,7 @@ impl<'a> AstDetail<'a> {
         Iter::from(&self.file_list)
     }
     pub fn target_files(&self) -> Iter<File<'a>> {
-        Iter::from(&self.file_list)
+        Iter::from(&self.target_files)
     }
     pub fn packages(&self) -> Iter<Package<'a>> {
         Iter::from(&self.package_list)
@@ -105,18 +158,10 @@ impl<'a> AstDetail<'a> {
     fn is_build_target(&self, fd: FileDescriptor<'a>) -> bool {
         self.target_list.contains(&fd.name().to_string())
     }
-    // fn hydrate_maps(&mut self, msg: Message<'a>) -> anyhow::Result<()> {
-    //     let maps = msg.maps().borrow();
-    //     for map in maps.values().cloned() {
-
-    //     }
-    //     Ok(())
-    // }
     fn hydrate_method(&self, meth: Method<'a>) -> anyhow::Result<()> {
         let hydrate = |p: MethodIO| {
             if p.is_empty() {
-                // todo: should this return an error?
-                return Ok(());
+                bail!("method {} missing {}", meth.fully_qualified_name(), p);
             }
             let node = self.node(p.node_name()).ok_or_else(|| {
                 anyhow!(
@@ -178,7 +223,9 @@ impl<'a> AstDetail<'a> {
         let embed = node.clone().as_message()?;
         let msg = field.message();
         field.set_value(node.clone())?;
+
         if embed.is_map_entry() {
+            self.hydrate_field(1, embed.fields().get(1).unwrap())?;
             msg.replace_field(idx, field.into_map()?);
         }
         node.add_dependent(msg.clone());
@@ -195,20 +242,23 @@ impl<'a> AstDetail<'a> {
             _ => Ok(()),
         }
     }
+    fn add_file(&mut self, file: File<'a>) {
+        self.nodes
+            .insert(file.name().to_string(), file.clone().into());
+        self.files.insert(file.name().to_string(), file.clone());
+        self.file_list.borrow_mut().push(file.clone());
+        if file.build_target() {
+            self.targets.insert(file.name().to_string(), file.clone());
+            self.target_files.borrow_mut().push(file.clone());
+        }
+    }
     fn hydrate_files(
         mut self,
         files: slice::Iter<'a, prost_types::FileDescriptorProto>,
     ) -> anyhow::Result<Self> {
         for fd in files {
-            println!("initializing file: {}", fd.name());
             let file = self.init_file(fd.into())?;
-            self.nodes
-                .insert(file.name().to_string(), file.clone().into());
-            self.files.insert(file.name().to_string(), file.clone());
-            if file.build_target() {
-                self.targets.insert(file.name().to_string(), file.clone());
-                self.target_files.borrow_mut().push(file.clone());
-            }
+            self.add_file(file);
         }
         for file in self.files() {
             self.hydrate_extensions(file.clone().into())?;
@@ -224,6 +274,7 @@ impl<'a> AstDetail<'a> {
                 }
             }
         }
+
         Ok(self)
     }
 
@@ -245,62 +296,5 @@ impl<'a> AstDetail<'a> {
             }
         }
         Ok(file)
-    }
-}
-#[derive(Debug, Clone)]
-pub struct Ast<'a>(Rc<AstDetail<'a>>);
-impl<'a> Ast<'a> {
-    pub fn package(&self, name: &str) -> Option<Package<'a>> {
-        self.0.package(name)
-    }
-    pub fn file(&self, name: &str) -> Option<File<'a>> {
-        self.0.file(name)
-    }
-    pub fn files(&self) -> Iter<File<'a>> {
-        self.0.files()
-    }
-    pub fn target_files(&self) -> Iter<File<'a>> {
-        self.0.target_files()
-    }
-    pub(crate) fn target_file_map(&self) -> HashMap<String, File<'a>> {
-        let targets = self.target_files();
-        let mut map = HashMap::with_capacity(targets.len());
-        for target in targets {
-            map.insert(target.name().to_string(), target);
-        }
-        map
-    }
-
-    pub fn packages(&self) -> Iter<Package<'a>> {
-        self.0.packages()
-    }
-    pub fn node(&self, key: &str) -> Option<Node<'a>> {
-        self.0.node(key)
-    }
-    pub fn all_nodes(&self) -> AllNodes<'a> {
-        AllNodes::from(self)
-    }
-}
-
-impl<'a> Ast<'a> {
-    pub fn new(input: &'a Input) -> Result<Self, anyhow::Error> {
-        let ast = AstDetail {
-            packages: HashMap::default(),
-            files: HashMap::default(),
-            file_list: Rc::new(RefCell::new(Vec::new())),
-            targets: HashMap::with_capacity(input.targets().len()),
-            defined_extensions: Extensions::new(),
-            nodes: HashMap::default(),
-            package_list: Rc::new(RefCell::new(Vec::new())),
-            target_files: Rc::new(RefCell::new(Vec::new())),
-            target_list: input.targets().iter().cloned().collect(),
-        }
-        .hydrate_files(input.files().iter())?;
-        println!("{:#?}", ast.target_list);
-        let ast = Ast(Rc::new(ast));
-        for file in ast.files() {
-            println!("{:?}", file.name());
-        }
-        Ok(ast)
     }
 }

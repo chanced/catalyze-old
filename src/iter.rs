@@ -1,9 +1,18 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Iter<T> {
     nodes: Rc<RefCell<Vec<T>>>,
     idx: usize,
+}
+
+impl<T> Debug for Iter<T>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_list().entries(self.nodes.borrow().iter()).finish()
+    }
 }
 
 impl<T: Clone> Iter<T> {

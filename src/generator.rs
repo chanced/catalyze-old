@@ -1,15 +1,30 @@
-use crate::{Ast, Input, Module, ParamMutatorFn, Parameters, Source};
+use crate::{Ast, Input, ParamMutatorFn, Parameters, Source};
 use anyhow::{anyhow, bail};
 use prost::Message;
 
 use std::{
     cell::RefCell,
+    error::Error,
     fs,
     io::{self, stdin},
     io::{stdout, BufReader, BufWriter, Cursor, Read, Stdin, Stdout, Write},
     path::Path,
     rc::Rc,
 };
+
+use std::collections::HashMap;
+
+use crate::{Artifact, Context, File};
+
+pub trait Module {
+    fn name(&self) -> &'static str;
+    fn init(&mut self, ctx: Context);
+    fn execute(
+        &mut self,
+        targets: HashMap<String, File>,
+        ast: Ast,
+    ) -> Result<Vec<Artifact>, Box<dyn Error + Send + Sync + 'static>>;
+}
 
 pub trait Workflow: Sized {
     fn decode_source<I: Read>(input: &mut BufReader<I>) -> Result<Source, io::Error>;
@@ -55,7 +70,7 @@ where
     input: BufReader<I>,
     output: Option<BufWriter<O>>,
     output_path: Option<String>,
-    modules: Vec<Box<dyn Module + 'static>>,
+    modules: Vec<Box<dyn Module>>,
     targets: Vec<String>,
     workflow: Box<W>,
     has_rendered: bool,
@@ -173,15 +188,26 @@ where
             self.param_mutators.as_slice(),
         )?;
         self.parsed_input = input;
+        let path = self
+            .output_path
+            .as_ref()
+            .map_or(Path::new("."), Path::new)
+            .to_owned();
+
         for m in self.modules.iter_mut() {
-            m.init();
+            m.init(Context::new(
+                path.clone(),
+                self.parsed_input.parameters().clone(),
+            ));
         }
 
         let ast = Ast::new(&self.parsed_input)?;
 
         let mut artifacts = vec![];
         for m in self.modules.iter_mut() {
-            let mut res = m.execute(ast.target_file_map(), ast.clone());
+            let mut res = m
+                .execute(ast.target_file_map(), ast.clone())
+                .map_err(|e| anyhow!(e).context(format!("module {}", m.name())))?;
             artifacts.append(&mut res);
         }
         self.has_rendered = true;
@@ -218,20 +244,42 @@ mod tests {
             "mod"
         }
 
-        fn init(&mut self) {
-            println!("init");
+        fn init(&mut self, ctx: Context) {
+            ctx.parameters().set_param("", "value");
         }
 
-        fn execute(&mut self, targets: HashMap<String, File>, ast: Ast) -> Vec<Artifact> {
+        fn execute(
+            &mut self,
+            targets: HashMap<String, File>,
+            ast: Ast,
+        ) -> Result<Vec<Artifact>, Box<dyn std::error::Error + Send + Sync + 'static>> {
             println!("{:?}", targets.keys());
-            vec![]
+
+            let sink = ast.node(".kitchen.Sink").unwrap();
+            let fields = sink.as_message().unwrap().fields();
+            let brand = fields.get(0).unwrap();
+            assert_eq!(brand.name(), "brand");
+            assert!(brand.is_enum(), "brand is not enum");
+
+            let kitchen_proto = ast.file("kitchen/kitchen.proto").unwrap();
+            let kitchen = kitchen_proto.message("Kitchen").expect("kitchen not found");
+            let dish_counts = kitchen.field("dish_counts").expect("dish_counts not found");
+            assert_eq!(dish_counts.name(), "dish_counts");
+            assert!(dish_counts.is_map());
+            match dish_counts {
+                Field::Map(map) => {
+                    assert!(map.key().is_string());
+                    assert_eq!(map.value_type(), Type::Scalar(Scalar::Uint32));
+                }
+                _ => panic!("dish_counts is not map"),
+            }
+
+            Ok(vec![])
         }
     }
 
     #[test]
     fn test_new_standalone_generator() {
-        println!("{}", file!());
-        println!("{}", env::current_dir().unwrap().display());
         let input = fs::File::open(
             env::current_dir()
                 .unwrap()

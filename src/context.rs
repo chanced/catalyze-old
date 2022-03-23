@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
 
+use crate::Parameters;
+
 const OUTPUT_PATH_KEY: &str = "output_path";
 
 // Tracks code generation relative to an output path. By default,
@@ -11,9 +13,17 @@ const OUTPUT_PATH_KEY: &str = "output_path";
 pub struct Context {
     path: PathBuf,
     parent: Option<Box<Context>>,
+    params: Option<Parameters>,
 }
 
 impl Context {
+    pub fn new(path: PathBuf, params: Parameters) -> Self {
+        Self {
+            path,
+            parent: None,
+            params: Some(params),
+        }
+    }
     /// The path where files should be generated to. This path may be relative
     /// or absolute, if it is relative, the path is based off the (unknown)
     /// output destination specified during execution of protoc. If it is
@@ -27,6 +37,7 @@ impl Context {
         Context {
             path: self.path.join(dir),
             parent: Some(Box::new(self.clone())),
+            params: None,
         }
     }
     pub fn pop_dir(self) -> Context {
@@ -36,39 +47,11 @@ impl Context {
             self
         }
     }
+    pub fn parameters(&self) -> Parameters {
+        if let Some(parent) = self.parent.clone() {
+            parent.parameters()
+        } else {
+            self.params.clone().expect("Parameters was not set")
+        }
+    }
 }
-
-// type BuildContext interface {
-// 	DebuggerCommon
-
-// 	// OutputPath is the path where files should be generated to. This path may
-// 	// be relative or absolute, if it is relative, the path is based off the
-// 	// (unknown) output destination specified during execution of protoc. If it
-// 	// is absolute, the path may be outside of the target directory for protoc.
-// 	OutputPath() string
-
-// 	// JoinPath returns name relative to the value of OutputPath.
-// 	JoinPath(name ...string) string
-
-// 	// Push adds an arbitrary prefix to the Debugger output. The Outpath value is
-// 	// unchanged.
-// 	Push(prefix string) BuildContext
-
-// 	// PushDir changes the BuildContext's OutputPath to dir. If dir is relative,
-// 	// it is applied relative to the current value of OutputPath.
-// 	PushDir(dir string) BuildContext
-
-// 	// Pop returns the previous state of the BuildContext. This may or may not
-// 	// change the value of OutputPath. This method will cause the plugin to fail
-// 	// if the root context is popped.
-// 	Pop() BuildContext
-
-// 	// PopDir behaves like Pop but returns the last previous state of OutputPath,
-// 	// skipping over any prefix changes in-between. If at the root context, this
-// 	// method will always return the root context.
-// 	PopDir() BuildContext
-
-// 	// Parameters returns the command line parameters passed in from protoc,
-// 	// mutated with any provided ParamMutators via InitOptions.
-// 	Parameters() Parameters
-// }

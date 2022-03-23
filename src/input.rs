@@ -75,6 +75,9 @@ impl Input {
     pub fn protoc_version(&self) -> Option<&semver::Version> {
         self.protoc_version.as_ref()
     }
+    pub fn parameters(&self) -> &Parameters {
+        &self.parameters
+    }
 }
 
 fn parse_compiler_vers(vers: Option<&prost_types::compiler::Version>) -> Option<semver::Version> {

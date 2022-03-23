@@ -25,6 +25,41 @@ pub enum Key {
     Sint32 = 17,
     Sint64 = 18,
 }
+impl Key {
+    pub fn is_int64(self) -> bool {
+        self == Key::Int64
+    }
+    pub fn is_uint64(self) -> bool {
+        self == Key::Uint64
+    }
+    pub fn is_int32(self) -> bool {
+        self == Key::Int32
+    }
+    pub fn is_fixed64(self) -> bool {
+        self == Key::Fixed64
+    }
+    pub fn is_fixed32(self) -> bool {
+        self == Key::Fixed32
+    }
+    pub fn is_string(self) -> bool {
+        self == Key::String
+    }
+    pub fn is_uint32(self) -> bool {
+        self == Key::Uint32
+    }
+    pub fn is_sfixed32(self) -> bool {
+        self == Key::Sfixed32
+    }
+    pub fn is_sfixed64(self) -> bool {
+        self == Key::Sfixed64
+    }
+    pub fn is_sint32(self) -> bool {
+        self == Key::Sint32
+    }
+    pub fn is_sint64(self) -> bool {
+        self == Key::Sint64
+    }
+}
 
 impl<'a> TryFrom<Type<'a>> for Key {
     type Error = anyhow::Error;
@@ -251,7 +286,6 @@ impl<'a> MapField<'a> {
                 map_entry.fully_qualified_name()
             )
         })?;
-
         let key = key.value_type().try_into()?;
         let fd = MapFieldDetail { key, detail };
 
