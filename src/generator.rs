@@ -394,6 +394,30 @@ mod tests {
 
             let installed_field = sink.field("installed").expect("installed not found");
 
+            assert_eq!(installed_field.name(), "installed");
+
+            assert!(
+                installed_field.is_embed(),
+                "installed_field's google.protobuf.Timestamp should be an embedded message"
+            );
+            match installed_field {
+                Field::Embed(installed_field) => {
+                    // println!("{:#?}", installed_field.embed().package());
+
+                    assert!(
+                        installed_field.is_well_known_type(),
+                        "installed_field is a google.protobuf.Timestamp which should be a well-known-type"
+                    );
+
+                    let wkt = installed_field
+                        .embed()
+                        .well_known_message()
+                        .expect("google.protobuf.Timestamp should be well-known");
+                    assert_eq!(wkt, WellKnownMessage::Timestamp);
+                }
+                _ => panic!("installed should be an embed field"),
+            }
+
             Ok(vec![])
         }
     }

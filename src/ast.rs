@@ -149,7 +149,7 @@ impl<'a> AstDetail<'a> {
         self.packages
             .entry(fd.name().to_string())
             .or_insert_with(|| {
-                let pkg = Package::new(fd.name());
+                let pkg = Package::new(fd.package());
                 self.package_list.borrow_mut().push(pkg.clone());
                 pkg
             })

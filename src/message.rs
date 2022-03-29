@@ -47,6 +47,7 @@ pub(crate) struct MessageDetail<'a> {
 impl<'a> MessageDetail<'a> {
     fn new(desc: MessageDescriptor<'a>, container: Container<'a>) -> Rc<Self> {
         let fqn = format!("{}.{}", container.fully_qualified_name(), desc.name());
+
         let wkt = if container.package().is_well_known_type() {
             WellKnownMessage::from_str(desc.name()).ok()
         } else {

@@ -247,6 +247,16 @@ impl std::str::FromStr for WellKnownMessage {
             "Int64Value" => Ok(WellKnownMessage::Int64Value),
             "ListValue" => Ok(WellKnownMessage::ListValue),
             "Method" => Ok(WellKnownMessage::Method),
+            "Mixin" => Ok(WellKnownMessage::Mixin),
+            "Option" => Ok(WellKnownMessage::Option),
+            "SourceContext" => Ok(WellKnownMessage::SourceContext),
+            "StringValue" => Ok(WellKnownMessage::StringValue),
+            "Struct" => Ok(WellKnownMessage::Struct),
+            "Timestamp" => Ok(WellKnownMessage::Timestamp),
+            "Type" => Ok(WellKnownMessage::Type),
+            "UInt32Value" => Ok(WellKnownMessage::UInt32Value),
+            "UInt64Value" => Ok(WellKnownMessage::UInt64Value),
+            "Value" => Ok(WellKnownMessage::Value),
             _ => bail!("Not a Well-Known Message: {}", s),
         }
     }
