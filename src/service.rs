@@ -89,6 +89,10 @@ impl<'a> Service<'a> {
                 _ => None,
             })
     }
+
+    pub fn method(&self, name: &str) -> Option<Method<'a>> {
+        self.methods().find(|m| m.name() == name)
+    }
 }
 
 impl<'a> From<WeakService<'a>> for Service<'a> {

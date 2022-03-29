@@ -535,14 +535,7 @@ impl<'a> Field<'a> {
                 self.fully_qualified_name()
             );
         }
-        let val = embed.fields().get(1).ok_or_else(|| {
-            anyhow!(
-                "err: {} does not contain a value",
-                self.fully_qualified_name()
-            )
-        })?;
         let msg = self.message();
-
         let fd = FieldDetail::new(self.descriptor(), msg, Some(embed))?;
         fd.set_comments(self.comments());
         let mf = Field::Map(MapField::new(fd)?);

@@ -418,6 +418,83 @@ mod tests {
                 _ => panic!("installed should be an embed field"),
             }
 
+            let brand = sink.enumeration("Brand").expect("Brand not found");
+            assert_eq!(brand.value("KRAUS").expect("KRAUS not found"), 0);
+            assert_eq!(brand.value("SWANSTONE").expect("SWANSTONE not found"), 1);
+            assert_eq!(brand.value("HOUZER").expect("HOUZER not found"), 2);
+            assert_eq!(brand.value("BLANCO").expect("BLANCO not found"), 3);
+            assert_eq!(brand.value("KOHLER").expect("KOHLER not found"), 4);
+
+            let cooking_service = kitchen_proto.service("Cooking").expect("Cooking not found");
+            let saute_method = cooking_service.method("Saute").expect("Saute not found");
+            let saute_request = kitchen_proto
+                .message("SauteRequest")
+                .expect("SauteRequest not found");
+            let saute_response = kitchen_proto
+                .message("SauteResponse")
+                .expect("SauteResponse not found");
+            assert_eq!(saute_method.name(), "Saute");
+            assert_eq!(saute_method.input(), saute_request);
+            assert_eq!(saute_method.output(), saute_response);
+            assert!(
+                !saute_method.is_bidirectional_streaming(),
+                "Saute should not be bidirectional streaming"
+            );
+            assert!(
+                !saute_method.is_client_streaming(),
+                "Saute should not be client streaming"
+            );
+            assert!(
+                !saute_method.is_server_streaming(),
+                "Saute should not be server streaming"
+            );
+            let ice_request = kitchen_proto
+                .message("IceRequest")
+                .expect("IceRequest not found");
+            let ice_response = kitchen_proto
+                .message("IceResponse")
+                .expect("IceResponse not found");
+
+            let dispense_ice_method = cooking_service
+                .method("DispenseIce")
+                .expect("DispenseIce not found");
+
+            assert_eq!(dispense_ice_method.input(), ice_request);
+            assert_eq!(dispense_ice_method.output(), ice_response);
+            assert!(
+                !dispense_ice_method.is_client_streaming(),
+                "DispenseIce should not be client streaming"
+            );
+            assert!(
+                dispense_ice_method.is_server_streaming(),
+                "DispenseIce should be server streaming"
+            );
+            assert!(
+                !dispense_ice_method.is_bidirectional_streaming(),
+                "DispenseIce should not be bidirectional streaming"
+            );
+
+            let load_fridge_method = cooking_service
+                .method("LoadFridge")
+                .expect("LoadFridge not found");
+
+            assert!(
+                load_fridge_method.is_client_streaming(),
+                "LoadFridge should be client streaming"
+            );
+            assert!(
+                !load_fridge_method.is_server_streaming(),
+                "LoadFridge should not be server streaming"
+            );
+
+            let order_drinks_method = cooking_service
+                .method("OrderDrinks")
+                .expect("OrderDrinks not found");
+            assert!(
+                order_drinks_method.is_bidirectional_streaming(),
+                "OrderDrinks should be bi-directional streaming"
+            );
+
             Ok(vec![])
         }
     }

@@ -76,6 +76,20 @@ impl<'a> Method<'a> {
     pub fn is_bidirectional_streaming(&self) -> bool {
         self.is_client_streaming() && self.is_server_streaming()
     }
+    pub fn input(&self) -> Message<'a> {
+        self.0.input.borrow().clone().into()
+    }
+    pub fn output(&self) -> Message<'a> {
+        self.0.output.borrow().clone().into()
+    }
+    /// alias for `input`
+    pub fn request(&self) -> Message<'a> {
+        self.input()
+    }
+    /// alias for `output`
+    pub fn response(&self) -> Message<'a> {
+        self.output()
+    }
 
     pub(crate) fn input_type(&self) -> &'a str {
         self.0.desc.input_type()

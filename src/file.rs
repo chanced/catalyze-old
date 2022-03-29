@@ -319,6 +319,10 @@ impl<'a> File<'a> {
             .and_then(|n| n.node_at_path(&path[2..]))
         })
     }
+
+    pub fn service(&self, name: &str) -> Option<Service<'a>> {
+        self.services().find(|s| s.name() == name)
+    }
 }
 
 impl<'a> From<&WeakFile<'a>> for File<'a> {
