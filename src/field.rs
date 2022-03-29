@@ -371,7 +371,7 @@ impl<'a> Field<'a> {
             Field::Map(f) => f.set_value(value),
             Field::Oneof(f) => f.set_value(value),
             Field::Repeated(f) => f.set_value(value),
-            _ => unreachable!(),
+            _ => panic!("set_value not supported for {:?}", self),
         }
     }
 
@@ -526,11 +526,19 @@ impl<'a> Field<'a> {
                 self.fully_qualified_name()
             );
         }
-        let desc = self.descriptor();
+        let val = embed.fields().get(1).ok_or_else(|| {
+            anyhow!(
+                "err: {} does not contain a value",
+                self.fully_qualified_name()
+            )
+        })?;
         let msg = self.message();
-        let fd = FieldDetail::new(desc, msg, Some(embed))?;
-        let mf = MapField::new(fd)?;
-        Ok(Field::Map(mf))
+
+        let fd = FieldDetail::new(self.descriptor(), msg, Some(embed))?;
+        fd.set_comments(self.comments());
+        let mf = Field::Map(MapField::new(fd)?);
+
+        Ok(mf)
     }
 }
 

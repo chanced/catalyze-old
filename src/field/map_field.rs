@@ -257,13 +257,13 @@ impl<'a> MapField<'a> {
         match self {
             MapField::Enum(f) => f.set_value(value),
             MapField::Embed(f) => f.set_value(value),
-            _ => unreachable!(),
+            _ => panic!("set_value called on non-enum"),
         }
     }
 
     pub fn value_type(&self) -> Type<'a> {
         match self {
-            MapField::Scalar(_) => self.descriptor().proto_type(),
+            MapField::Scalar(s) => s.value_type(),
             MapField::Enum(e) => e.value_type(),
             MapField::Embed(e) => e.value_type(),
         }
@@ -288,7 +288,6 @@ impl<'a> MapField<'a> {
         })?;
         let key = key.value_type().try_into()?;
         let fd = MapFieldDetail { key, detail };
-
         let map_field = match value.value_type() {
             Type::Scalar(s) => MapField::Scalar(MappedScalarField::new(fd, s)),
             Type::Enum(_) => MapField::Enum(MappedEnumField::new(fd, value.enumeration())?),
@@ -439,6 +438,11 @@ pub(crate) struct MapFieldDetail<'a> {
 }
 
 impl<'a> MapFieldDetail<'a> {
+    fn value_type(&self) -> Type<'a> {
+        self.value_field()
+            .expect("value_field is None")
+            .value_type()
+    }
     fn value_field(&self) -> Result<Field<'a>, anyhow::Error> {
         let map_entry = self.detail.map_entry()?;
         map_entry
@@ -508,6 +512,9 @@ pub struct MappedScalarField<'a>(Rc<MappedScalarFieldDetail<'a>>);
 impl<'a> MappedScalarField<'a> {
     pub(crate) fn new(detail: MapFieldDetail<'a>, scalar: Scalar) -> Self {
         MappedScalarField(Rc::new(MappedScalarFieldDetail { detail, scalar }))
+    }
+    pub(crate) fn value_type(&self) -> Type<'a> {
+        self.0.detail.value_type()
     }
     pub fn name(&self) -> &Name {
         self.0.detail.name()
@@ -644,10 +651,7 @@ impl<'a> MappedEmbedFieldDetail<'a> {
         self.embed.borrow().clone()
     }
     pub(crate) fn value_type(&self) -> Type<'a> {
-        self.detail
-            .value_field()
-            .expect("value_field is None")
-            .value_type()
+        self.detail.value_type()
     }
 }
 
@@ -841,10 +845,7 @@ impl<'a> MappedEnumFieldDetail<'a> {
         self.enumeration.borrow().clone().into()
     }
     pub(crate) fn value_type(&self) -> Type<'a> {
-        self.detail
-            .value_field()
-            .expect("value_field is None")
-            .value_type()
+        self.detail.value_type()
     }
 }
 

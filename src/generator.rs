@@ -253,25 +253,60 @@ mod tests {
             targets: HashMap<String, File>,
             ast: Ast,
         ) -> Result<Vec<Artifact>, Box<dyn std::error::Error + Send + Sync + 'static>> {
-            println!("{:?}", targets.keys());
-
             let sink = ast.node(".kitchen.Sink").unwrap();
             let fields = sink.as_message().unwrap().fields();
             let brand = fields.get(0).unwrap();
             assert_eq!(brand.name(), "brand");
             assert!(brand.is_enum(), "brand is not enum");
 
+            let sink_proto = ast.file("kitchen/sink.proto").unwrap();
+            let sink = sink_proto.message("Sink").expect("Sink not found");
+
             let kitchen_proto = ast.file("kitchen/kitchen.proto").unwrap();
-            let kitchen = kitchen_proto.message("Kitchen").expect("kitchen not found");
-            let dish_counts = kitchen.field("dish_counts").expect("dish_counts not found");
-            assert_eq!(dish_counts.name(), "dish_counts");
-            assert!(dish_counts.is_map());
-            match dish_counts {
-                Field::Map(map) => {
-                    assert!(map.key().is_string());
-                    assert_eq!(map.value_type(), Type::Scalar(Scalar::Uint32));
+            let kitchen = kitchen_proto.message("Kitchen").expect("Kitchen not found");
+            let color = kitchen_proto.message("Color").expect("Color not found");
+
+            let style_field = kitchen.field("style").expect("style not found");
+            assert_eq!(style_field.name(), "style");
+            match style_field {
+                Field::Enum(e) => {
+                    let style = e.enumeration();
+                    assert_eq!(style.name(), "Style");
                 }
-                _ => panic!("dish_counts is not map"),
+                _ => panic!("style should be an enum"),
+            }
+
+            let sink_field = kitchen.field("sink").expect("sink not found");
+            assert_eq!(sink_field.name(), "sink");
+            assert!(!sink_field.is_well_known_type());
+            assert!(sink_field.is_embed());
+
+            let dish_counts_field = kitchen.field("dish_counts").expect("dish_counts not found");
+            assert!(dish_counts_field.is_map());
+            assert_eq!(dish_counts_field.name(), "dish_counts");
+            match dish_counts_field {
+                Field::Map(dish_counts) => match dish_counts {
+                    MapField::Scalar(scf) => {
+                        assert_eq!(scf.name(), "dish_counts");
+                        assert_eq!(scf.key(), Key::String);
+                        assert_eq!(scf.scalar(), Scalar::Uint32);
+                    }
+                    _ => panic!("map field should be scalar"),
+                },
+                _ => panic!("dish_counts should be a map"),
+            }
+
+            let wall_colors_field = kitchen.field("wall_colors").expect("wall_colors not found");
+            match wall_colors_field {
+                Field::Repeated(wall_colors_field) => match wall_colors_field {
+                    RepeatedField::Embed(wall_colors_field) => {
+                        let color_embed = wall_colors_field.embed();
+                        assert_eq!(color_embed, color);
+                        assert_eq!(color_embed.name(), "Color");
+                    }
+                    _ => panic!("wall_colors should be a repeated embed field"),
+                },
+                _ => panic!("wall_colors should be repeated"),
             }
 
             Ok(vec![])

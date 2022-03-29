@@ -191,7 +191,7 @@ impl<'a> RepeatedField<'a> {
         match self {
             RepeatedField::Enum(f) => f.set_value(value),
             RepeatedField::Embed(f) => f.set_value(value),
-            _ => unreachable!(),
+            _ => panic!("set_value called on non-repeated field"),
         }
     }
 

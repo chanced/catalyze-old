@@ -20,15 +20,6 @@ use crate::{Package, WellKnownType};
 use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug, Clone)]
-/// Message describes a proto message. Messages can be contained in either
-/// another Message or a File, and may house further Messages and/or Enums. While
-/// all Fields technically live on the Message, some may be contained within
-/// Oneof blocks.
-///
-/// Fields within Oneof blocks fields will be accessible on both the Message and the Oneof.
-pub struct Message<'a>(Rc<MessageDetail<'a>>);
-
-#[derive(Debug, Clone)]
 pub(crate) struct MessageDetail<'a> {
     name: Name,
     descriptor: MessageDescriptor<'a>,
@@ -83,6 +74,15 @@ impl<'a> MessageDetail<'a> {
         })
     }
 }
+
+#[derive(Debug, Clone)]
+/// Message describes a proto message. Messages can be contained in either
+/// another Message or a File, and may house further Messages and/or Enums. While
+/// all Fields technically live on the Message, some may be contained within
+/// Oneof blocks.
+///
+/// Fields within Oneof blocks fields will be accessible on both the Message and the Oneof.
+pub struct Message<'a>(Rc<MessageDetail<'a>>);
 
 impl<'a> Message<'a> {
     pub fn new(
@@ -368,6 +368,12 @@ impl<'a> Message<'a> {
             Node::Extension(e) => self.0.defined_extensions.borrow_mut().push(e),
             _ => panic!("unexpected node type"),
         }
+    }
+}
+
+impl<'a> PartialEq for Message<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        self.fully_qualified_name() == other.fully_qualified_name()
     }
 }
 

@@ -1,5 +1,6 @@
 #![allow(clippy::new_ret_no_self)]
 
+use core::panic;
 use std::{cell::RefCell, rc::Rc};
 
 use anyhow::bail;
@@ -243,7 +244,7 @@ impl<'a> OneofField<'a> {
         match self {
             OneofField::Enum(f) => f.set_value(value),
             OneofField::Embed(f) => f.set_value(value),
-            _ => unreachable!(),
+            _ => panic!("set_value called on non-enum field"),
         }
     }
 
