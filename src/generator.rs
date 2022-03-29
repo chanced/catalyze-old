@@ -253,6 +253,8 @@ mod tests {
             targets: HashMap<String, File>,
             ast: Ast,
         ) -> Result<Vec<Artifact>, Box<dyn std::error::Error + Send + Sync + 'static>> {
+            assert_eq!(targets.len(), 1);
+            assert!(targets.contains_key("kitchen/kitchen.proto"));
             let sink = ast.node(".kitchen.Sink").unwrap();
             let fields = sink.as_message().unwrap().fields();
             let brand = fields.get(0).unwrap();
@@ -260,7 +262,6 @@ mod tests {
             assert!(brand.is_enum(), "brand is not enum");
 
             let sink_proto = ast.file("kitchen/sink.proto").unwrap();
-            let sink = sink_proto.message("Sink").expect("Sink not found");
 
             let kitchen_proto = ast.file("kitchen/kitchen.proto").unwrap();
             let kitchen = kitchen_proto.message("Kitchen").expect("Kitchen not found");
@@ -284,6 +285,26 @@ mod tests {
             let dish_counts_field = kitchen.field("dish_counts").expect("dish_counts not found");
             assert!(dish_counts_field.is_map());
             assert_eq!(dish_counts_field.name(), "dish_counts");
+
+            let utensils_field = kitchen.field("utensils").expect("utensils not found");
+            assert_eq!("utensils", utensils_field.name());
+            assert!(utensils_field.is_repeated());
+            assert!(utensils_field.is_scalar());
+
+            match utensils_field {
+                Field::Repeated(utensils_field) => {
+                    assert_eq!(utensils_field.name(), "utensils");
+                    assert!(utensils_field.is_scalar());
+                    match utensils_field {
+                        RepeatedField::Scalar(utensils_field) => {
+                            assert_eq!(utensils_field.scalar(), Scalar::String);
+                        }
+                        _ => panic!("utensils should be a repeated scalar field"),
+                    }
+                }
+                _ => panic!("utensils should be a repeated field"),
+            }
+
             match dish_counts_field {
                 Field::Map(dish_counts) => match dish_counts {
                     MapField::Scalar(scf) => {
@@ -307,6 +328,35 @@ mod tests {
                     _ => panic!("wall_colors should be a repeated embed field"),
                 },
                 _ => panic!("wall_colors should be repeated"),
+            }
+            let appliance_colors = kitchen
+                .field("appliance_colors")
+                .expect("appliance_colors not found");
+
+            match appliance_colors {
+                Field::Map(appliance_colors) => match appliance_colors {
+                    MapField::Embed(appliance_colors) => {
+                        let color_embed = appliance_colors.embed();
+                        assert_eq!(color_embed, color);
+                        assert_eq!(color_embed.name(), "Color");
+                    }
+                    _ => panic!("appliance_colors should be a mapped embed field"),
+                },
+                _ => panic!("appliance_colors should be a map"),
+            }
+
+            let sink = sink_proto.message("Sink").expect("Sink not found");
+
+            let brand_field = sink.field("brand").expect("brand not found");
+
+            assert!(brand_field.is_enum());
+            assert_eq!(brand_field.name(), "brand");
+            match brand_field {
+                Field::Enum(brand_field) => {
+                    let brand = brand_field.enumeration();
+                    assert_eq!(brand.name(), "Brand");
+                }
+                _ => panic!("brand should be an enum"),
             }
 
             Ok(vec![])
