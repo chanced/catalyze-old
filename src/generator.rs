@@ -256,11 +256,7 @@ mod tests {
             assert_eq!(targets.len(), 1);
             assert!(targets.contains_key("kitchen/kitchen.proto"));
             let sink = ast.node(".kitchen.Sink").unwrap();
-            let fields = sink.as_message().unwrap().fields();
-            let brand = fields.get(0).unwrap();
-            assert_eq!(brand.name(), "brand");
-            assert!(brand.is_enum(), "brand is not enum");
-
+            assert!(matches!(sink, Node::Message(_)));
             let sink_proto = ast.file("kitchen/sink.proto").unwrap();
 
             let kitchen_proto = ast.file("kitchen/kitchen.proto").unwrap();
@@ -346,18 +342,57 @@ mod tests {
             }
 
             let sink = sink_proto.message("Sink").expect("Sink not found");
-
+            let brand = sink.r#enum("Brand").expect("Brand not found");
             let brand_field = sink.field("brand").expect("brand not found");
 
             assert!(brand_field.is_enum());
             assert_eq!(brand_field.name(), "brand");
             match brand_field {
                 Field::Enum(brand_field) => {
-                    let brand = brand_field.enumeration();
-                    assert_eq!(brand.name(), "Brand");
+                    assert_eq!(brand, brand_field.enumeration());
+                    assert_eq!(brand_field.name(), "brand");
+                    assert_eq!(brand, brand_field.enumeration());
                 }
                 _ => panic!("brand should be an enum"),
             }
+
+            let material_field = sink.field("material").expect("material not found");
+
+            assert!(material_field.is_embed());
+            assert_eq!(material_field.name(), "material");
+
+            let material = sink_proto.message("Material").expect("Material not found");
+
+            match material_field {
+                Field::Embed(material_field) => {
+                    let material_embed = material_field.embed();
+                    assert_eq!(material_embed, material);
+                    assert_eq!(material_embed.name(), "Material");
+                }
+                _ => panic!("material should be an embed field"),
+            }
+
+            let model_field = sink.field("model").expect("model not found");
+            assert_eq!(model_field.name(), "model");
+            assert!(model_field.is_scalar());
+            match model_field {
+                Field::Scalar(model_field) => {
+                    assert_eq!(model_field.scalar(), Scalar::String);
+                }
+                _ => panic!("model should be a scalar field"),
+            }
+            let basin_count_field = sink.field("basin_count").expect("basin_count not found");
+            assert_eq!(basin_count_field.name(), "basin_count");
+            assert!(basin_count_field.is_scalar());
+            assert_eq!(basin_count_field.number(), 4);
+            match basin_count_field {
+                Field::Scalar(basin_count_field) => {
+                    assert_eq!(basin_count_field.scalar(), Scalar::Uint32);
+                }
+                _ => panic!("basin_count should be a scalar field"),
+            }
+
+            let installed_field = sink.field("installed").expect("installed not found");
 
             Ok(vec![])
         }

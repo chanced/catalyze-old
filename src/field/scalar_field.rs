@@ -207,6 +207,10 @@ impl<'a> ScalarField<'a> {
     pub fn message(&self) -> Message<'a> {
         self.0.message()
     }
+
+    pub fn number(&self) -> i32 {
+        self.descriptor().number()
+    }
 }
 
 // #[derive(Debug, Clone)]

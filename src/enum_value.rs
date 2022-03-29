@@ -80,7 +80,9 @@ impl<'a> EnumValue<'a> {
     pub fn package(&self) -> Package<'a> {
         self.enumeration().package()
     }
-
+    pub fn number(&self) -> i32 {
+        self.descriptor().number()
+    }
     pub fn fully_qualified_name(&self) -> String {
         self.0.fully_qualified_name()
     }
@@ -97,5 +99,31 @@ impl<'a> EnumValue<'a> {
         } else {
             None
         }
+    }
+}
+
+impl<'a> PartialEq for EnumValue<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        self.fully_qualified_name() == other.fully_qualified_name()
+    }
+}
+impl<'a> PartialEq<i32> for EnumValue<'a> {
+    fn eq(&self, other: &i32) -> bool {
+        self.number() == *other
+    }
+}
+impl<'a> PartialEq<EnumValue<'a>> for i32 {
+    fn eq(&self, other: &EnumValue<'a>) -> bool {
+        self == &other.number()
+    }
+}
+impl<'a> PartialEq<str> for EnumValue<'a> {
+    fn eq(&self, other: &str) -> bool {
+        self.fully_qualified_name() == other
+    }
+}
+impl<'a> PartialEq<EnumValue<'a>> for str {
+    fn eq(&self, other: &EnumValue<'a>) -> bool {
+        self == other.fully_qualified_name()
     }
 }

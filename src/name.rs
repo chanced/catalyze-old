@@ -116,7 +116,11 @@ impl PartialEq<str> for Name {
         PartialEq::eq(&self.val, other)
     }
 }
-
+// impl PartialEq<&Name> for str {
+//     fn eq(&self, other: &&Name) -> bool {
+//         PartialEq::eq(self, &other.val)
+//     }
+// }
 impl PartialEq<Name> for str {
     fn eq(&self, other: &Name) -> bool {
         PartialEq::eq(self, &other.val)

@@ -87,7 +87,12 @@ impl<'a> Enum<'a> {
         }
         e
     }
-
+    pub fn has_value(&self, name: &str) -> bool {
+        self.values().any(|v| v.name() == name)
+    }
+    pub fn value(&self, name: &str) -> Option<EnumValue<'a>> {
+        self.values().find(|v| v.name() == name)
+    }
     pub fn fully_qualified_name(&self) -> String {
         self.0.fqn.clone()
     }
@@ -113,7 +118,6 @@ impl<'a> Enum<'a> {
     pub fn name(&self) -> &Name {
         &self.0.name
     }
-
     pub fn values(&self) -> Iter<EnumValue<'a>> {
         Iter::from(&self.0.values)
     }
@@ -161,7 +165,11 @@ impl<'a> Enum<'a> {
             })
     }
 }
-
+impl<'a> PartialEq for Enum<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        self.fully_qualified_name() == other.fully_qualified_name()
+    }
+}
 impl<'a> From<WeakEnum<'a>> for Enum<'a> {
     fn from(e: WeakEnum<'a>) -> Self {
         e.upgrade()

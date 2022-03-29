@@ -307,6 +307,14 @@ impl<'a> RepeatedField<'a> {
             RepeatedField::Embed(f) => f.uninterpreted_options(),
         }
     }
+
+    pub fn number(&self) -> i32 {
+        match self {
+            RepeatedField::Scalar(f) => f.number(),
+            RepeatedField::Enum(f) => f.number(),
+            RepeatedField::Embed(f) => f.number(),
+        }
+    }
 }
 
 impl<'a> From<RepeatedScalarField<'a>> for RepeatedField<'a> {
@@ -490,6 +498,10 @@ impl<'a> RepeatedEmbedField<'a> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
+
+    pub fn number(&self) -> i32 {
+        self.descriptor().number()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -637,6 +649,10 @@ impl<'a> RepeatedEnumField<'a> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
+
+    pub fn number(&self) -> i32 {
+        self.descriptor().number()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -758,5 +774,9 @@ impl<'a> RepeatedScalarField<'a> {
     /// Options the parser does not recognize.
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
+    }
+
+    pub fn number(&self) -> i32 {
+        self.descriptor().number()
     }
 }

@@ -187,6 +187,15 @@ impl<'a> File<'a> {
     pub fn messages(&self) -> Iter<Message<'a>> {
         Iter::from(&self.0.messages)
     }
+    pub fn r#enum(&self, name: &str) -> Option<Enum<'a>> {
+        self.all_enums().find(|e| e.name() == name)
+    }
+    pub fn enumeration(&self, name: &str) -> Option<Enum<'a>> {
+        self.r#enum(name)
+    }
+    pub fn enumerations(&self) -> Iter<Enum<'a>> {
+        self.enums()
+    }
     pub fn enums(&self) -> Iter<Enum<'a>> {
         Iter::from(&self.0.enums)
     }

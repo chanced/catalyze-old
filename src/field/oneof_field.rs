@@ -370,6 +370,14 @@ impl<'a> OneofField<'a> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
+
+    pub fn number(&self) -> i32 {
+        match self {
+            OneofField::Scalar(f) => f.number(),
+            OneofField::Enum(f) => f.number(),
+            OneofField::Embed(f) => f.number(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -530,6 +538,10 @@ impl<'a> OneofEnumField<'a> {
     pub fn is_deprecated(&self) -> bool {
         self.descriptor().options().is_deprecated()
     }
+
+    pub fn number(&self) -> i32 {
+        self.descriptor().number()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -663,6 +675,10 @@ impl<'a> OneofScalarField<'a> {
     /// is a formalization for deprecating fields.
     pub fn is_deprecated(&self) -> bool {
         self.descriptor().options().is_deprecated()
+    }
+
+    pub fn number(&self) -> i32 {
+        self.descriptor().number()
     }
 }
 
@@ -818,5 +834,9 @@ impl<'a> OneofEmbedField<'a> {
     /// is a formalization for deprecating fields.
     pub fn is_deprecated(&self) -> bool {
         self.descriptor().options().is_deprecated()
+    }
+
+    pub fn number(&self) -> i32 {
+        self.descriptor().number()
     }
 }

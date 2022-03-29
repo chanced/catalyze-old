@@ -269,4 +269,8 @@ impl<'a> EnumField<'a> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
+
+    pub fn number(&self) -> i32 {
+        self.descriptor().number()
+    }
 }

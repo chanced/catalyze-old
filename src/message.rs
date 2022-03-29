@@ -154,6 +154,18 @@ impl<'a> Message<'a> {
     pub fn messages(&self) -> Iter<Self> {
         Iter::from(&self.0.messages)
     }
+    pub fn message(&self, name: &str) -> Option<Message<'a>> {
+        self.embed(name)
+    }
+    pub fn embed(&self, name: &str) -> Option<Message<'a>> {
+        self.messages().find(|msg| msg.name() == name)
+    }
+    pub fn r#enum(&self, name: &str) -> Option<Enum<'a>> {
+        self.enums().find(|enum_| enum_.name() == name)
+    }
+    pub fn enumeration(&self, name: &str) -> Option<Enum<'a>> {
+        self.r#enum(name)
+    }
     pub fn oneofs(&self) -> Iter<Oneof<'a>> {
         Iter::from(&self.0.oneofs)
     }

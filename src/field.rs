@@ -149,7 +149,16 @@ impl<'a> Field<'a> {
             Field::Scalar(_) => FileRefs::empty(),
         }
     }
-
+    pub fn number(&self) -> i32 {
+        match self {
+            Field::Embed(f) => f.number(),
+            Field::Enum(f) => f.number(),
+            Field::Map(f) => f.number(),
+            Field::Oneof(f) => f.number(),
+            Field::Repeated(f) => f.number(),
+            Field::Scalar(f) => f.number(),
+        }
+    }
     pub fn build_target(&self) -> bool {
         match self {
             Field::Embed(f) => f.build_target(),

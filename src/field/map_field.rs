@@ -396,6 +396,14 @@ impl<'a> MapField<'a> {
             MapField::Embed(f) => f.message(),
         }
     }
+
+    pub fn number(&self) -> i32 {
+        match self {
+            MapField::Scalar(f) => f.number(),
+            MapField::Enum(f) => f.number(),
+            MapField::Embed(f) => f.number(),
+        }
+    }
 }
 
 impl<'a> From<MappedEnumField<'a>> for MapField<'a> {
@@ -639,6 +647,10 @@ impl<'a> MappedScalarField<'a> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
+
+    pub fn number(&self) -> i32 {
+        self.descriptor().number()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -832,6 +844,10 @@ impl<'a> MappedEmbedField<'a> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
     }
+
+    pub fn number(&self) -> i32 {
+        self.descriptor().number()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1023,5 +1039,9 @@ impl<'a> MappedEnumField<'a> {
     /// Options the parser does not recognize.
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         self.descriptor().options().uninterpreted_options()
+    }
+
+    pub fn number(&self) -> i32 {
+        self.descriptor().number()
     }
 }
