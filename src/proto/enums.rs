@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{any::Any, fmt};
 
 use anyhow::bail;
 
@@ -35,28 +35,61 @@ impl<'a> Type<'a> {
 //     }
 // }
 
-impl<'a> From<&'a prost_types::FieldDescriptorProto> for Type<'a> {
-    fn from(fd: &'a prost_types::FieldDescriptorProto) -> Self {
-        let t = fd.r#type();
-        match t {
-            prost_types::field_descriptor_proto::Type::Double => Type::Scalar(Scalar::Double),
-            prost_types::field_descriptor_proto::Type::Float => Type::Scalar(Scalar::Float),
-            prost_types::field_descriptor_proto::Type::Int64 => Type::Scalar(Scalar::Int64),
-            prost_types::field_descriptor_proto::Type::Uint64 => Type::Scalar(Scalar::Uint64),
-            prost_types::field_descriptor_proto::Type::Int32 => Type::Scalar(Scalar::Int32),
-            prost_types::field_descriptor_proto::Type::Fixed64 => Type::Scalar(Scalar::Fixed64),
-            prost_types::field_descriptor_proto::Type::Fixed32 => Type::Scalar(Scalar::Fixed32),
-            prost_types::field_descriptor_proto::Type::Bool => Type::Scalar(Scalar::Bool),
-            prost_types::field_descriptor_proto::Type::String => Type::Scalar(Scalar::String),
-            prost_types::field_descriptor_proto::Type::Bytes => Type::Scalar(Scalar::Bytes),
-            prost_types::field_descriptor_proto::Type::Uint32 => Type::Scalar(Scalar::Uint32),
-            prost_types::field_descriptor_proto::Type::Sfixed32 => Type::Scalar(Scalar::Sfixed32),
-            prost_types::field_descriptor_proto::Type::Sfixed64 => Type::Scalar(Scalar::Sfixed64),
-            prost_types::field_descriptor_proto::Type::Sint32 => Type::Scalar(Scalar::Sint32),
-            prost_types::field_descriptor_proto::Type::Sint64 => Type::Scalar(Scalar::Sint64),
-            prost_types::field_descriptor_proto::Type::Enum => Type::Enum(fd.type_name()),
-            prost_types::field_descriptor_proto::Type::Message => Type::Message(fd.type_name()),
-            prost_types::field_descriptor_proto::Type::Group => Type::Group,
+impl<'a> From<&'a protobuf::descriptor::FieldDescriptorProto> for Type<'a> {
+    fn from(fd: &'a protobuf::descriptor::FieldDescriptorProto) -> Self {
+        match fd.field_type() {
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_DOUBLE => {
+                Type::Scalar(Scalar::Double)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_FLOAT => {
+                Type::Scalar(Scalar::Float)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_INT64 => {
+                Type::Scalar(Scalar::Int64)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_UINT64 => {
+                Type::Scalar(Scalar::Uint64)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_INT32 => {
+                Type::Scalar(Scalar::Int32)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_FIXED64 => {
+                Type::Scalar(Scalar::Fixed64)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_FIXED32 => {
+                Type::Scalar(Scalar::Fixed32)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_BOOL => {
+                Type::Scalar(Scalar::Bool)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_STRING => {
+                Type::Scalar(Scalar::String)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_BYTES => {
+                Type::Scalar(Scalar::Bytes)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_UINT32 => {
+                Type::Scalar(Scalar::Uint32)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_SFIXED32 => {
+                Type::Scalar(Scalar::Sfixed32)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_SFIXED64 => {
+                Type::Scalar(Scalar::Sfixed64)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_SINT32 => {
+                Type::Scalar(Scalar::Sint32)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_SINT64 => {
+                Type::Scalar(Scalar::Sint64)
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_ENUM => {
+                Type::Enum(fd.type_name())
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_MESSAGE => {
+                Type::Message(fd.type_name())
+            }
+            protobuf::descriptor::field_descriptor_proto::Type::TYPE_GROUP => Type::Group,
         }
     }
 }
@@ -145,12 +178,12 @@ pub enum CType {
     StringPiece = 2,
 }
 
-impl From<prost_types::field_options::CType> for CType {
-    fn from(t: prost_types::field_options::CType) -> Self {
+impl From<protobuf::descriptor::field_options::CType> for CType {
+    fn from(t: protobuf::descriptor::field_options::CType) -> Self {
         match t {
-            prost_types::field_options::CType::String => CType::String,
-            prost_types::field_options::CType::Cord => CType::Cord,
-            prost_types::field_options::CType::StringPiece => CType::StringPiece,
+            protobuf::descriptor::field_options::CType::STRING => CType::String,
+            protobuf::descriptor::field_options::CType::CORD => CType::Cord,
+            protobuf::descriptor::field_options::CType::STRING_PIECE => CType::StringPiece,
         }
     }
 }
@@ -187,12 +220,12 @@ pub enum JsType {
     Number = 2,
 }
 
-impl From<prost_types::field_options::JsType> for JsType {
-    fn from(value: prost_types::field_options::JsType) -> Self {
+impl From<protobuf::descriptor::field_options::JSType> for JsType {
+    fn from(value: protobuf::descriptor::field_options::JSType) -> Self {
         match value {
-            prost_types::field_options::JsType::JsNormal => JsType::Normal,
-            prost_types::field_options::JsType::JsString => JsType::String,
-            prost_types::field_options::JsType::JsNumber => JsType::Number,
+            protobuf::descriptor::field_options::JSType::JS_NORMAL => JsType::Normal,
+            protobuf::descriptor::field_options::JSType::JS_STRING => JsType::String,
+            protobuf::descriptor::field_options::JSType::JS_NUMBER => JsType::Number,
         }
     }
 }
@@ -227,12 +260,12 @@ pub enum Label {
     Repeated = 3,
 }
 
-impl From<prost_types::field_descriptor_proto::Label> for Label {
-    fn from(value: prost_types::field_descriptor_proto::Label) -> Self {
+impl From<protobuf::descriptor::field_descriptor_proto::Label> for Label {
+    fn from(value: protobuf::descriptor::field_descriptor_proto::Label) -> Self {
         match value {
-            prost_types::field_descriptor_proto::Label::Required => Label::Required,
-            prost_types::field_descriptor_proto::Label::Optional => Label::Optional,
-            prost_types::field_descriptor_proto::Label::Repeated => Label::Repeated,
+            protobuf::descriptor::field_descriptor_proto::Label::LABEL_REQUIRED => Label::Required,
+            protobuf::descriptor::field_descriptor_proto::Label::LABEL_OPTIONAL => Label::Optional,
+            protobuf::descriptor::field_descriptor_proto::Label::LABEL_REPEATED => Label::Repeated,
         }
     }
 }
@@ -273,12 +306,14 @@ pub enum OptimizeMode {
     LiteRuntime = 3,
 }
 
-impl From<prost_types::file_options::OptimizeMode> for OptimizeMode {
-    fn from(value: prost_types::file_options::OptimizeMode) -> Self {
+impl From<protobuf::descriptor::file_options::OptimizeMode> for OptimizeMode {
+    fn from(value: protobuf::descriptor::file_options::OptimizeMode) -> Self {
         match value {
-            prost_types::file_options::OptimizeMode::Speed => OptimizeMode::Speed,
-            prost_types::file_options::OptimizeMode::CodeSize => OptimizeMode::CodeSize,
-            prost_types::file_options::OptimizeMode::LiteRuntime => OptimizeMode::LiteRuntime,
+            protobuf::descriptor::file_options::OptimizeMode::SPEED => OptimizeMode::Speed,
+            protobuf::descriptor::file_options::OptimizeMode::CODE_SIZE => OptimizeMode::CodeSize,
+            protobuf::descriptor::file_options::OptimizeMode::LITE_RUNTIME => {
+                OptimizeMode::LiteRuntime
+            }
         }
     }
 }
@@ -316,16 +351,16 @@ pub enum IdempotencyLevel {
     /// idempotent, but may have side effects
     Idempotent = 2,
 }
-impl From<prost_types::method_options::IdempotencyLevel> for IdempotencyLevel {
-    fn from(value: prost_types::method_options::IdempotencyLevel) -> Self {
+impl From<protobuf::descriptor::method_options::IdempotencyLevel> for IdempotencyLevel {
+    fn from(value: protobuf::descriptor::method_options::IdempotencyLevel) -> Self {
         match value {
-            prost_types::method_options::IdempotencyLevel::Idempotent => {
+            protobuf::descriptor::method_options::IdempotencyLevel::IDEMPOTENT => {
                 IdempotencyLevel::Idempotent
             }
-            prost_types::method_options::IdempotencyLevel::NoSideEffects => {
+            protobuf::descriptor::method_options::IdempotencyLevel::NO_SIDE_EFFECTS => {
                 IdempotencyLevel::NoSideEffects
             }
-            prost_types::method_options::IdempotencyLevel::IdempotencyUnknown => {
+            protobuf::descriptor::method_options::IdempotencyLevel::IDEMPOTENCY_UNKNOWN => {
                 IdempotencyLevel::IdempotencyUnknown
             }
         }

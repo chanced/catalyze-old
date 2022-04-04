@@ -4,11 +4,11 @@ use crate::Parameters;
 
 #[derive(Clone, Debug)]
 pub enum Source {
-    CodeGeneratorRequest(prost_types::compiler::CodeGeneratorRequest),
-    FileDescriptorSet(prost_types::FileDescriptorSet),
+    CodeGeneratorRequest(protobuf::plugin::CodeGeneratorRequest),
+    FileDescriptorSet(protobuf::descriptor::FileDescriptorSet),
 }
 impl Source {
-    pub fn files(&self) -> &[prost_types::FileDescriptorProto] {
+    pub fn files(&self) -> &[protobuf::descriptor::FileDescriptorProto] {
         match self {
             Source::CodeGeneratorRequest(ref req) => req.proto_file.as_slice(),
             Source::FileDescriptorSet(ref fds) => fds.file.as_slice(),
@@ -18,7 +18,7 @@ impl Source {
 
 impl Default for Source {
     fn default() -> Self {
-        Source::CodeGeneratorRequest(prost_types::compiler::CodeGeneratorRequest::default())
+        Source::CodeGeneratorRequest(protobuf::plugin::CodeGeneratorRequest::default())
     }
 }
 
@@ -41,7 +41,13 @@ impl Input {
             _ => None,
         };
         let mut parameters = Parameters::new(match src {
-            Source::CodeGeneratorRequest(ref req) => req.parameter.as_deref(),
+            Source::CodeGeneratorRequest(ref req) => {
+                if req.has_parameter() {
+                    Some(req.parameter())
+                } else {
+                    None
+                }
+            }
             _ => None,
         });
         if let Some(op) = output_path {
@@ -63,7 +69,7 @@ impl Input {
         }
     }
 
-    pub fn files(&self) -> &[prost_types::FileDescriptorProto] {
+    pub fn files(&self) -> &[protobuf::descriptor::FileDescriptorProto] {
         self.src.files()
     }
     pub fn targets(&self) -> &[String] {
@@ -80,7 +86,7 @@ impl Input {
     }
 }
 
-fn parse_compiler_vers(vers: Option<&prost_types::compiler::Version>) -> Option<semver::Version> {
+fn parse_compiler_vers(vers: Option<&protobuf::plugin::Version>) -> Option<semver::Version> {
     vers.map(|vers| {
         let suffix = vers.suffix();
         let pre = if !suffix.is_empty() {

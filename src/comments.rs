@@ -11,8 +11,8 @@ impl<'a> From<&Location<'a>> for Comments<'a> {
     }
 }
 
-impl<'a> From<&'a prost_types::source_code_info::Location> for Comments<'a> {
-    fn from(loc: &'a prost_types::source_code_info::Location) -> Self {
+impl<'a> From<&'a protobuf::descriptor::source_code_info::Location> for Comments<'a> {
+    fn from(loc: &'a protobuf::descriptor::source_code_info::Location) -> Self {
         Comments { loc: loc.into() }
     }
 }
@@ -72,7 +72,7 @@ impl<'a> Iterator for PackageComments<'a> {
 
 // #[derive(Debug, Clone)]
 // pub struct CommentsIter<'a> {
-//     iter: std::slice::Iter<'a, prost_types::source_code_info::Location>,
+//     iter: std::slice::Iter<'a, protobuf::descriptor::source_code_info::Location>,
 //     phantom: PhantomData<U>,
 // }
 

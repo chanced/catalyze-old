@@ -254,7 +254,7 @@ impl<'a> AstDetail<'a> {
     }
     fn hydrate_files(
         mut self,
-        files: slice::Iter<'a, prost_types::FileDescriptorProto>,
+        files: slice::Iter<'a, protobuf::descriptor::FileDescriptorProto>,
     ) -> anyhow::Result<Self> {
         for fd in files {
             let file = self.init_file(fd.into())?;

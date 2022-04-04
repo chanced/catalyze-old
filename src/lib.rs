@@ -22,7 +22,6 @@ mod package;
 mod parameters;
 mod proto;
 mod service;
-mod traits;
 pub mod util;
 mod visit;
 mod well_known_type;

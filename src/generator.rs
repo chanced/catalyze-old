@@ -1,13 +1,13 @@
 use crate::{Ast, Input, ParamMutatorFn, Parameters, Source};
 use anyhow::{anyhow, bail};
-use prost::Message;
+use protobuf::Message;
 
 use std::{
     cell::RefCell,
     error::Error,
     fs,
     io::{self, stdin},
-    io::{stdout, BufReader, BufWriter, Cursor, Read, Stdin, Stdout, Write},
+    io::{stdout, BufReader, BufWriter, Read, Stdin, Stdout, Write},
     path::Path,
     rc::Rc,
 };
@@ -39,8 +39,7 @@ impl Workflow for Standalone {
     fn decode_source<I: Read>(input: &mut BufReader<I>) -> Result<Source, io::Error> {
         let mut buf = Vec::new();
         input.read_to_end(&mut buf)?;
-        let buf = Cursor::new(buf);
-        let fds = prost_types::FileDescriptorSet::decode(buf)?;
+        let fds = protobuf::descriptor::FileDescriptorSet::parse_from_bytes(&buf)?;
         Ok(Source::FileDescriptorSet(fds))
     }
 }
@@ -55,8 +54,7 @@ impl Workflow for ProtocPlugin {
     fn decode_source<I: Read>(input: &mut BufReader<I>) -> Result<Source, io::Error> {
         let mut buf = Vec::new();
         input.read_to_end(&mut buf)?;
-        let buf = Cursor::new(buf);
-        let cgr = prost_types::compiler::CodeGeneratorRequest::decode(buf)?;
+        let cgr = protobuf::plugin::CodeGeneratorRequest::parse_from_bytes(&buf)?;
         Ok(Source::CodeGeneratorRequest(cgr))
     }
 }

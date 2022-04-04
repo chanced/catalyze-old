@@ -12,29 +12,29 @@ use std::{
 };
 
 lazy_static::lazy_static! {
-    static ref DEFAULT_SOURCE_CODE_INFO: prost_types::SourceCodeInfo =
-        prost_types::SourceCodeInfo::default();
-    static ref DEFAULT_LOCATION: prost_types::source_code_info::Location =
-        prost_types::source_code_info::Location::default();
-    static ref DEFAULT_FILE_OPTIONS: prost_types::FileOptions = prost_types::FileOptions::default();
-    static ref DEFAULT_MESSAGE_OPTIONS: prost_types::MessageOptions =
-        prost_types::MessageOptions::default();
-    static ref DEFAULT_ONEOF_OPTIONS: prost_types::OneofOptions =
-        prost_types::OneofOptions::default();
-    static ref DEFAULT_FIELD_OPTIONS: prost_types::FieldOptions =
-        prost_types::FieldOptions::default();
-    static ref DEFAULT_SERVICE_OPTIONS: prost_types::ServiceOptions =
-        prost_types::ServiceOptions::default();
-    static ref DEFAULT_METHOD_OPTIONS: prost_types::MethodOptions =
-        prost_types::MethodOptions::default();
-    static ref DEFAULT_ENUM_OPTIONS: prost_types::EnumOptions = prost_types::EnumOptions::default();
-    static ref DEFAULT_ENUM_VALUE_OPTIONS: prost_types::EnumValueOptions =
-        prost_types::EnumValueOptions::default();
+    static ref DEFAULT_SOURCE_CODE_INFO: protobuf::descriptor::SourceCodeInfo =
+        protobuf::descriptor::SourceCodeInfo::default();
+    static ref DEFAULT_LOCATION: protobuf::descriptor::source_code_info::Location =
+        protobuf::descriptor::source_code_info::Location::default();
+    static ref DEFAULT_FILE_OPTIONS: protobuf::descriptor::FileOptions = protobuf::descriptor::FileOptions::default();
+    static ref DEFAULT_MESSAGE_OPTIONS: protobuf::descriptor::MessageOptions =
+        protobuf::descriptor::MessageOptions::default();
+    static ref DEFAULT_ONEOF_OPTIONS: protobuf::descriptor::OneofOptions =
+        protobuf::descriptor::OneofOptions::default();
+    static ref DEFAULT_FIELD_OPTIONS: protobuf::descriptor::FieldOptions =
+        protobuf::descriptor::FieldOptions::default();
+    static ref DEFAULT_SERVICE_OPTIONS: protobuf::descriptor::ServiceOptions =
+        protobuf::descriptor::ServiceOptions::default();
+    static ref DEFAULT_METHOD_OPTIONS: protobuf::descriptor::MethodOptions =
+        protobuf::descriptor::MethodOptions::default();
+    static ref DEFAULT_ENUM_OPTIONS: protobuf::descriptor::EnumOptions = protobuf::descriptor::EnumOptions::default();
+    static ref DEFAULT_ENUM_VALUE_OPTIONS: protobuf::descriptor::EnumValueOptions =
+        protobuf::descriptor::EnumValueOptions::default();
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FileDescriptor<'a> {
-    desc: &'a prost_types::FileDescriptorProto,
+    desc: &'a protobuf::descriptor::FileDescriptorProto,
 }
 
 impl<'a> FileDescriptor<'a> {
@@ -89,8 +89,8 @@ impl<'a> FileDescriptor<'a> {
         self.desc.syntax().into()
     }
 }
-impl<'a> From<&'a prost_types::FileDescriptorProto> for FileDescriptor<'a> {
-    fn from(desc: &'a prost_types::FileDescriptorProto) -> Self {
+impl<'a> From<&'a protobuf::descriptor::FileDescriptorProto> for FileDescriptor<'a> {
+    fn from(desc: &'a protobuf::descriptor::FileDescriptorProto) -> Self {
         Self { desc }
     }
 }
@@ -106,7 +106,7 @@ impl<'a> Default for FileDescriptor<'a> {
 /// Describes a message type.
 #[derive(Debug, Clone, Copy)]
 pub struct MessageDescriptor<'a> {
-    desc: &'a prost_types::DescriptorProto,
+    desc: &'a protobuf::descriptor::DescriptorProto,
 }
 impl<'a> MessageDescriptor<'a> {
     pub fn name(&self) -> &'a str {
@@ -149,8 +149,8 @@ impl<'a> MessageDescriptor<'a> {
         self.desc.reserved_name.iter()
     }
 }
-impl<'a> From<&'a prost_types::DescriptorProto> for MessageDescriptor<'a> {
-    fn from(desc: &'a prost_types::DescriptorProto) -> Self {
+impl<'a> From<&'a protobuf::descriptor::DescriptorProto> for MessageDescriptor<'a> {
+    fn from(desc: &'a protobuf::descriptor::DescriptorProto) -> Self {
         Self { desc }
     }
 }
@@ -164,7 +164,7 @@ impl<'a> Default for MessageDescriptor<'a> {
 }
 #[derive(Debug, Clone, Copy)]
 pub struct EnumDescriptor<'a> {
-    desc: &'a prost_types::EnumDescriptorProto,
+    desc: &'a protobuf::descriptor::EnumDescriptorProto,
 }
 impl<'a> EnumDescriptor<'a> {
     pub fn name(&self) -> &'a str {
@@ -186,8 +186,8 @@ impl<'a> EnumDescriptor<'a> {
         self.desc.reserved_name.iter()
     }
 }
-impl<'a> From<&'a prost_types::EnumDescriptorProto> for EnumDescriptor<'a> {
-    fn from(desc: &'a prost_types::EnumDescriptorProto) -> Self {
+impl<'a> From<&'a protobuf::descriptor::EnumDescriptorProto> for EnumDescriptor<'a> {
+    fn from(desc: &'a protobuf::descriptor::EnumDescriptorProto) -> Self {
         EnumDescriptor { desc }
     }
 }
@@ -202,7 +202,7 @@ impl<'a> Default for EnumDescriptor<'a> {
 
 #[derive(Debug, Clone, Copy)]
 pub struct EnumValueDescriptor<'a> {
-    desc: &'a prost_types::EnumValueDescriptorProto,
+    desc: &'a protobuf::descriptor::EnumValueDescriptorProto,
 }
 impl<'a> EnumValueDescriptor<'a> {
     pub fn name(&self) -> &'a str {
@@ -215,8 +215,8 @@ impl<'a> EnumValueDescriptor<'a> {
         self.desc.options.as_ref().into()
     }
 }
-impl<'a> From<&'a prost_types::EnumValueDescriptorProto> for EnumValueDescriptor<'a> {
-    fn from(desc: &'a prost_types::EnumValueDescriptorProto) -> Self {
+impl<'a> From<&'a protobuf::descriptor::EnumValueDescriptorProto> for EnumValueDescriptor<'a> {
+    fn from(desc: &'a protobuf::descriptor::EnumValueDescriptorProto) -> Self {
         Self { desc }
     }
 }
@@ -232,7 +232,7 @@ impl<'a> Default for EnumValueDescriptor<'a> {
 /// Describes a field within a message.
 #[derive(Debug, Clone, Copy)]
 pub struct FieldDescriptor<'a> {
-    desc: &'a prost_types::FieldDescriptorProto,
+    desc: &'a protobuf::descriptor::FieldDescriptorProto,
 }
 impl<'a> FieldDescriptor<'a> {
     pub fn name(&self) -> &str {
@@ -368,7 +368,11 @@ impl<'a> FieldDescriptor<'a> {
     ///
     /// This field is a member of that oneof.
     pub fn oneof_index(&self) -> Option<i32> {
-        self.desc.oneof_index
+        if self.desc.has_oneof_index() {
+            Some(self.desc.oneof_index())
+        } else {
+            None
+        }
     }
 
     /// JSON name of this field. The value is set by protocol compiler. If the
@@ -419,8 +423,8 @@ impl<'a> FieldDescriptor<'a> {
         syntax.supports_required_prefix() && self.label() == Label::Required
     }
 }
-impl<'a> From<&'a prost_types::FieldDescriptorProto> for FieldDescriptor<'a> {
-    fn from(desc: &'a prost_types::FieldDescriptorProto) -> Self {
+impl<'a> From<&'a protobuf::descriptor::FieldDescriptorProto> for FieldDescriptor<'a> {
+    fn from(desc: &'a protobuf::descriptor::FieldDescriptorProto) -> Self {
         Self { desc }
     }
 }
@@ -437,7 +441,7 @@ impl<'a> Default for FieldDescriptor<'a> {
 /// Describes a service.
 #[derive(Debug, Clone, Copy)]
 pub struct ServiceDescriptor<'a> {
-    desc: &'a prost_types::ServiceDescriptorProto,
+    desc: &'a protobuf::descriptor::ServiceDescriptorProto,
 }
 impl<'a> ServiceDescriptor<'a> {
     pub fn name(&self) -> &'a str {
@@ -450,8 +454,8 @@ impl<'a> ServiceDescriptor<'a> {
         (&self.desc.method).into()
     }
 }
-impl<'a> From<&'a prost_types::ServiceDescriptorProto> for ServiceDescriptor<'a> {
-    fn from(desc: &'a prost_types::ServiceDescriptorProto) -> Self {
+impl<'a> From<&'a protobuf::descriptor::ServiceDescriptorProto> for ServiceDescriptor<'a> {
+    fn from(desc: &'a protobuf::descriptor::ServiceDescriptorProto) -> Self {
         Self { desc }
     }
 }
@@ -467,7 +471,7 @@ impl<'a> Default for ServiceDescriptor<'a> {
 /// Describes a method.
 #[derive(Debug, Clone, Copy)]
 pub struct MethodDescriptor<'a> {
-    desc: &'a prost_types::MethodDescriptorProto,
+    desc: &'a protobuf::descriptor::MethodDescriptorProto,
 }
 impl<'a> MethodDescriptor<'a> {
     pub fn name(&self) -> &'a str {
@@ -499,8 +503,8 @@ impl<'a> MethodDescriptor<'a> {
         self.desc.options.as_ref().into()
     }
 }
-impl<'a> From<&'a prost_types::MethodDescriptorProto> for MethodDescriptor<'a> {
-    fn from(desc: &'a prost_types::MethodDescriptorProto) -> Self {
+impl<'a> From<&'a protobuf::descriptor::MethodDescriptorProto> for MethodDescriptor<'a> {
+    fn from(desc: &'a protobuf::descriptor::MethodDescriptorProto) -> Self {
         Self { desc }
     }
 }
@@ -516,7 +520,7 @@ impl<'a> Default for MethodDescriptor<'a> {
 /// Describes a oneof.
 #[derive(Debug, Clone, Copy)]
 pub struct OneofDescriptor<'a> {
-    desc: &'a prost_types::OneofDescriptorProto,
+    desc: &'a protobuf::descriptor::OneofDescriptorProto,
 }
 impl<'a> OneofDescriptor<'a> {
     pub fn name(&self) -> &'a str {
@@ -526,8 +530,8 @@ impl<'a> OneofDescriptor<'a> {
         self.desc.options.as_ref().into()
     }
 }
-impl<'a> From<&'a prost_types::OneofDescriptorProto> for OneofDescriptor<'a> {
-    fn from(desc: &'a prost_types::OneofDescriptorProto) -> Self {
+impl<'a> From<&'a protobuf::descriptor::OneofDescriptorProto> for OneofDescriptor<'a> {
+    fn from(desc: &'a protobuf::descriptor::OneofDescriptorProto) -> Self {
         Self { desc }
     }
 }
@@ -572,10 +576,10 @@ impl<'a> Default for OneofDescriptor<'a> {
 //   to automatically assign option numbers.
 #[derive(Debug, Clone, Copy)]
 pub struct FileOptions<'a> {
-    opts: Option<&'a prost_types::FileOptions>,
+    opts: Option<&'a protobuf::descriptor::FileOptions>,
 }
-impl<'a> From<Option<&'a prost_types::FileOptions>> for FileOptions<'a> {
-    fn from(opts: Option<&'a prost_types::FileOptions>) -> Self {
+impl<'a> From<Option<&'a protobuf::descriptor::FileOptions>> for FileOptions<'a> {
+    fn from(opts: Option<&'a protobuf::descriptor::FileOptions>) -> Self {
         Self { opts }
     }
 }
@@ -716,14 +720,14 @@ impl<'a> FileOptions<'a> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         (&self.opts().uninterpreted_option).into()
     }
-    fn opts(&self) -> &'a prost_types::FileOptions {
+    fn opts(&self) -> &'a protobuf::descriptor::FileOptions {
         self.opts.unwrap_or(&DEFAULT_FILE_OPTIONS)
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct EnumValueOptions<'a> {
-    opts: Option<&'a prost_types::EnumValueOptions>,
+    opts: Option<&'a protobuf::descriptor::EnumValueOptions>,
 }
 impl<'a> EnumValueOptions<'a> {
     /// Is this enum value deprecated?
@@ -740,19 +744,19 @@ impl<'a> EnumValueOptions<'a> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         (&self.opts().uninterpreted_option).into()
     }
-    fn opts(&self) -> &'a prost_types::EnumValueOptions {
+    fn opts(&self) -> &'a protobuf::descriptor::EnumValueOptions {
         self.opts.unwrap_or(&DEFAULT_ENUM_VALUE_OPTIONS)
     }
 }
-impl<'a> From<Option<&'a prost_types::EnumValueOptions>> for EnumValueOptions<'a> {
-    fn from(opts: Option<&'a prost_types::EnumValueOptions>) -> Self {
+impl<'a> From<Option<&'a protobuf::descriptor::EnumValueOptions>> for EnumValueOptions<'a> {
+    fn from(opts: Option<&'a protobuf::descriptor::EnumValueOptions>) -> Self {
         Self { opts }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct MessageOptions<'a> {
-    opts: Option<&'a prost_types::MessageOptions>,
+    opts: Option<&'a protobuf::descriptor::MessageOptions>,
 }
 impl<'a> MessageOptions<'a> {
     /// Set true to use the old proto1 MessageSet wire format for extensions.
@@ -818,22 +822,22 @@ impl<'a> MessageOptions<'a> {
     pub fn uninterpreted_option(&self) -> UninterpretedOptions<'a> {
         (&self.opts().uninterpreted_option).into()
     }
-    fn opts(&self) -> &'a prost_types::MessageOptions {
+    fn opts(&self) -> &'a protobuf::descriptor::MessageOptions {
         self.opts.unwrap_or(&DEFAULT_MESSAGE_OPTIONS)
     }
 }
-impl<'a> From<Option<&'a prost_types::MessageOptions>> for MessageOptions<'a> {
-    fn from(opts: Option<&'a prost_types::MessageOptions>) -> Self {
+impl<'a> From<Option<&'a protobuf::descriptor::MessageOptions>> for MessageOptions<'a> {
+    fn from(opts: Option<&'a protobuf::descriptor::MessageOptions>) -> Self {
         MessageOptions { opts }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct FieldOptions<'a> {
-    opts: Option<&'a prost_types::FieldOptions>,
+    opts: Option<&'a protobuf::descriptor::FieldOptions>,
 }
 impl<'a> FieldOptions<'a> {
-    pub fn new(opts: Option<&'a prost_types::FieldOptions>) -> Self {
+    pub fn new(opts: Option<&'a protobuf::descriptor::FieldOptions>) -> Self {
         Self { opts }
     }
     /// The ctype option instructs the C++ code generator to use a different
@@ -916,19 +920,19 @@ impl<'a> FieldOptions<'a> {
         (&self.opts().uninterpreted_option).into()
     }
 
-    fn opts(&self) -> &'a prost_types::FieldOptions {
+    fn opts(&self) -> &'a protobuf::descriptor::FieldOptions {
         self.opts.unwrap_or(&DEFAULT_FIELD_OPTIONS)
     }
 }
-impl<'a> From<Option<&'a prost_types::FieldOptions>> for FieldOptions<'a> {
-    fn from(opts: Option<&'a prost_types::FieldOptions>) -> Self {
+impl<'a> From<Option<&'a protobuf::descriptor::FieldOptions>> for FieldOptions<'a> {
+    fn from(opts: Option<&'a protobuf::descriptor::FieldOptions>) -> Self {
         Self { opts }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct EnumOptions<'a> {
-    opts: Option<&'a prost_types::EnumOptions>,
+    opts: Option<&'a protobuf::descriptor::EnumOptions>,
 }
 impl<'a> EnumOptions<'a> {
     /// Is this enum deprecated?
@@ -949,12 +953,12 @@ impl<'a> EnumOptions<'a> {
     pub fn allow_alias(&self) -> bool {
         self.opts().allow_alias()
     }
-    fn opts(&self) -> &'a prost_types::EnumOptions {
+    fn opts(&self) -> &'a protobuf::descriptor::EnumOptions {
         self.opts.unwrap_or(&DEFAULT_ENUM_OPTIONS)
     }
 }
-impl<'a> From<Option<&'a prost_types::EnumOptions>> for EnumOptions<'a> {
-    fn from(opts: Option<&'a prost_types::EnumOptions>) -> Self {
+impl<'a> From<Option<&'a protobuf::descriptor::EnumOptions>> for EnumOptions<'a> {
+    fn from(opts: Option<&'a protobuf::descriptor::EnumOptions>) -> Self {
         Self { opts }
     }
 }
@@ -965,7 +969,7 @@ impl<'a> From<Option<&'a prost_types::EnumOptions>> for EnumOptions<'a> {
 /// framework.
 #[derive(Debug, Clone, Copy)]
 pub struct ServiceOptions<'a> {
-    opts: Option<&'a prost_types::ServiceOptions>,
+    opts: Option<&'a protobuf::descriptor::ServiceOptions>,
 }
 impl<'a> ServiceOptions<'a> {
     /// Is this service deprecated?
@@ -982,12 +986,12 @@ impl<'a> ServiceOptions<'a> {
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         (&self.opts().uninterpreted_option).into()
     }
-    fn opts(&self) -> &'a prost_types::ServiceOptions {
+    fn opts(&self) -> &'a protobuf::descriptor::ServiceOptions {
         self.opts.unwrap_or(&DEFAULT_SERVICE_OPTIONS)
     }
 }
-impl<'a> From<Option<&'a prost_types::ServiceOptions>> for ServiceOptions<'a> {
-    fn from(opts: Option<&'a prost_types::ServiceOptions>) -> Self {
+impl<'a> From<Option<&'a protobuf::descriptor::ServiceOptions>> for ServiceOptions<'a> {
+    fn from(opts: Option<&'a protobuf::descriptor::ServiceOptions>) -> Self {
         Self { opts }
     }
 }
@@ -997,7 +1001,7 @@ impl<'a> From<Option<&'a prost_types::ServiceOptions>> for ServiceOptions<'a> {
 /// Note:  Field numbers 1 through 32 are reserved for Google's internal RPC
 /// framework.
 pub struct MethodOptions<'a> {
-    opts: Option<&'a prost_types::MethodOptions>,
+    opts: Option<&'a protobuf::descriptor::MethodOptions>,
 }
 impl<'a> MethodOptions<'a> {
     // Note:  Field numbers 1 through 32 are reserved for Google's internal RPC
@@ -1026,38 +1030,38 @@ impl<'a> MethodOptions<'a> {
     pub fn idempotency_level(&self) -> IdempotencyLevel {
         self.opts().idempotency_level().into()
     }
-    fn opts(&self) -> &'a prost_types::MethodOptions {
+    fn opts(&self) -> &'a protobuf::descriptor::MethodOptions {
         self.opts.unwrap_or(&DEFAULT_METHOD_OPTIONS)
     }
 }
-impl<'a> From<Option<&'a prost_types::MethodOptions>> for MethodOptions<'a> {
-    fn from(opts: Option<&'a prost_types::MethodOptions>) -> Self {
+impl<'a> From<Option<&'a protobuf::descriptor::MethodOptions>> for MethodOptions<'a> {
+    fn from(opts: Option<&'a protobuf::descriptor::MethodOptions>) -> Self {
         Self { opts }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct OneofOptions<'a> {
-    opts: Option<&'a prost_types::OneofOptions>,
+    opts: Option<&'a protobuf::descriptor::OneofOptions>,
 }
 impl<'a> OneofOptions<'a> {
     /// The parser stores options it doesn't recognize here. See above.
     pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
         (&self.opts().uninterpreted_option).into()
     }
-    pub fn opts(&self) -> &'a prost_types::OneofOptions {
+    pub fn opts(&self) -> &'a protobuf::descriptor::OneofOptions {
         self.opts.unwrap_or(&DEFAULT_ONEOF_OPTIONS)
     }
 }
-impl<'a> From<Option<&'a prost_types::OneofOptions>> for OneofOptions<'a> {
-    fn from(opts: Option<&'a prost_types::OneofOptions>) -> Self {
+impl<'a> From<Option<&'a protobuf::descriptor::OneofOptions>> for OneofOptions<'a> {
+    fn from(opts: Option<&'a protobuf::descriptor::OneofOptions>) -> Self {
         Self { opts }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct UninterpretedOptions<'a> {
-    pub(crate) opts: &'a [prost_types::UninterpretedOption],
+    pub(crate) opts: &'a [protobuf::descriptor::UninterpretedOption],
 }
 impl<'a> UninterpretedOptions<'a> {
     pub fn iter(&self) -> UninterpretedOptionsIter<'a> {
@@ -1072,8 +1076,8 @@ impl<'a> IntoIterator for UninterpretedOptions<'a> {
         self.into()
     }
 }
-impl<'a> From<&'a Vec<prost_types::UninterpretedOption>> for UninterpretedOptions<'a> {
-    fn from(opts: &'a Vec<prost_types::UninterpretedOption>) -> Self {
+impl<'a> From<&'a Vec<protobuf::descriptor::UninterpretedOption>> for UninterpretedOptions<'a> {
+    fn from(opts: &'a Vec<protobuf::descriptor::UninterpretedOption>) -> Self {
         UninterpretedOptions { opts }
     }
 }
@@ -1086,7 +1090,7 @@ impl<'a> From<&'a Vec<prost_types::UninterpretedOption>> for UninterpretedOption
 /// in them.
 #[derive(Debug, Clone, Copy)]
 pub struct UninterpretedOption<'a> {
-    opt: &'a prost_types::UninterpretedOption,
+    opt: &'a protobuf::descriptor::UninterpretedOption,
 }
 impl<'a> UninterpretedOption<'a> {
     pub fn name_parts(&self) -> NameParts<'a> {
@@ -1113,8 +1117,8 @@ impl<'a> UninterpretedOption<'a> {
     }
 }
 
-impl<'a> From<&'a prost_types::UninterpretedOption> for UninterpretedOption<'a> {
-    fn from(opt: &'a prost_types::UninterpretedOption) -> Self {
+impl<'a> From<&'a protobuf::descriptor::UninterpretedOption> for UninterpretedOption<'a> {
+    fn from(opt: &'a protobuf::descriptor::UninterpretedOption) -> Self {
         UninterpretedOption { opt }
     }
 }
@@ -1124,7 +1128,7 @@ impl<'a> From<&'a prost_types::UninterpretedOption> for UninterpretedOption<'a> 
 /// not overlap.
 #[derive(Debug, Clone, Copy)]
 pub struct ReservedRange<'a> {
-    range: &'a prost_types::descriptor_proto::ReservedRange,
+    range: &'a protobuf::descriptor::descriptor_proto::ReservedRange,
 }
 impl<'a> ReservedRange<'a> {
     /// Inclusive.
@@ -1146,15 +1150,15 @@ impl<'a> PartialEq for ReservedRange<'a> {
         self.start() == other.start() && self.end() == other.end()
     }
 }
-impl<'a> From<&'a prost_types::descriptor_proto::ReservedRange> for ReservedRange<'a> {
-    fn from(range: &'a prost_types::descriptor_proto::ReservedRange) -> Self {
+impl<'a> From<&'a protobuf::descriptor::descriptor_proto::ReservedRange> for ReservedRange<'a> {
+    fn from(range: &'a protobuf::descriptor::descriptor_proto::ReservedRange) -> Self {
         ReservedRange { range }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct ReservedRanges<'a> {
-    ranges: &'a [prost_types::descriptor_proto::ReservedRange],
+    ranges: &'a [protobuf::descriptor::descriptor_proto::ReservedRange],
 }
 impl<'a> IntoIterator for ReservedRanges<'a> {
     type Item = ReservedRange<'a>;
@@ -1183,15 +1187,17 @@ impl<'a> ReservedRanges<'a> {
         self.iter().any(|r| r.start() <= num && r.end() >= num)
     }
 }
-impl<'a> From<&'a Vec<prost_types::descriptor_proto::ReservedRange>> for ReservedRanges<'a> {
-    fn from(ranges: &'a Vec<prost_types::descriptor_proto::ReservedRange>) -> Self {
+impl<'a> From<&'a Vec<protobuf::descriptor::descriptor_proto::ReservedRange>>
+    for ReservedRanges<'a>
+{
+    fn from(ranges: &'a Vec<protobuf::descriptor::descriptor_proto::ReservedRange>) -> Self {
         ReservedRanges { ranges }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct ExtensionRange<'a> {
-    range: &'a prost_types::descriptor_proto::ExtensionRange,
+    range: &'a protobuf::descriptor::descriptor_proto::ExtensionRange,
 }
 impl<'a> PartialEq for ExtensionRange<'a> {
     fn eq(&self, other: &Self) -> bool {
@@ -1211,15 +1217,15 @@ impl<'a> ExtensionRange<'a> {
         self.start() <= val && val < self.end()
     }
 }
-impl<'a> From<&'a prost_types::descriptor_proto::ExtensionRange> for ExtensionRange<'a> {
-    fn from(range: &'a prost_types::descriptor_proto::ExtensionRange) -> Self {
+impl<'a> From<&'a protobuf::descriptor::descriptor_proto::ExtensionRange> for ExtensionRange<'a> {
+    fn from(range: &'a protobuf::descriptor::descriptor_proto::ExtensionRange) -> Self {
         ExtensionRange { range }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct ExtensionRanges<'a> {
-    ranges: &'a [prost_types::descriptor_proto::ExtensionRange],
+    ranges: &'a [protobuf::descriptor::descriptor_proto::ExtensionRange],
 }
 impl<'a> ExtensionRanges<'a> {
     pub fn iter(&self) -> ExtensionRangeIter<'a> {
@@ -1248,8 +1254,10 @@ impl<'a> IntoIterator for ExtensionRanges<'a> {
         self.iter()
     }
 }
-impl<'a> From<&'a Vec<prost_types::descriptor_proto::ExtensionRange>> for ExtensionRanges<'a> {
-    fn from(ranges: &'a Vec<prost_types::descriptor_proto::ExtensionRange>) -> Self {
+impl<'a> From<&'a Vec<protobuf::descriptor::descriptor_proto::ExtensionRange>>
+    for ExtensionRanges<'a>
+{
+    fn from(ranges: &'a Vec<protobuf::descriptor::descriptor_proto::ExtensionRange>) -> Self {
         ExtensionRanges { ranges }
     }
 }
@@ -1262,10 +1270,12 @@ impl<'a> From<&'a Vec<prost_types::descriptor_proto::ExtensionRange>> for Extens
 /// domain.
 #[derive(Debug, PartialEq)]
 pub struct EnumReservedRange<'a> {
-    rr: &'a prost_types::enum_descriptor_proto::EnumReservedRange,
+    rr: &'a protobuf::descriptor::enum_descriptor_proto::EnumReservedRange,
 }
-impl<'a> From<&'a prost_types::enum_descriptor_proto::EnumReservedRange> for EnumReservedRange<'a> {
-    fn from(r: &'a prost_types::enum_descriptor_proto::EnumReservedRange) -> Self {
+impl<'a> From<&'a protobuf::descriptor::enum_descriptor_proto::EnumReservedRange>
+    for EnumReservedRange<'a>
+{
+    fn from(r: &'a protobuf::descriptor::enum_descriptor_proto::EnumReservedRange) -> Self {
         Self { rr: r }
     }
 }
@@ -1282,7 +1292,7 @@ impl<'a> EnumReservedRange<'a> {
 
 #[derive(Debug, Clone, Copy)]
 pub struct EnumReservedRanges<'a> {
-    ranges: &'a [prost_types::enum_descriptor_proto::EnumReservedRange],
+    ranges: &'a [protobuf::descriptor::enum_descriptor_proto::EnumReservedRange],
 }
 impl<'a> IntoIterator for EnumReservedRanges<'a> {
     type Item = EnumReservedRange<'a>;
@@ -1311,10 +1321,12 @@ impl<'a> EnumReservedRanges<'a> {
         self.iter().any(|r| r.start() <= num && r.end() >= num)
     }
 }
-impl<'a> From<&'a Vec<prost_types::enum_descriptor_proto::EnumReservedRange>>
+impl<'a> From<&'a Vec<protobuf::descriptor::enum_descriptor_proto::EnumReservedRange>>
     for EnumReservedRanges<'a>
 {
-    fn from(ranges: &'a Vec<prost_types::enum_descriptor_proto::EnumReservedRange>) -> Self {
+    fn from(
+        ranges: &'a Vec<protobuf::descriptor::enum_descriptor_proto::EnumReservedRange>,
+    ) -> Self {
         Self { ranges }
     }
 }
@@ -1329,7 +1341,7 @@ impl<'a> From<&'a Vec<prost_types::enum_descriptor_proto::EnumReservedRange>>
 /// ```
 #[derive(Clone, Copy)]
 pub struct NamePart<'a> {
-    part: &'a prost_types::uninterpreted_option::NamePart,
+    part: &'a protobuf::descriptor::uninterpreted_option::NamePart,
 }
 impl<'a> Eq for NamePart<'a> {}
 impl<'a> PartialEq<NamePart<'a>> for NamePart<'a> {
@@ -1341,8 +1353,8 @@ impl<'a> PartialEq<NamePart<'a>> for NamePart<'a> {
 impl<'a> fmt::Debug for NamePart<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("NamePart")
-            .field("value", &self.part.name_part)
-            .field("is_extension", &self.part.is_extension)
+            .field("value", &self.part.name_part())
+            .field("is_extension", &self.part.is_extension())
             .finish()
     }
 }
@@ -1367,7 +1379,7 @@ impl<'a> NamePart<'a> {
     /// alias for value
     /// the value of the part `NamePart`
     pub fn name_part(&self) -> &'a str {
-        &self.part.name_part
+        &self.part.name_part()
     }
     /// the value of the part
     /// E.g. `"foo"`, `"bar.baz"`, or `"qux"` of:
@@ -1380,20 +1392,20 @@ impl<'a> NamePart<'a> {
     /// is_extension is true if the segment represents an extension (denoted
     /// with parentheses in options specs in .proto files).
     pub fn is_extension(&self) -> bool {
-        self.part.is_extension
+        self.part.is_extension()
     }
     pub fn formatted_value(&self) -> String {
-        if self.part.is_extension {
-            format!("({})", self.part.name_part)
+        if self.part.is_extension() {
+            format!("({})", self.part.name_part())
         } else {
-            self.part.name_part.to_string()
+            self.part.name_part().to_string()
         }
     }
 }
 
 impl<'a> NamePart<'a> {
     pub fn as_str(&self) -> &str {
-        &self.part.name_part
+        &self.part.name_part()
     }
 }
 
@@ -1401,19 +1413,19 @@ impl<'a> Deref for NamePart<'a> {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
-        &self.part.name_part
+        &self.part.name_part()
     }
 }
 
-impl<'a> From<&'a prost_types::uninterpreted_option::NamePart> for NamePart<'a> {
-    fn from(part: &'a prost_types::uninterpreted_option::NamePart) -> Self {
+impl<'a> From<&'a protobuf::descriptor::uninterpreted_option::NamePart> for NamePart<'a> {
+    fn from(part: &'a protobuf::descriptor::uninterpreted_option::NamePart) -> Self {
         Self { part }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct NameParts<'a> {
-    parts: &'a [prost_types::uninterpreted_option::NamePart],
+    parts: &'a [protobuf::descriptor::uninterpreted_option::NamePart],
 }
 
 impl<'a> ToString for NameParts<'a> {
@@ -1422,8 +1434,12 @@ impl<'a> ToString for NameParts<'a> {
     }
 }
 
-impl<'a> From<&'a std::vec::Vec<prost_types::uninterpreted_option::NamePart>> for NameParts<'a> {
-    fn from(prost_parts: &'a std::vec::Vec<prost_types::uninterpreted_option::NamePart>) -> Self {
+impl<'a> From<&'a std::vec::Vec<protobuf::descriptor::uninterpreted_option::NamePart>>
+    for NameParts<'a>
+{
+    fn from(
+        prost_parts: &'a std::vec::Vec<protobuf::descriptor::uninterpreted_option::NamePart>,
+    ) -> Self {
         Self { parts: prost_parts }
     }
 }
@@ -1454,7 +1470,7 @@ impl<'a> NameParts<'a> {
         self.parts.is_empty()
     }
     pub fn contains(&self, part: &str) -> bool {
-        self.parts.iter().any(|p| p.name_part == part)
+        self.parts.iter().any(|p| p.name_part() == part)
     }
     pub fn formatted_value(&self) -> String {
         self.iter()
@@ -1465,7 +1481,7 @@ impl<'a> NameParts<'a> {
 }
 
 pub struct NamePartIter<'a> {
-    iter: std::slice::Iter<'a, prost_types::uninterpreted_option::NamePart>,
+    iter: std::slice::Iter<'a, protobuf::descriptor::uninterpreted_option::NamePart>,
 }
 impl<'a> Iterator for NamePartIter<'a> {
     type Item = NamePart<'a>;
@@ -1481,20 +1497,20 @@ impl<'a> From<&NameParts<'a>> for NamePartIter<'a> {
         }
     }
 }
-impl<'a> From<&'a [prost_types::uninterpreted_option::NamePart]> for NamePartIter<'a> {
-    fn from(parts: &'a [prost_types::uninterpreted_option::NamePart]) -> Self {
+impl<'a> From<&'a [protobuf::descriptor::uninterpreted_option::NamePart]> for NamePartIter<'a> {
+    fn from(parts: &'a [protobuf::descriptor::uninterpreted_option::NamePart]) -> Self {
         Self { iter: parts.iter() }
     }
 }
-impl<'a> From<&'a Vec<prost_types::uninterpreted_option::NamePart>> for NamePartIter<'a> {
-    fn from(parts: &'a Vec<prost_types::uninterpreted_option::NamePart>) -> Self {
+impl<'a> From<&'a Vec<protobuf::descriptor::uninterpreted_option::NamePart>> for NamePartIter<'a> {
+    fn from(parts: &'a Vec<protobuf::descriptor::uninterpreted_option::NamePart>) -> Self {
         Self { iter: parts.iter() }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct SourceCodeInfo<'a> {
-    pub(crate) info: &'a prost_types::SourceCodeInfo,
+    pub(crate) info: &'a protobuf::descriptor::SourceCodeInfo,
 }
 
 impl<'a> SourceCodeInfo<'a> {
@@ -1509,14 +1525,14 @@ impl<'a> SourceCodeInfo<'a> {
     }
 }
 
-impl<'a> From<&'a prost_types::SourceCodeInfo> for SourceCodeInfo<'a> {
-    fn from(info: &'a prost_types::SourceCodeInfo) -> Self {
+impl<'a> From<&'a protobuf::descriptor::SourceCodeInfo> for SourceCodeInfo<'a> {
+    fn from(info: &'a protobuf::descriptor::SourceCodeInfo) -> Self {
         SourceCodeInfo { info }
     }
 }
 
-impl<'a> From<Option<&'a prost_types::SourceCodeInfo>> for SourceCodeInfo<'a> {
-    fn from(info: Option<&'a prost_types::SourceCodeInfo>) -> Self {
+impl<'a> From<Option<&'a protobuf::descriptor::SourceCodeInfo>> for SourceCodeInfo<'a> {
+    fn from(info: Option<&'a protobuf::descriptor::SourceCodeInfo>) -> Self {
         SourceCodeInfo {
             info: info.unwrap_or(&DEFAULT_SOURCE_CODE_INFO),
         }
@@ -1547,18 +1563,13 @@ mod tests {
 
     #[test]
     fn test_to_string() {
-        let p1 = prost_types::uninterpreted_option::NamePart {
-            name_part: "foo".to_string(),
-            is_extension: false,
-        };
-        let p2 = prost_types::uninterpreted_option::NamePart {
-            name_part: "bar".to_string(),
-            is_extension: true,
-        };
-        let p3 = prost_types::uninterpreted_option::NamePart {
-            name_part: "baz".to_string(),
-            is_extension: false,
-        };
+        let mut p1 = protobuf::descriptor::uninterpreted_option::NamePart::new();
+        p1.set_name_part("foo".to_string());
+        let mut p2 = protobuf::descriptor::uninterpreted_option::NamePart::new();
+        p2.set_name_part("bar".to_string());
+        p2.set_is_extension(true);
+        let mut p3 = protobuf::descriptor::uninterpreted_option::NamePart::new();
+        p3.set_name_part("baz".to_string());
         let parts = vec![p1, p2, p3];
         let name_parts: NameParts<'_> = NameParts::from(&parts);
         assert_eq!(name_parts.to_string(), "foo.(bar).baz");
@@ -1569,10 +1580,10 @@ mod tests {
 /// Comments associated to entities in the source code.
 #[derive(Debug, Clone, Copy)]
 pub struct Location<'a> {
-    loc: &'a prost_types::source_code_info::Location,
+    loc: &'a protobuf::descriptor::source_code_info::Location,
 }
-impl<'a> From<&'a prost_types::source_code_info::Location> for Location<'a> {
-    fn from(loc: &'a prost_types::source_code_info::Location) -> Self {
+impl<'a> From<&'a protobuf::descriptor::source_code_info::Location> for Location<'a> {
+    fn from(loc: &'a protobuf::descriptor::source_code_info::Location) -> Self {
         Self { loc }
     }
 }
@@ -1655,13 +1666,13 @@ impl<'a> Location<'a> {
 mod test_data {
 
     lazy_static::lazy_static! {
-        pub static ref DEFAULT_FILE_DESCRIPTOR_PROTO:prost_types::FileDescriptorProto = prost_types::FileDescriptorProto::default();
-        pub static ref DEFAULT_DESCRIPTOR_PROTO:prost_types::DescriptorProto = prost_types::DescriptorProto::default();
-        pub static ref DEFAULT_FIELD_DESCRIPTOR_PROTO:prost_types::FieldDescriptorProto = prost_types::FieldDescriptorProto::default();
-        pub static ref DEFAULT_ENUM_DESCRIPTOR_PROTO:prost_types::EnumDescriptorProto = prost_types::EnumDescriptorProto::default();
-        pub static ref DEFAULT_ENUM_VALUE_DESCRIPTOR_PROTO:prost_types::EnumValueDescriptorProto = prost_types::EnumValueDescriptorProto::default();
-        pub static ref DEFAULT_SERVICE_DESCRIPTOR_PROTO:prost_types::ServiceDescriptorProto = prost_types::ServiceDescriptorProto::default();
-        pub static ref DEFAULT_METHOD_DESCRIPTOR_PROTO:prost_types::MethodDescriptorProto = prost_types::MethodDescriptorProto::default();
-        pub static ref DEFAULT_ONEOF_DESCRIPTOR:prost_types::OneofDescriptorProto = prost_types::OneofDescriptorProto::default();
+        pub static ref DEFAULT_FILE_DESCRIPTOR_PROTO:protobuf::descriptor::FileDescriptorProto = protobuf::descriptor::FileDescriptorProto::default();
+        pub static ref DEFAULT_DESCRIPTOR_PROTO:protobuf::descriptor::DescriptorProto = protobuf::descriptor::DescriptorProto::default();
+        pub static ref DEFAULT_FIELD_DESCRIPTOR_PROTO:protobuf::descriptor::FieldDescriptorProto = protobuf::descriptor::FieldDescriptorProto::default();
+        pub static ref DEFAULT_ENUM_DESCRIPTOR_PROTO:protobuf::descriptor::EnumDescriptorProto = protobuf::descriptor::EnumDescriptorProto::default();
+        pub static ref DEFAULT_ENUM_VALUE_DESCRIPTOR_PROTO:protobuf::descriptor::EnumValueDescriptorProto = protobuf::descriptor::EnumValueDescriptorProto::default();
+        pub static ref DEFAULT_SERVICE_DESCRIPTOR_PROTO:protobuf::descriptor::ServiceDescriptorProto = protobuf::descriptor::ServiceDescriptorProto::default();
+        pub static ref DEFAULT_METHOD_DESCRIPTOR_PROTO:protobuf::descriptor::MethodDescriptorProto = protobuf::descriptor::MethodDescriptorProto::default();
+        pub static ref DEFAULT_ONEOF_DESCRIPTOR:protobuf::descriptor::OneofDescriptorProto = protobuf::descriptor::OneofDescriptorProto::default();
     }
 }
