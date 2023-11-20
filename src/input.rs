@@ -96,9 +96,9 @@ fn parse_compiler_vers(vers: Option<&protobuf::plugin::Version>) -> Option<semve
         };
         let build = semver::BuildMetadata::EMPTY;
         semver::Version {
-            major: vers.major().abs() as u64,
-            minor: vers.minor().abs() as u64,
-            patch: vers.patch().abs() as u64,
+            major: vers.major().unsigned_abs() as u64,
+            minor: vers.minor().unsigned_abs() as u64,
+            patch: vers.patch().unsigned_abs() as u64,
             pre,
             build,
         }

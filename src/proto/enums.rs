@@ -1,4 +1,4 @@
-use std::{any::Any, fmt};
+use std::fmt;
 
 use anyhow::bail;
 
@@ -37,7 +37,7 @@ impl<'a> Type<'a> {
 
 impl<'a> From<&'a protobuf::descriptor::FieldDescriptorProto> for Type<'a> {
     fn from(fd: &'a protobuf::descriptor::FieldDescriptorProto) -> Self {
-        match fd.field_type() {
+        match fd.type_() {
             protobuf::descriptor::field_descriptor_proto::Type::TYPE_DOUBLE => {
                 Type::Scalar(Scalar::Double)
             }

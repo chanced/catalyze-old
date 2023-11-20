@@ -1,16 +1,15 @@
 syntax = "proto3";
 
 package kitchen;
-option go_package = "github.com/lyft/protoc-gen-star/testdata/generated/kitchen";
 
 import "google/protobuf/timestamp.proto";
 
 message Sink {
-    Brand                     brand       = 1;
-    Material                  material    = 2;
-    string                    model       = 3;
-    uint32                    basin_count = 4;
-    google.protobuf.Timestamp installed   = 5;
+    Brand brand                         = 1;
+    Material material                   = 2;
+    string model                        = 3;
+    uint32 basin_count                  = 4;
+    google.protobuf.Timestamp installed = 5;
 
     enum Brand {
         KRAUS     = 0;
@@ -21,7 +20,7 @@ message Sink {
     }
 
     message Material {
-        Type   type   = 1;
+        Type type     = 1;
         Finish finish = 2;
 
         enum Type {

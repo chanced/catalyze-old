@@ -32,18 +32,6 @@ impl Name {
             val: val.to_owned(),
         }
     }
-    /// Returns a new `Name` with the contents of `val` and a cloned copy
-    /// of `Rc<U>`.
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// let n = Name::new("foo");
-    /// let n2 = n.with_value("bar");
-    /// assert_eq!(n2, "bar");
-    /// ```
     pub fn with_value(&self, val: &str) -> Self {
         Self {
             val: val.to_owned(),

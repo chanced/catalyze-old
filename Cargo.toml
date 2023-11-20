@@ -9,19 +9,17 @@ anyhow = "1.0"
 thiserror = "1.0"
 petgraph = { version = "0.6", optional = true }
 lazy_static = "1.4"
-protobuf = "3.0.0-alpha.9"
-syn = { version = "1.0", features = ["full"] }
+protobuf = "3.3.0"
 proc-macro2 = "1.0"
 bytes = "1.1"
 semver = "1.0"
+
 [build-dependencies]
 which = { version = "4.2" }
-
 [workspace]
 members = ["catalyze-build", "catalyze-prost", "catalyze-codec", "tests"]
 
 [features]
-
 default = ["message-graph"]
 # Enables the `MessageGraph` util sourced from prost to determine dependency cycles.
 message-graph = ["petgraph"]

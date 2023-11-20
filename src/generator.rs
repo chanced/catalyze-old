@@ -34,7 +34,7 @@ pub trait Workflow: Sized {
 /// target (proto) files. The output is saved to disk at the specified output
 /// path.
 
-pub struct Standalone {}
+pub struct Standalone;
 impl Workflow for Standalone {
     fn decode_source<I: Read>(input: &mut BufReader<I>) -> Result<Source, io::Error> {
         let mut buf = Vec::new();
@@ -49,7 +49,7 @@ impl Workflow for Standalone {
 ///
 /// The input (`stdin`) and output (`stdout`) can be configured, using any
 /// reader and writer respectively.
-pub struct ProtocPlugin {}
+pub struct ProtocPlugin;
 impl Workflow for ProtocPlugin {
     fn decode_source<I: Read>(input: &mut BufReader<I>) -> Result<Source, io::Error> {
         let mut buf = Vec::new();
@@ -76,7 +76,7 @@ where
     param_mutators: Vec<ParamMutatorFn>,
 }
 
-impl<'a> Generator {
+impl Generator {
     pub fn new_protoc_plugin() -> Generator<ProtocPlugin, Stdin, Stdout> {
         let input = BufReader::new(stdin());
         let output = Some(BufWriter::new(stdout()));
@@ -85,7 +85,7 @@ impl<'a> Generator {
             output,
             modules: Vec::new(),
             targets: Vec::new(),
-            workflow: Box::new(ProtocPlugin {}),
+            workflow: Box::new(ProtocPlugin),
             output_path: None,
             has_rendered: false,
             parsed_input: Input::default(),
@@ -94,7 +94,7 @@ impl<'a> Generator {
     }
 }
 
-impl<'a, I, O> Generator<ProtocPlugin, I, O>
+impl<I, O> Generator<ProtocPlugin, I, O>
 where
     I: Read,
     O: Write,
@@ -131,7 +131,7 @@ where
     }
 }
 
-impl<'a, I> Generator<Standalone, I>
+impl<I> Generator<Standalone, I>
 where
     I: Read,
 {
@@ -191,7 +191,7 @@ where
             .as_ref()
             .map_or(Path::new("."), Path::new)
             .to_owned();
-
+        dbg!(&path);
         for m in self.modules.iter_mut() {
             m.init(Context::new(
                 path.clone(),
@@ -233,10 +233,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
-    use std::{collections::HashMap, env, fs};
+    use protobuf::{plugin::CodeGeneratorRequest, Message};
 
-    struct Mod {}
+    use crate::*;
+    use std::{collections::HashMap, env, fs, io::Cursor};
+
+    struct Mod;
     impl Module for Mod {
         fn name(&self) -> &'static str {
             "mod"
@@ -506,6 +508,17 @@ mod tests {
         )
         .unwrap();
         let mut gen = Generator::new_standalone(input, &["kitchen/kitchen.proto"], "").unwrap();
+        gen.module(Mod {}).render().unwrap();
+    }
+
+    #[test]
+    fn test_new_protoc_plugin_generator() {
+        use std::io::prelude::*;
+        let mut input_file = std::fs::File::open("tests/code-generator-requests/kitchen").unwrap();
+        let mut input = Vec::new();
+        input_file.read_to_end(&mut input).unwrap();
+        let mut input = Cursor::new(input);
+        let mut gen = Generator::new_protoc_plugin().input(&mut input);
         gen.module(Mod {}).render().unwrap();
     }
 }

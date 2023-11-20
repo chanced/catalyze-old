@@ -86,7 +86,7 @@ impl PartialEq<i32> for FileDescriptorPath {
 }
 impl PartialEq<FileDescriptorPath> for i32 {
     fn eq(&self, other: &FileDescriptorPath) -> bool {
-        *other == *self as i32
+        *other == *self
     }
 }
 /// Paths for nodes in a DescriptorProto
@@ -121,12 +121,12 @@ impl TryFrom<i32> for DescriptorPath {
 
 impl PartialEq<i32> for DescriptorPath {
     fn eq(&self, other: &i32) -> bool {
-        *other as i32 == *self
+        *other == *self
     }
 }
 impl PartialEq<DescriptorPath> for i32 {
     fn eq(&self, other: &DescriptorPath) -> bool {
-        *other == *self as i32
+        *other == *self
     }
 }
 
@@ -144,7 +144,7 @@ impl PartialEq<i32> for EnumDescriptorPath {
 }
 impl PartialEq<EnumDescriptorPath> for i32 {
     fn eq(&self, other: &EnumDescriptorPath) -> bool {
-        *other == *self as i32
+        *other == *self
     }
 }
 

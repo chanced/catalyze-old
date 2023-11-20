@@ -70,9 +70,9 @@ impl<'a> Extension<'a> {
             None
         }
     }
-    pub(crate) fn set_extendee(&self, msg: Message<'a>) {
-        self.0.extendee.replace(msg.clone().into());
-    }
+    // pub(crate) fn set_extendee(&self, msg: Message<'a>) {
+    //     self.0.extendee.replace(msg.clone().into());
+    // }
     pub(crate) fn set_comments(&self, comments: Comments<'a>) {
         self.0.comments.replace(comments);
     }
