@@ -1,0 +1,10 @@
+[package]
+edition = "2021"
+name    = "catalyze-macros"
+version = "0.1.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = { version = "1.0.33" }
