@@ -4,9 +4,9 @@ use core::panic;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    proto::{FieldDescriptor, Scalar, Syntax},
-    Comments, Enum, Error, Field, File, FileRefs, JsType, Kind, Message, Node, Oneof, Package,
-    Type, WeakEnum, WeakMessage, WeakOneof, WellKnownType,
+    uninterpreted_option::UninterpretedOption, Comments, Enum, Error, Field, File, FileRefs,
+    JsType, Kind, Message, Node, Oneof, Package, Scalar, Syntax, Type, WeakEnum, WeakMessage,
+    WeakOneof, WellKnownType,
 };
 
 use super::FieldDetail;
@@ -18,9 +18,6 @@ pub(crate) struct OneofFieldDetail {
 impl OneofFieldDetail {
     pub fn name(&self) -> &str {
         self.detail.name()
-    }
-    pub fn descriptor(&self) -> FieldDescriptor {
-        self.detail.descriptor()
     }
 
     pub fn fully_qualified_name(&self) -> &str {
@@ -160,14 +157,6 @@ impl OneofField {
             OneofField::Scalar(f) => f.set_comments(comments),
             OneofField::Enum(f) => f.set_comments(comments),
             OneofField::Embed(f) => f.set_comments(comments),
-        }
-    }
-
-    pub fn descriptor(&self) -> FieldDescriptor {
-        match self {
-            OneofField::Scalar(f) => f.descriptor(),
-            OneofField::Enum(f) => f.descriptor(),
-            OneofField::Embed(f) => f.descriptor(),
         }
     }
 
@@ -423,10 +412,6 @@ impl OneofEnumField {
         self.file().build_target()
     }
 
-    pub fn descriptor(&self) -> FieldDescriptor {
-        self.0.detail.descriptor()
-    }
-
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
@@ -581,10 +566,6 @@ impl OneofScalarField {
         self.file().build_target()
     }
 
-    pub fn descriptor(&self) -> FieldDescriptor {
-        self.0.detail.descriptor()
-    }
-
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
@@ -722,10 +703,6 @@ impl OneofEmbedField {
 
     pub(crate) fn set_comments(&self, comments: Comments) {
         self.0.detail.set_comments(comments);
-    }
-
-    pub fn descriptor(&self) -> FieldDescriptor {
-        self.0.detail.descriptor()
     }
 
     pub fn syntax(&self) -> Syntax {

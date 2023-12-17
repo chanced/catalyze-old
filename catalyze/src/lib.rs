@@ -21,12 +21,7 @@ pub mod uninterpreted_option;
 
 mod visit;
 mod well_known_type;
-use std::{
-    collections::HashMap,
-    fmt,
-    io::Read,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, fmt, path::PathBuf};
 
 pub use artifact::*;
 pub use ast::*;
@@ -533,30 +528,37 @@ pub(crate) enum FileDescriptorPath {
     Syntax = 12,
 }
 
+impl FileDescriptorPath {
+    const NAME: i32 = Self::Name as i32;
+    const PACKAGE: i32 = Self::Package as i32;
+    const DEPENDENCY: i32 = Self::Dependency as i32;
+    const PUBLIC_DEPENDENCY: i32 = Self::PublicDependency as i32;
+    const WEAK_DEPENDENCY: i32 = Self::WeakDependency as i32;
+    const MESSAGE_TYPE: i32 = Self::MessageType as i32;
+    const ENUM_TYPE: i32 = Self::EnumType as i32;
+    const SERVICE: i32 = Self::Service as i32;
+    const EXTENSION: i32 = Self::Extension as i32;
+    const OPTIONS: i32 = Self::Options as i32;
+    const SOURCE_CODE_INFO: i32 = Self::SourceCodeInfo as i32;
+    const SYNTAX: i32 = Self::Syntax as i32;
+}
 impl TryFrom<i32> for FileDescriptorPath {
     type Error = crate::Error;
-
-    fn try_from(v: i32) -> Result<Self, Self::Error> {
-        match v {
-            x if x == FileDescriptorPath::Name as i32 => Ok(FileDescriptorPath::Name),
-            x if x == FileDescriptorPath::Package as i32 => Ok(FileDescriptorPath::Package),
-            x if x == FileDescriptorPath::Dependency as i32 => Ok(FileDescriptorPath::Dependency),
-            x if x == FileDescriptorPath::PublicDependency as i32 => {
-                Ok(FileDescriptorPath::PublicDependency)
-            }
-            x if x == FileDescriptorPath::WeakDependency as i32 => {
-                Ok(FileDescriptorPath::WeakDependency)
-            }
-            x if x == FileDescriptorPath::MessageType as i32 => Ok(FileDescriptorPath::MessageType),
-            x if x == FileDescriptorPath::EnumType as i32 => Ok(FileDescriptorPath::EnumType),
-            x if x == FileDescriptorPath::Service as i32 => Ok(FileDescriptorPath::Service),
-            x if x == FileDescriptorPath::Extension as i32 => Ok(FileDescriptorPath::Extension),
-            x if x == FileDescriptorPath::Options as i32 => Ok(FileDescriptorPath::Options),
-            x if x == FileDescriptorPath::SourceCodeInfo as i32 => {
-                Ok(FileDescriptorPath::SourceCodeInfo)
-            }
-            x if x == FileDescriptorPath::Syntax as i32 => Ok(FileDescriptorPath::Syntax),
-            _ => bail!("invalid FileDescriptorPath: {}", v),
+    fn try_from(path: i32) -> Result<Self, Self::Error> {
+        match path {
+            Self::NAME => Ok(Self::Name),
+            Self::PACKAGE => Ok(Self::Package),
+            Self::DEPENDENCY => Ok(Self::Dependency),
+            Self::PUBLIC_DEPENDENCY => Ok(Self::PublicDependency),
+            Self::WEAK_DEPENDENCY => Ok(Self::WeakDependency),
+            Self::MESSAGE_TYPE => Ok(Self::MessageType),
+            Self::ENUM_TYPE => Ok(Self::EnumType),
+            Self::SERVICE => Ok(Self::Service),
+            Self::EXTENSION => Ok(Self::Extension),
+            Self::OPTIONS => Ok(Self::Options),
+            Self::SOURCE_CODE_INFO => Ok(Self::SourceCodeInfo),
+            Self::SYNTAX => Ok(Self::Syntax),
+            _ => Err(Error::UnknownFileDecriptorPath { path }),
         }
     }
 }
@@ -586,17 +588,22 @@ pub(crate) enum DescriptorPath {
     /// DescriptorProto.oneof_decl
     OneofDecl = 8,
 }
-
+impl DescriptorPath {
+    const FIELD: i32 = Self::Field as i32;
+    const NESTED_TYPE: i32 = Self::NestedType as i32;
+    const ENUM_TYPE: i32 = Self::EnumType as i32;
+    const ONEOF_DECL: i32 = Self::OneofDecl as i32;
+}
 impl TryFrom<i32> for DescriptorPath {
-    type Error = ();
+    type Error = crate::Error;
 
-    fn try_from(v: i32) -> Result<Self, Self::Error> {
-        match v {
-            x if x == DescriptorPath::Field as i32 => Ok(DescriptorPath::Field),
-            x if x == DescriptorPath::NestedType as i32 => Ok(DescriptorPath::NestedType),
-            x if x == DescriptorPath::EnumType as i32 => Ok(DescriptorPath::EnumType),
-            x if x == DescriptorPath::OneofDecl as i32 => Ok(DescriptorPath::OneofDecl),
-            _ => Err(()),
+    fn try_from(path: i32) -> Result<Self, Self::Error> {
+        match path {
+            Self::FIELD => Ok(DescriptorPath::Field),
+            Self::NESTED_TYPE => Ok(DescriptorPath::NestedType),
+            Self::ENUM_TYPE => Ok(DescriptorPath::EnumType),
+            Self::ONEOF_DECL => Ok(DescriptorPath::OneofDecl),
+            _ => Err(Error::UnknownDecriptorPath { path }),
         }
     }
 }
@@ -629,13 +636,15 @@ impl PartialEq<EnumDescriptorPath> for i32 {
         *other == *self
     }
 }
-
+impl EnumDescriptorPath {
+    const VALUE: i32 = Self::Value as i32;
+}
 impl TryFrom<i32> for EnumDescriptorPath {
-    type Error = ();
+    type Error = crate::Error;
 
     fn try_from(v: i32) -> Result<Self, Self::Error> {
         match v {
-            x if x == EnumDescriptorPath::Value as i32 => Ok(EnumDescriptorPath::Value),
+            Self::VALUE => Ok(Self::Value),
             _ => Err(()),
         }
     }
@@ -648,13 +657,20 @@ pub(crate) enum ServiceDescriptorPath {
     Method = 2,
     Mixin = 6,
 }
-impl TryFrom<i32> for ServiceDescriptorPath {
-    type Error = ();
 
-    fn try_from(v: i32) -> Result<Self, Self::Error> {
-        match v {
-            x if x == EnumDescriptorPath::Value as i32 => Ok(ServiceDescriptorPath::Method),
-            _ => Err(()),
+impl ServiceDescriptorPath {
+    const METHOD: i32 = Self::Method as i32;
+    const MIXIN: i32 = Self::Mixin as i32;
+}
+
+impl TryFrom<i32> for ServiceDescriptorPath {
+    type Error = crate::Error;
+
+    fn try_from(path: i32) -> Result<Self, Self::Error> {
+        match path {
+            Self::METHOD => Ok(Self::Method),
+            Self::MIXIN => Ok(Self::Mixin),
+            _ => Err(Error::UnknownServiceDecriptorPath { path }),
         }
     }
 }

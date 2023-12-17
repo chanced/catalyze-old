@@ -74,8 +74,17 @@ pub enum Error {
     #[snafu(display("Not a well-known type: \"\""))]
     NotWellKnownTyoe { value: String },
 
-    #[snafu(display("Unknown File Descriptor path: {path}"))]
+    #[snafu(display("Unknown file descriptor path: {path}"))]
     UnknownFileDecriptorPath { path: i32 },
+
+    #[snafu(display("Unknown service descriptor path: {path}"))]
+    UnknownServiceDecriptorPath { path: i32 },
+
+    #[snafu(display("Unknown enum descriptor path: {path}"))]
+    UnknownEnumDecriptorPath { path: i32 },
+
+    #[snafu(display("Unknown descriptor path: {path}"))]
+    UnknownDecriptorPath { path: i32 },
 }
 
 impl Error {

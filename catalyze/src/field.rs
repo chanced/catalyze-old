@@ -10,14 +10,189 @@ pub use embed_field::*;
 pub use enum_field::*;
 pub use map_field::*;
 pub use oneof_field::*;
+use protobuf::reflect::FieldDescriptor;
 pub use repeated_field::*;
 pub use scalar_field::*;
 
 use crate::{
-    CType, Comments, Enum, Error, File, FileRefs, InvalidMapEntryReason, JsType, Kind, Message,
-    Node, Oneof, Package, WeakMessage, WellKnownType,
+    uninterpreted_option::UninterpretedOption, CType, Comments, Enum, Error, File, FileRefs,
+    InvalidMapEntryReason, JsType, Kind, Message, Node, Oneof, Package, Scalar, Syntax, Type,
+    WeakMessage, WellKnownType,
 };
+use ::std::option::Option;
 use std::{cell::RefCell, convert::From};
+
+#[derive(Debug, Clone, Copy)]
+struct Options {
+    // message fields
+    ///  The ctype option instructs the C++ code generator to use a different
+    ///  representation of the field than it normally would.  See the specific
+    ///  options below.  This option is not yet implemented in the open source
+    ///  release -- sorry, we'll try to include it in a future version!
+    // @@protoc_insertion_point(field:google.protobuf.FieldOptions.ctype)
+    pub ctype: Option<CType>,
+    ///  The packed option can be enabled for repeated primitive fields to enable
+    ///  a more efficient representation on the wire. Rather than repeatedly
+    ///  writing the tag and type for each element, the entire array is encoded as
+    ///  a single length-delimited blob. In proto3, only explicit setting it to
+    ///  false will avoid using packed encoding.
+    // @@protoc_insertion_point(field:google.protobuf.FieldOptions.packed)
+    pub packed: Option<bool>,
+    ///  The jstype option determines the JavaScript type used for values of the
+    ///  field.  The option is permitted only for 64 bit integral and fixed types
+    ///  (int64, uint64, sint64, fixed64, sfixed64).  A field with jstype JS_STRING
+    ///  is represented as JavaScript string, which avoids loss of precision that
+    ///  can happen when a large value is converted to a floating point JavaScript.
+    ///  Specifying JS_NUMBER for the jstype causes the generated JavaScript code to
+    ///  use the JavaScript "number" type.  The behavior of the default option
+    ///  JS_NORMAL is implementation dependent.
+    ///
+    ///  This option is an enum to permit additional types to be added, e.g.
+    ///  goog.math.Integer.
+    jstype: Option<protobuf::EnumOrUnknown<protobuf::descriptor::field_options::JSType>>,
+    ///  Should this field be parsed lazily?  Lazy applies only to message-type
+    ///  fields.  It means that when the outer message is initially parsed, the
+    ///  inner message's contents will not be parsed but instead stored in encoded
+    ///  form.  The inner message will actually be parsed when it is first accessed.
+    ///
+    ///  This is only a hint.  Implementations are free to choose whether to use
+    ///  eager or lazy parsing regardless of the value of this option.  However,
+    ///  setting this option true suggests that the protocol author believes that
+    ///  using lazy parsing on this field is worth the additional bookkeeping
+    ///  overhead typically needed to implement it.
+    ///
+    ///  This option does not affect the public interface of any generated code;
+    ///  all method signatures remain the same.  Furthermore, thread-safety of the
+    ///  interface is not affected by this option; const methods remain safe to
+    ///  call from multiple threads concurrently, while non-const methods continue
+    ///  to require exclusive access.
+    ///
+    ///
+    ///  Note that implementations may choose not to check required fields within
+    ///  a lazy sub-message.  That is, calling IsInitialized() on the outer message
+    ///  may return true even if the inner message has missing required fields.
+    ///  This is necessary because otherwise the inner message would have to be
+    ///  parsed in order to perform the check, defeating the purpose of lazy
+    ///  parsing.  An implementation which chooses not to check required fields
+    ///  must be consistent about it.  That is, for any particular sub-message, the
+    ///  implementation must either *always* check its required fields, or *never*
+    ///  check its required fields, regardless of whether or not the message has
+    ///  been parsed.
+    lazy: Option<bool>,
+    ///  Is this field deprecated?
+    ///  Depending on the target platform, this can emit Deprecated annotations
+    ///  for accessors, or it will be completely ignored; in the very least, this
+    ///  is a formalization for deprecating fields.
+    deprecated: Option<bool>,
+    ///  For Google-internal migration only. Do not use.
+    weak: Option<bool>,
+    ///  The parser stores options it doesn't recognize here. See above.
+    uninterpreted_option: ::std::vec::Vec<UninterpretedOption>,
+    // special fields
+    // @@protoc_insertion_point(special_field:google.protobuf.FieldOptions.special_fields)
+    special_fields: protobuf::SpecialFields,
+}
+impl Options {
+    pub(crate) fn new(opts: Option<&'a protobuf::descriptor::FieldOptions>) -> Self {
+        let Some(opts) = opts else {
+            return Self::default();
+        };
+
+        Self {
+            ctype: opts.ctype,
+            deprecated: opts.deprecated,
+            jstype: opts.jstype,
+            lazy: opts.lazy,
+            packed: opts.packed,
+        }
+    }
+    /// The ctype option instructs the C++ code generator to use a different
+    /// representation of the field than it normally would.  See the specific
+    /// options below.  This option is not yet implemented in the open source
+    /// release -- sorry, we'll try to include it in a future version!
+    pub fn ctype(&self) -> CType {
+        CType::from(self.opts().ctype())
+    }
+    /// The packed option can be enabled for repeated primitive fields to enable
+    /// a more efficient representation on the wire. Rather than repeatedly
+    /// writing the tag and type for each element, the entire array is encoded as
+    /// a single length-delimited blob. In proto3, only explicit setting it to
+    /// false will avoid using packed encoding.
+    pub fn packed(&self) -> bool {
+        self.opts().packed()
+    }
+    /// The jstype option determines the JavaScript type used for values of the
+    /// field.  The option is permitted only for 64 bit integral and fixed types
+    /// (int64, uint64, sint64, fixed64, sfixed64).  A field with jstype JS_STRING
+    /// is represented as JavaScript string, which avoids loss of precision that
+    /// can happen when a large value is converted to a floating point JavaScript.
+    /// Specifying JS_NUMBER for the jstype causes the generated JavaScript code to
+    /// use the JavaScript "number" type.  The behavior of the default option
+    /// JS_NORMAL is implementation dependent.
+    ///
+    /// This option is an enum to permit additional types to be added, e.g.
+    /// goog.math.Integer.
+    pub fn jstype(&self) -> JsType {
+        self.opts().jstype().into()
+    }
+    /// Should this field be parsed lazily?  Lazy applies only to message-type
+    /// fields.  It means that when the outer message is initially parsed, the
+    /// inner message's contents will not be parsed but instead stored in encoded
+    /// form.  The inner message will actually be parsed when it is first accessed.
+    ///
+    /// This is only a hint.  Implementations are free to choose whether to use
+    /// eager or lazy parsing regardless of the value of this option.  However,
+    /// setting this option true suggests that the protocol author believes that
+    /// using lazy parsing on this field is worth the additional bookkeeping
+    /// overhead typically needed to implement it.
+    ///
+    /// This option does not affect the public interface of any generated code;
+    /// all method signatures remain the same.  Furthermore, thread-safety of the
+    /// interface is not affected by this option; const methods remain safe to
+    /// call from multiple threads concurrently, while non-const methods continue
+    /// to require exclusive access.
+    ///
+    ///
+    /// Note that implementations may choose not to check required fields within
+    /// a lazy sub-message.  That is, calling IsInitialized() on the outer message
+    /// may return true even if the inner message has missing required fields.
+    /// This is necessary because otherwise the inner message would have to be
+    /// parsed in order to perform the check, defeating the purpose of lazy
+    /// parsing.  An implementation which chooses not to check required fields
+    /// must be consistent about it.  That is, for any particular sub-message, the
+    /// implementation must either *always* check its required fields, or *never*
+    /// check its required fields, regardless of whether or not the message has
+    /// been parsed.
+    pub fn lazy(&self) -> bool {
+        self.opts().lazy()
+    }
+    /// Is this field deprecated?
+    /// Depending on the target platform, this can emit Deprecated annotations
+    /// for accessors, or it will be completely ignored; in the very least, this
+    /// is a formalization for deprecating fields.
+    pub fn deprecated(&self) -> bool {
+        self.opts().deprecated()
+    }
+    /// For Google-internal migration only. Do not use.
+    pub fn weak(&self) -> bool {
+        self.opts().weak()
+    }
+
+    /// Options the parser does not recognize.
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
+        (&self.opts().uninterpreted_option).into()
+    }
+
+    fn opts(&self) -> Option<&protobuf::descriptor::FieldOptions> {
+        self.opts.unwrap_or(&DEFAULT_FIELD_OPTIONS)
+    }
+}
+impl From<Option<&'a protobuf::descriptor::FieldOptions>> for Options {
+    fn from(opts: Option<&'a protobuf::descriptor::FieldOptions>) -> Self {
+        Self { opts }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Field {
     Embed(EmbedField),
@@ -339,7 +514,7 @@ impl Field {
     /// Returns `true` for all fields that have explicit presence.
     ///
     /// ---
-    /// ### Proto2
+    /// ## Proto2
     /// Field type                                   | Explicit Presence
     /// -------------------------------------------- | :-----------------:
     /// Singular numeric (integer or floating point) | ✔️
@@ -351,7 +526,7 @@ impl Field {
     /// Maps                                         |
     ///
     /// ---
-    /// ### Proto3
+    /// ## Proto3
     /// Field type                                   | `optional` | Explicit Presence
     /// -------------------------------------------- |:----------: | :-----------------:
     /// Singular numeric (integer or floating point) | No         |
@@ -564,11 +739,13 @@ impl Field {
         }
     }
     pub(crate) fn into_map(self) -> Result<Self, Error> {
-        let embed = self.embed().ok_or_else(|| Error::InvalidMapEntry {
-            reason: InvalidMapEntryReason::FieldNotEmbed,
-            fully_qualified_name: self.fully_qualified_name(),
-            name: self.name(),
-            syntax: self.syntax(),
+        let embed = self.embed().ok_or_else(|| {
+            Error::invalid_map_entry(
+                InvalidMapEntryReason::FieldNotEmbed,
+                self.fully_qualified_name(),
+                self.name(),
+                self.syntax(),
+            )
         })?;
         if !embed.is_map_entry() {
             return Err(Error::invalid_map_entry(

@@ -10,6 +10,7 @@ use protobuf::reflect::EnumDescriptor;
 use crate::{
     container::{Container, WeakContainer},
     iter::Iter,
+    uninterpreted_option::UninterpretedOption,
     Comments, Dependents, EnumDescriptorPath, EnumValue, File, Message, Node, Nodes, Package,
     WeakFile, WeakMessage, WellKnownEnum, WellKnownType,
 };
@@ -23,6 +24,55 @@ struct EnumDetail {
     dependents: RefCell<Vec<WeakMessage>>,
     descriptor: EnumDescriptor,
     wkt: Option<WellKnownEnum>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Options {
+    // message fields
+    ///  Set this option to true to allow mapping different tag names to the same
+    ///  value.
+    // @@protoc_insertion_point(field:google.protobuf.EnumOptions.allow_alias)
+    pub allow_alias: ::std::option::Option<bool>,
+    ///  Is this enum deprecated?
+    ///  Depending on the target platform, this can emit Deprecated annotations
+    ///  for the enum, or it will be completely ignored; in the very least, this
+    ///  is a formalization for deprecating enums.
+    // @@protoc_insertion_point(field:google.protobuf.EnumOptions.deprecated)
+    pub deprecated: ::std::option::Option<bool>,
+    ///  The parser stores options it doesn't recognize here. See above.
+    // @@protoc_insertion_point(field:google.protobuf.EnumOptions.uninterpreted_option)
+    pub uninterpreted_option: ::std::vec::Vec<UninterpretedOption>,
+    // special fields
+    // @@protoc_insertion_point(special_field:google.protobuf.EnumOptions.special_fields)
+    pub special_fields: crate::SpecialFields,
+}
+impl Options {
+    /// Is this enum deprecated?
+    /// Depending on the target platform, this can emit Deprecated annotations
+    /// for the enum, or it will be completely ignored; in the very least, this
+    /// is a formalization for deprecating enums.
+    pub fn deprecated(&self) -> bool {
+        self.opts().deprecated()
+    }
+    pub fn is_deprecated(&self) -> bool {
+        self.opts().deprecated()
+    }
+    /// Options not recognized by the parser.
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
+        (&self.opts().uninterpreted_option).into()
+    }
+    /// Allows mapping different tag names to the same value.
+    pub fn allow_alias(&self) -> bool {
+        self.opts().allow_alias()
+    }
+    fn opts(&self) -> &'a protobuf::descriptor::EnumOptions {
+        self.opts.unwrap_or(&DEFAULT_ENUM_OPTIONS)
+    }
+}
+impl From<Option<&'a protobuf::descriptor::EnumOptions>> for Options {
+    fn from(opts: Option<&'a protobuf::descriptor::EnumOptions>) -> Self {
+        Self { opts }
+    }
 }
 
 impl EnumDetail {
@@ -235,5 +285,31 @@ impl Iterator for AllEnums {
             }
             None
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ValueOptions<'a> {
+    opts: Option<&'a protobuf::descriptor::EnumValueOptions>,
+}
+impl ValueOptions<'_> {
+    /// Is this enum value deprecated?
+    /// Depending on the target platform, this can emit Deprecated annotations
+    /// for the enum value, or it will be completely ignored; in the very least,
+    /// this is a formalization for deprecating enum values.
+    pub fn deprecated(&self) -> bool {
+        self.opts().deprecated()
+    }
+    pub fn is_deprecated(&self) -> bool {
+        self.opts().deprecated()
+    }
+    /// Options not recognized by the parser.
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
+        (&self.opts().uninterpreted_option).into()
+    }
+}
+impl<'a> From<Option<&'a protobuf::descriptor::EnumValueOptions>> for ValueOptions<'a> {
+    fn from(opts: Option<&'a protobuf::descriptor::EnumValueOptions>) -> Self {
+        Self { opts }
     }
 }

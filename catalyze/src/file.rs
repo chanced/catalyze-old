@@ -1,10 +1,10 @@
+use protobuf::reflect::FileDescriptor;
+
 use crate::container::Container;
 use crate::iter::Iter;
 use crate::package::WeakPackage;
 
-use crate::proto::FileDescriptorPath;
-use crate::proto::{FileDescriptor, Syntax};
-
+use crate::uninterpreted_option::UninterpretedOption;
 use crate::*;
 use std::cell::RefCell;
 
@@ -12,11 +12,197 @@ use std::collections::{HashSet, VecDeque};
 use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 
-#[derive(Debug, Clone)]
-pub struct File(Rc<FileDetail>);
+/// Each of the definitions above may have "options" attached.  These are
+/// just annotations which may cause code to be generated slightly differently
+/// or may contain hints for code that manipulates protocol messages.
+///
+/// Clients may define custom options as extensions of the *Options messages.
+/// These extensions may not yet be known at parsing time, so the parser cannot
+/// store the values in them.  Instead it stores them in a field in the *Options
+/// message called uninterpreted_option. This field must have the same name
+/// across all *Options messages. We then use this field to populate the
+/// extensions when we build a descriptor, at which point all protos have been
+/// parsed and so all extensions are known.
+///
+/// Extension numbers for custom options may be chosen as follows:
+/// * For options which will only be used within a single application or
+///   organization, or for experimental options, use field numbers 50000
+///   through 99999.  It is up to you to ensure that you do not use the
+///   same number for multiple options.
+/// * For options which will be published and used publicly by multiple
+///   independent entities, e-mail protobuf-global-extension-registry@google.com
+///   to reserve extension numbers. Simply provide your project name (e.g.
+///   Objective-C plugin) and your project website (if available) -- there's no
+///   need to explain how you intend to use them. Usually you only need one
+///   extension number. You can declare multiple options with only one extension
+///   number by putting them in a sub-message. See the Custom Options section of
+///   the docs for examples:
+///   <https://developers.google.com/protocol-buffers/docs/proto#options>
+///   If this turns out to be popular, a web service will be set up
+///   to automatically assign option numbers.
+
+#[derive(Debug, Clone, Copy)]
+pub struct Options<'a> {
+    opts: Option<&'a protobuf::descriptor::FileOptions>,
+}
+
+impl<'a> From<Option<&'a protobuf::descriptor::FileOptions>> for Options<'a> {
+    fn from(opts: Option<&'a protobuf::descriptor::FileOptions>) -> Self {
+        Self { opts }
+    }
+}
+
+impl<'a> Options<'a> {
+    /// Java package where classes generated from this .proto will be
+    /// placed.  By default, the proto package is used, but this is often
+    /// inappropriate because proto packages do not normally start with backwards
+    /// domain names.
+    pub fn java_package(&self) -> Option<&str> {
+        self.opts.and_then(|opts| opts.java_package.as_ref())
+    }
+    /// If set, all the classes from the .proto file are wrapped in a single
+    /// outer class with the given name.  This applies to both Proto1
+    /// (equivalent to the old "--one_java_file" option) and Proto2 (where
+    /// a .proto always translates to a single class, but you may want to
+    /// explicitly choose the class name).
+    pub fn java_outer_classname(&self) -> Option<&str> {
+        self.opts
+            .and_then(|opts| opts.java_outer_classname.as_ref())
+    }
+
+    /// If set true, then the Java code generator will generate a separate .java
+    /// file for each top-level message, enum, and service defined in the .proto
+    /// file.  Thus, these types will *not* be nested inside the outer class
+    /// named by java_outer_classname.  However, the outer class will still be
+    /// generated to contain the file's getDescriptor() method as well as any
+    /// top-level extensions defined in the file.
+    pub fn java_multiple_files(&self) -> bool {
+        self.opts
+            .and_then(|opts| opts.java_multiple_files)
+            .unwrap_or(false)
+    }
+
+    /// If set true, then the Java2 code generator will generate code that
+    /// throws an exception whenever an attempt is made to assign a non-UTF-8
+    /// byte sequence to a string field.
+    ///
+    /// Message reflection will do the same.
+    /// However, an extension field still accepts non-UTF-8 byte sequences.
+    ///
+    /// This option has no effect on when used with the lite runtime.
+    pub fn java_string_check_utf8(&self) -> bool {
+        self.opts
+            .map(|opts| opts.java_string_check_utf8())
+            .unwrap_or(false)
+    }
+    /// Generated classes can be optimized for speed or code size.
+    pub fn optimize_for(&self) -> OptimizeMode {
+        self.opts().optimize_for().into()
+    }
+    /// Sets the Go package where structs generated from this .proto will be
+    /// placed. If omitted, the Go package will be derived from the following:
+    ///   - The basename of the package import path, if provided.
+    ///   - Otherwise, the package statement in the .proto file, if present.
+    ///   - Otherwise, the basename of the .proto file, without extension.
+    pub fn go_package(&self) -> &str {
+        self.opts().go_package()
+    }
+    /// Should generic services be generated in each language?  "Generic" services
+    /// are not specific to any particular RPC system.  They are generated by the
+    /// main code generators in each language (without additional plugins).
+    /// Generic services were the only kind of service generation supported by
+    /// early versions of google.protobuf.
+    ///
+    /// Generic services are now considered deprecated in favor of using plugins
+    /// that generate code specific to your particular RPC system.  Therefore,
+    /// these default to false.  Old code which depends on generic services should
+    /// explicitly set them to true.
+    pub fn cc_generic_services(&self) -> bool {
+        self.opts().cc_generic_services()
+    }
+
+    pub fn java_generic_services(&self) -> bool {
+        self.opts().java_generic_services()
+    }
+
+    pub fn py_generic_services(&self) -> bool {
+        self.opts().py_generic_services()
+    }
+
+    pub fn php_generic_services(&self) -> bool {
+        self.opts().php_generic_services()
+    }
+
+    /// Is this file deprecated?
+    /// Depending on the target platform, this can emit Deprecated annotations
+    /// for everything in the file, or it will be completely ignored; in the very
+    /// least, this is a formalization for deprecating files.
+    pub fn deprecated(&self) -> bool {
+        self.opts().deprecated()
+    }
+    pub fn is_deprecated(&self) -> bool {
+        self.opts().deprecated()
+    }
+    /// Enables the use of arenas for the proto messages in this file. This applies
+    /// only to generated classes for C++.
+    pub fn cc_enable_arenas(&self) -> bool {
+        self.opts().cc_enable_arenas()
+    }
+    /// Sets the objective c class prefix which is prepended to all objective c
+    /// generated classes from this .proto. There is no default.
+    pub fn objc_class_prefix(&self) -> &str {
+        self.opts().objc_class_prefix()
+    }
+
+    /// Namespace for generated classes; defaults to the package.
+    pub fn csharp_namespace(&self) -> &str {
+        self.opts().csharp_namespace()
+    }
+    /// By default Swift generators will take the proto package and CamelCase it
+    /// replacing '.' with underscore and use that to prefix the types/symbols
+    /// defined. When this options is provided, they will use this value instead
+    /// to prefix the types/symbols defined.
+    pub fn swift_prefix(&self) -> &str {
+        self.opts().swift_prefix()
+    }
+
+    /// Sets the php class prefix which is prepended to all php generated classes
+    /// from this .proto. Default is empty.
+    pub fn php_class_prefix(&self) -> &str {
+        self.opts().php_class_prefix()
+    }
+
+    /// Use this option to change the namespace of php generated classes. Default
+    /// is empty. When this option is empty, the package name will be used for
+    /// determining the namespace.
+    pub fn php_namespace(&self) -> &str {
+        self.opts().php_namespace()
+    }
+
+    /// Use this option to change the namespace of php generated metadata classes.
+    /// Default is empty. When this option is empty, the proto file name will be
+    /// used for determining the namespace.
+    pub fn php_metadata_namespace(&self) -> &str {
+        self.opts().php_metadata_namespace()
+    }
+    /// Use this option to change the package of ruby generated classes. Default
+    /// is empty. When this option is not set, the package name will be used for
+    /// determining the ruby package.
+    pub fn ruby_package(&self) -> &str {
+        self.opts().ruby_package()
+    }
+    /// The parser stores options it doesn't recognize here.
+    /// See the documentation for the "Options" section above.
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
+        (&self.opts().uninterpreted_option).into()
+    }
+}
 
 #[derive(Debug, Clone)]
-struct FileDetail {
+pub struct File(Rc<Detail>);
+
+#[derive(Debug, Clone)]
+struct Detail {
     descriptor: FileDescriptor,
     file_path: PathBuf,
     fqn: String,
@@ -35,7 +221,7 @@ struct FileDetail {
     syntax: Syntax,
 }
 
-impl FileDetail {
+impl Detail {
     pub fn new(build_target: bool, descriptor: FileDescriptor, pkg: Package) -> Rc<Self> {
         let fqn = match descriptor.package() {
             "" => String::default(),
@@ -75,7 +261,7 @@ impl File {
         desc: FileDescriptor,
         pkg: Package,
     ) -> Result<Self, Error> {
-        let file = Self(FileDetail::new(build_target, desc, pkg))
+        let file = Self(Detail::new(build_target, desc, pkg))
             .hydrate_messages()?
             .hydrate_enums()
             .hydrate_services()
@@ -285,7 +471,7 @@ impl File {
         }
     }
 
-    pub fn syntax(&self) -> crate::proto::Syntax {
+    pub fn syntax(&self) -> Syntax {
         self.0.syntax
     }
 
@@ -351,7 +537,7 @@ impl PartialEq<WeakFile> for File {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct WeakFile(Weak<FileDetail>);
+pub(crate) struct WeakFile(Weak<Detail>);
 
 impl WeakFile {
     pub fn fully_qualified_name(&self) -> &str {

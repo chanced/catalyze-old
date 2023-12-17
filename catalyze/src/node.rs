@@ -826,6 +826,8 @@ impl From<&Ast> for AllNodes {
 
 #[cfg(test)]
 mod tests {
+    use protobuf::reflect::FileDescriptor;
+
     use crate::*;
 
     #[test]

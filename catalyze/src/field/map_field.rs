@@ -5,9 +5,9 @@ use protobuf::reflect::FieldDescriptor;
 
 use super::FieldDetail;
 use crate::{
-    Comments, Enum, Error, Field, File, FileRefs, InvalidMapEntryReason, JsType, Kind, Message,
-    Node, Package, Scalar, Syntax, Type, WeakEnum, WeakMessage, WellKnownEnum, WellKnownMessage,
-    WellKnownType,
+    uninterpreted_option::UninterpretedOption, Comments, Enum, Error, Field, File, FileRefs,
+    InvalidMapEntryReason, JsType, Kind, Message, Node, Package, Scalar, Syntax, Type, WeakEnum,
+    WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -384,6 +384,7 @@ impl MapField {
             MapField::Embed(f) => f.uninterpreted_options(),
         }
     }
+
     /// The packed option can be enabled for repeated primitive fields to enable
     /// a more efficient representation on the wire. Rather than repeatedly
     /// writing the tag and type for each element, the entire array is encoded as

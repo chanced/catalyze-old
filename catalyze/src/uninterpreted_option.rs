@@ -1,4 +1,5 @@
 use ::std::{option::Option, string::String, vec::Vec};
+
 /// A message representing an option that parser does not recognize.
 pub struct UninterpretedOption {
     name: Vec<NamePart>,

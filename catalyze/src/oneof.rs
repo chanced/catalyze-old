@@ -3,9 +3,10 @@ use std::{
     rc::{Rc, Weak},
 };
 
+use protobuf::reflect::OneofDescriptor;
+
 use crate::{
-    iter::Iter, proto::OneofDescriptor, Comments, Field, File, FileRefs, Message, Node, Package,
-    WeakFile, WeakMessage,
+    iter::Iter, Comments, Field, File, FileRefs, Message, Node, Package, WeakFile, WeakMessage,
 };
 
 #[derive(Debug, Clone)]

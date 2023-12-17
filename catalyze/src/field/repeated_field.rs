@@ -2,8 +2,9 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    Comments, Detail, Enum, Error, Field, FieldDetail, File, FileRefs, Message, Node, Package,
-    Scalar, Syntax, Type, WeakEnum, WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
+    uninterpreted_option::UninterpretedOption, Comments, Enum, Error, Field, FieldDetail, File,
+    FileRefs, Message, Node, Package, Scalar, Syntax, Type, WeakEnum, WeakMessage, WellKnownEnum,
+    WellKnownMessage, WellKnownType,
 };
 
 /// Represents a field marked as `repeated`. The field can hold
@@ -185,24 +186,24 @@ impl RepeatedField {
     pub(crate) fn new(detail: FieldDetail) -> Result<Field, Error> {
         match detail.value_type() {
             Type::Scalar(s) => Ok(RepeatedField::Scalar(RepeatedScalarField(Rc::new(
-                Detail::new(detail, s),
+                super::scalar_field::Detail::new(detail, s),
             )))
             .into()),
-            Type::Enum(_) => Ok(RepeatedField::Enum(RepeatedEnumField(Rc::new(Detail {
-                detail,
-                enum_: RefCell::new(WeakEnum::empty()),
-            })))
+            Type::Enum(_) => Ok(RepeatedField::Enum(RepeatedEnumField(Rc::new(
+                super::enum_field::Detail {
+                    detail,
+                    enum_: RefCell::new(WeakEnum::empty()),
+                },
+            )))
             .into()),
             Type::Message(_) => Ok(Field::Repeated(RepeatedField::Embed(RepeatedEmbedField(
-                Rc::new(Detail {
+                Rc::new(super::embed_field::Detail {
                     detail,
                     embed: RefCell::new(WeakMessage::new()),
                 }),
             )))
             .into()),
-            Type::Group => Err(Error::GroupNotSupported {
-                fully_qualified_name: detail.fully_qualified_name(),
-            }),
+            Type::Group => Err(Error::group_not_supported(detail.fully_qualified_name())),
         }
     }
     /// The jstype option determines the JavaScript type used for values of the
@@ -339,7 +340,7 @@ impl From<&RepeatedEmbedField> for RepeatedField {
 }
 
 #[derive(Debug, Clone)]
-pub struct RepeatedEmbedField(Rc<Detail>);
+pub struct RepeatedEmbedField(Rc<super::embed_field::Detail>);
 
 impl RepeatedEmbedField {
     pub fn name(&self) -> &str {
@@ -367,9 +368,6 @@ impl RepeatedEmbedField {
 
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
-    }
-    pub fn descriptor(&self) -> FieldDescriptor {
-        self.0.detail.descriptor()
     }
     pub fn comments(&self) -> Comments {
         self.0.detail.comments()
@@ -490,7 +488,7 @@ impl RepeatedEmbedField {
 }
 
 #[derive(Debug, Clone)]
-pub struct RepeatedEnumField(Rc<Detail>);
+pub struct RepeatedEnumField(Rc<super::enum_field::Detail>);
 
 impl RepeatedEnumField {
     pub fn name(&self) -> &str {
@@ -518,9 +516,6 @@ impl RepeatedEnumField {
 
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
-    }
-    pub fn descriptor(&self) -> FieldDescriptor {
-        self.0.detail.descriptor()
     }
     pub fn is_marked_optional(&self) -> bool {
         self.0.detail.is_marked_optional()
@@ -638,7 +633,7 @@ impl RepeatedEnumField {
 }
 
 #[derive(Debug, Clone)]
-pub struct RepeatedScalarField(Rc<Detail>);
+pub struct RepeatedScalarField(Rc<super::scalar_field::Detail>);
 
 impl RepeatedScalarField {
     pub fn name(&self) -> &str {
@@ -667,9 +662,6 @@ impl RepeatedScalarField {
 
     pub fn syntax(&self) -> Syntax {
         self.0.syntax()
-    }
-    pub fn descriptor(&self) -> FieldDescriptor {
-        self.0.descriptor()
     }
     pub fn comments(&self) -> Comments {
         self.0.comments()

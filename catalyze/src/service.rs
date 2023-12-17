@@ -3,10 +3,10 @@ use std::{
     rc::{Rc, Weak},
 };
 
+use protobuf::reflect::ServiceDescriptor;
+
 use crate::{
-    iter::Iter,
-    proto::{ServiceDescriptor, ServiceDescriptorPath},
-    Comments, File, Method, Node, Nodes, Package, WeakFile,
+    iter::Iter, Comments, File, Method, Node, Nodes, Package, ServiceDescriptorPath, WeakFile,
 };
 
 #[derive(Debug, Clone)]

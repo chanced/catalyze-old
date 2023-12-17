@@ -2,7 +2,10 @@
 use std::rc::Rc;
 
 use super::FieldDetail;
-use crate::{Comments, Field, File, Message, Package, Scalar, Syntax, Type, UninterpretedOption};
+use crate::{
+    uninterpreted_option::UninterpretedOption, Comments, Field, File, Message, Package, Scalar,
+    Syntax, Type,
+};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Detail {

@@ -3,25 +3,27 @@ use std::marker::PhantomData;
 use std::rc::{Rc, Weak};
 use std::str::FromStr;
 
+use protobuf::reflect::MessageDescriptor;
+
 use crate::extension::WeakExtension;
 
 use crate::iter::Iter;
+use crate::uninterpreted_option::UninterpretedOption;
+use crate::DescriptorPath;
 use crate::{container::Container, container::WeakContainer};
 use crate::{
     AllEnums, Comments, Enum, Extension, Field, File, Node, Nodes, Oneof, WeakFile,
     WellKnownMessage,
 };
-use crate::{DescriptorPath, MessageDescriptor};
 use crate::{Error, Syntax};
 use crate::{Package, WellKnownType};
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug, Clone)]
-pub(crate) struct MessageDetail {
+pub(crate) struct Detail {
     descriptor: MessageDescriptor,
     fqn: String,
-
     messages: RefCell<Rc<[Message]>>,
     enums: RefCell<Rc<[Enum]>>,
     fields: RefCell<Rc<[Field]>>,
@@ -41,7 +43,7 @@ pub(crate) struct MessageDetail {
     wkt: Option<WellKnownMessage>,
 }
 
-impl MessageDetail {
+impl Detail {
     fn new(desc: MessageDescriptor, container: Container) -> Rc<Self> {
         let fqn = format!("{}.{}", container.fully_qualified_name(), desc.name());
 
@@ -79,11 +81,11 @@ impl MessageDetail {
 /// Oneof blocks.
 ///
 /// Fields within Oneof blocks fields will be accessible on both the Message and the Oneof.
-pub struct Message(Rc<MessageDetail>);
+pub struct Message(Rc<Detail>);
 
 impl Message {
     pub fn new(desc: MessageDescriptor, container: Container) -> Result<Self, Error> {
-        let msg = Self(MessageDetail::new(desc, container))
+        let msg = Self(Detail::new(desc, container))
             .hydrate_nested_msgs()?
             .hydrate_enums()
             .hydrate_exts()
@@ -408,7 +410,7 @@ impl TryFrom<Container> for Message {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct WeakMessage(Weak<MessageDetail>);
+pub(crate) struct WeakMessage(Weak<Detail>);
 
 impl WeakMessage {
     pub(crate) fn new() -> WeakMessage {
@@ -515,5 +517,75 @@ impl From<Rc<RefCell<Vec<WeakMessage>>>> for Dependents {
 impl From<WeakMessage> for Option<Message> {
     fn from(msg: WeakMessage) -> Self {
         msg.0.upgrade().map(Message)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Options<'a> {
+    opts: Option<&'a protobuf::descriptor::MessageOptions>,
+}
+impl Options<'_> {
+    /// Set true to use the old proto1 MessageSet wire format for extensions.
+    /// This is provided for backwards-compatibility with the MessageSet wire
+    /// format.  You should not use this for any other reason:  It's less
+    /// efficient, has fewer features, and is more complicated.
+    ///
+    /// The message must be defined exactly as follows:
+    ///   message Foo {
+    ///     option message_set_wire_format = true;
+    ///     extensions 4 to max;
+    ///   }
+    /// Note that the message cannot have any defined fields; MessageSets only
+    /// have extensions.
+    ///
+    /// All extensions of your type must be singular messages; e.g. they cannot
+    /// be int32s, enums, or repeated messages.
+    ///
+    /// Because this is an option, the above two restrictions are not enforced by
+    /// the protocol compiler.
+    pub fn message_set_wire_format(&self) -> bool {
+        self.opts().message_set_wire_format()
+    }
+    /// Whether the message is an automatically generated map entry type for the
+    /// maps field.
+    ///
+    /// For maps fields:
+    ///     map<KeyType, ValueType> map_field = 1;
+    /// The parsed descriptor looks like:
+    ///     message MapFieldEntry {
+    ///         option map_entry = true;
+    ///         optional KeyType key = 1;
+    ///         optional ValueType value = 2;
+    ///     }
+    ///     repeated MapFieldEntry map_field = 1;
+    ///
+    /// Implementations may choose not to generate the map_entry=true message, but
+    /// use a native map in the target language to hold the keys and values.
+    /// The reflection APIs in such implementations still need to work as
+    /// if the field is a repeated message field.
+    ///
+    /// NOTE: Do not set the option in .proto files. Always use the maps syntax
+    /// instead. The option should only be implicitly set by the proto compiler
+    /// parser.
+    pub fn map_entry(&self) -> bool {
+        self.opts().map_entry()
+    }
+
+    pub fn is_map_entry(&self) -> bool {
+        self.map_entry()
+    }
+
+    pub fn deprecated(&self) -> bool {
+        self.opts().deprecated()
+    }
+    pub fn is_deprecated(&self) -> bool {
+        self.opts().deprecated()
+    }
+    pub fn no_standard_descriptor_accessor(&self) -> bool {
+        self.opts().no_standard_descriptor_accessor()
+    }
+    /// The parser stores options it doesn't recognize here. See above.
+    pub fn uninterpreted_option(&self) -> &[UninterpretedOption] {
+        (&self.opts().uninterpreted_option).into()
     }
 }
