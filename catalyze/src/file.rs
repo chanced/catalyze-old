@@ -13,47 +13,55 @@ use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 
 #[derive(Debug, Clone)]
-struct FileDetail<'a> {
-    desc: FileDescriptor<'a>,
-    name: Name,
+pub struct File(Rc<FileDetail>);
+
+#[derive(Debug, Clone)]
+struct FileDetail {
+    descriptor: FileDescriptor,
     file_path: PathBuf,
     fqn: String,
-    messages: Rc<RefCell<Vec<Message<'a>>>>,
-    enums: Rc<RefCell<Vec<Enum<'a>>>>,
-    services: Rc<RefCell<Vec<Service<'a>>>>,
-    defined_extensions: Rc<RefCell<Vec<Extension<'a>>>>,
+    messages: RefCell<Vec<Message>>,
+    enums: RefCell<Vec<Enum>>,
+    services: RefCell<Vec<Service>>,
+    defined_extensions: RefCell<Vec<Extension>>,
     build_target: bool,
-    pkg_comments: RefCell<Comments<'a>>,
-    comments: RefCell<Comments<'a>>,
+    pkg_comments: RefCell<Comments>,
+    comments: RefCell<Comments>,
 
-    pkg: WeakPackage<'a>,
-    dependents: Rc<RefCell<Vec<WeakFile<'a>>>>,
-    imports: Rc<RefCell<Vec<WeakFile<'a>>>>,
+    pkg: WeakPackage,
+    dependents: RefCell<Vec<WeakFile>>,
+    imports: RefCell<Vec<WeakFile>>,
     used_imports: Rc<RefCell<HashSet<String>>>,
     syntax: Syntax,
 }
 
-impl<'a> FileDetail<'a> {
-    pub fn new(build_target: bool, desc: FileDescriptor<'a>, pkg: Package<'a>) -> Rc<Self> {
-        let name = desc.name().into();
-        let fqn = match desc.package() {
+impl FileDetail {
+    pub fn new(build_target: bool, descriptor: FileDescriptor, pkg: Package) -> Rc<Self> {
+        let fqn = match descriptor.package() {
             "" => String::default(),
             p => format!(".{}", p),
         };
         Rc::new(Self {
-            name,
-            desc,
+            descriptor,
             pkg: pkg.into(),
             build_target,
             fqn,
-            syntax: desc.syntax(),
-            file_path: PathBuf::from(desc.name()),
+            syntax: descriptor.syntax(),
+            file_path: PathBuf::from(descriptor.name()),
             dependents: Rc::new(RefCell::new(Vec::new())),
-            imports: Rc::new(RefCell::new(Vec::with_capacity(desc.dependencies().len()))),
-            defined_extensions: Rc::new(RefCell::new(Vec::with_capacity(desc.extensions().len()))),
-            messages: Rc::new(RefCell::new(Vec::with_capacity(desc.messages().len()))),
-            enums: Rc::new(RefCell::new(Vec::with_capacity(desc.enums().len()))),
-            services: Rc::new(RefCell::new(Vec::with_capacity(desc.services().len()))),
+            imports: Rc::new(RefCell::new(Vec::with_capacity(
+                descriptor.dependencies().len(),
+            ))),
+            defined_extensions: Rc::new(RefCell::new(Vec::with_capacity(
+                descriptor.extensions().len(),
+            ))),
+            messages: Rc::new(RefCell::new(Vec::with_capacity(
+                descriptor.messages().len(),
+            ))),
+            enums: Rc::new(RefCell::new(Vec::with_capacity(descriptor.enums().len()))),
+            services: Rc::new(RefCell::new(Vec::with_capacity(
+                descriptor.services().len(),
+            ))),
             pkg_comments: RefCell::new(Comments::default()),
             comments: RefCell::new(Comments::default()),
             used_imports: Rc::new(RefCell::new(HashSet::new())),
@@ -61,20 +69,17 @@ impl<'a> FileDetail<'a> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct File<'a>(Rc<FileDetail<'a>>);
-
-impl<'a> File<'a> {
+impl File {
     pub(crate) fn new(
         build_target: bool,
-        desc: FileDescriptor<'a>,
-        pkg: Package<'a>,
-    ) -> Result<Self, anyhow::Error> {
+        desc: FileDescriptor,
+        pkg: Package,
+    ) -> Result<Self, Error> {
         let file = Self(FileDetail::new(build_target, desc, pkg))
-            .hydrate_msgs()?
+            .hydrate_messages()?
             .hydrate_enums()
             .hydrate_services()
-            .hydrate_exts()
+            .hydrate_extensions()
             .assign_comments();
         Ok(file)
     }
@@ -100,7 +105,7 @@ impl<'a> File<'a> {
         self
     }
 
-    fn hydrate_exts(self) -> Self {
+    fn hydrate_extensions(self) -> Self {
         {
             let mut exts = self.0.defined_extensions.borrow_mut();
             let container = self.as_container();
@@ -111,7 +116,7 @@ impl<'a> File<'a> {
         }
         self
     }
-    fn hydrate_msgs(self) -> anyhow::Result<Self> {
+    fn hydrate_messages(self) -> Result<Self, Error> {
         {
             let container = self.clone().as_container();
             let mut msgs = self.0.messages.borrow_mut();
@@ -144,87 +149,84 @@ impl<'a> File<'a> {
         }
         self
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
+    pub fn fully_qualified_name(&self) -> &str {
+        &self.0.fqn
     }
-    pub fn as_container(&self) -> Container<'a> {
+    pub fn as_container(&self) -> Container {
         self.clone().into()
     }
-    pub fn name(&self) -> &Name {
-        &self.0.name
+    pub fn name(&self) -> &str {
+        &self.0.descriptor.name()
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.0.pkg.clone().into()
     }
     pub fn build_target(&self) -> bool {
         self.0.build_target
     }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         *self.0.comments.borrow()
     }
     pub fn file_path(&self) -> &PathBuf {
         &self.0.file_path
     }
     /// Returns comments attached to the package in this File if any exist.
-    pub fn package_comments(&self) -> Comments<'a> {
+    pub fn package_comments(&self) -> Comments {
         *self.0.pkg_comments.borrow()
     }
-    pub fn descriptor(&self) -> FileDescriptor<'a> {
-        self.0.desc
+    pub fn descriptor(&self) -> FileDescriptor {
+        self.0.descriptor
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         *self.0.comments.borrow_mut() = comments;
     }
-    pub(crate) fn set_package_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_package_comments(&self, comments: Comments) {
         *self.0.pkg_comments.borrow_mut() = comments;
     }
-    pub fn message(&self, name: &str) -> Option<Message<'a>> {
+    pub fn message(&self, name: &str) -> Option<Message> {
         let name = name.to_lowercase();
         self.all_messages().find(|m| {
             m.name().to_lowercase() == name || m.fully_qualified_name().to_lowercase() == name
         })
     }
-    pub fn messages(&self) -> Iter<Message<'a>> {
+    pub fn messages(&self) -> Iter<Message> {
         Iter::from(&self.0.messages)
     }
-    pub fn enum_(&self, name: &str) -> Option<Enum<'a>> {
+    pub fn enum_(&self, name: &str) -> Option<Enum> {
         self.all_enums().find(|e| e.name() == name)
     }
-    pub fn enumeration(&self, name: &str) -> Option<Enum<'a>> {
-        self.enum_(name)
-    }
-    pub fn enumerations(&self) -> Iter<Enum<'a>> {
+    pub fn enum_s(&self) -> Iter<Enum> {
         self.enums()
     }
-    pub fn enums(&self) -> Iter<Enum<'a>> {
+    pub fn enums(&self) -> Iter<Enum> {
         Iter::from(&self.0.enums)
     }
-    pub fn services(&self) -> Iter<Service<'a>> {
+    pub fn services(&self) -> Iter<Service> {
         Iter::from(&self.0.services)
     }
-    pub fn defined_extensions(&self) -> Iter<Extension<'a>> {
+    pub fn defined_extensions(&self) -> Iter<Extension> {
         Iter::from(&self.0.defined_extensions)
     }
 
-    pub fn imports(&self) -> FileRefs<'a> {
+    pub fn imports(&self) -> FileRefs {
         self.0.imports.clone().into()
     }
 
-    pub fn dependents(&self) -> FileRefs<'a> {
+    pub fn dependents(&self) -> FileRefs {
         self.0.dependents.clone().into()
     }
-    pub fn transitive_imports(&self) -> TransitiveImports<'a> {
+    pub fn transitive_imports(&self) -> TransitiveImports {
         TransitiveImports::new(self.0.imports.clone())
     }
 
     /// all_messages returns an iterator of all top-level and nested messages from this
     /// file.
-    pub fn all_messages(&self) -> AllMessages<'a> {
+    pub fn all_messages(&self) -> AllMessages {
         AllMessages::new(self.0.messages.clone())
     }
 
     /// all_enums returns an iterator of all top-level and nested enums from this file.
-    pub fn all_enums(&self) -> AllEnums<'a> {
+    pub fn all_enums(&self) -> AllEnums {
         AllEnums::new(self.0.enums.clone(), self.0.messages.clone())
     }
 
@@ -232,27 +234,27 @@ impl<'a> File<'a> {
         self.0.file_path.clone()
     }
 
-    pub(crate) fn add_import(&self, file: File<'a>) {
+    pub(crate) fn add_import(&self, file: File) {
         self.0.imports.borrow_mut().push(file.into());
     }
 
-    pub(crate) fn mark_import_as_used(&self, file: File<'a>) {
+    pub(crate) fn mark_import_as_used(&self, file: File) {
         self.0
             .used_imports
             .borrow_mut()
-            .insert(file.fully_qualified_name());
+            .insert(file.fully_qualified_name().to_string());
     }
 
-    pub(crate) fn add_dependent(&self, file: File<'a>) {
+    pub(crate) fn add_dependent(&self, file: File) {
         self.0.dependents.borrow_mut().push(file.into());
     }
-    fn downgrade(&self) -> WeakFile<'a> {
+    fn downgrade(&self) -> WeakFile {
         WeakFile(Rc::downgrade(&self.0))
     }
-    pub fn all_nodes(&self) -> AllNodes<'a> {
+    pub fn all_nodes(&self) -> AllNodes {
         AllNodes::new(self.into())
     }
-    pub fn nodes(&self) -> Nodes<'a> {
+    pub fn nodes(&self) -> Nodes {
         Nodes::new(vec![
             self.enums().into(),
             self.messages().into(),
@@ -261,7 +263,7 @@ impl<'a> File<'a> {
         ])
     }
 
-    pub fn unused_imports(&self) -> Vec<File<'a>> {
+    pub fn unused_imports(&self) -> Vec<File> {
         let used_imports = self.0.used_imports.borrow();
         let mut unused_imports = Vec::new();
         for file in self.0.imports.borrow().iter() {
@@ -273,7 +275,7 @@ impl<'a> File<'a> {
     }
 
     #[cfg(test)]
-    pub fn add_node(&self, n: Node<'a>) {
+    pub fn add_node(&self, n: Node) {
         match n {
             Node::Message(m) => self.0.messages.borrow_mut().push(m),
             Node::Enum(e) => self.0.enums.borrow_mut().push(e),
@@ -287,7 +289,7 @@ impl<'a> File<'a> {
         self.0.syntax
     }
 
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node> {
         if path.is_empty() {
             return Some(self.into());
         }
@@ -320,93 +322,93 @@ impl<'a> File<'a> {
         })
     }
 
-    pub fn service(&self, name: &str) -> Option<Service<'a>> {
+    pub fn service(&self, name: &str) -> Option<Service> {
         self.services().find(|s| s.name() == name)
     }
 }
 
-impl<'a> From<&WeakFile<'a>> for File<'a> {
-    fn from(weak: &WeakFile<'a>) -> Self {
+impl From<&WeakFile> for File {
+    fn from(weak: &WeakFile) -> Self {
         weak.upgrade()
     }
 }
-impl<'a> From<WeakFile<'a>> for File<'a> {
-    fn from(weak: WeakFile<'a>) -> Self {
+impl From<WeakFile> for File {
+    fn from(weak: WeakFile) -> Self {
         weak.upgrade()
     }
 }
 
-impl<'a> PartialEq for File<'a> {
+impl PartialEq for File {
     fn eq(&self, other: &Self) -> bool {
         self.file_path() == other.file_path()
     }
 }
 
-impl<'a> PartialEq<WeakFile<'a>> for File<'a> {
-    fn eq(&self, other: &WeakFile<'a>) -> bool {
+impl PartialEq<WeakFile> for File {
+    fn eq(&self, other: &WeakFile) -> bool {
         self.file_path() == other.upgrade().file_path()
     }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct WeakFile<'a>(Weak<FileDetail<'a>>);
+pub(crate) struct WeakFile(Weak<FileDetail>);
 
-impl<'a> WeakFile<'a> {
-    pub fn fully_qualified_name(&self) -> String {
+impl WeakFile {
+    pub fn fully_qualified_name(&self) -> &str {
         self.upgrade().fully_qualified_name()
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.upgrade().package()
     }
 
     pub fn build_target(&self) -> bool {
         self.upgrade().build_target()
     }
-    fn upgrade(&self) -> File<'a> {
+    fn upgrade(&self) -> File {
         File(self.0.upgrade().expect("Failed to upgrade weak file"))
     }
 }
 
-impl<'a> From<File<'a>> for WeakFile<'a> {
-    fn from(file: File<'a>) -> Self {
+impl From<File> for WeakFile {
+    fn from(file: File) -> Self {
         file.downgrade()
     }
 }
-impl<'a> From<&File<'a>> for WeakFile<'a> {
-    fn from(file: &File<'a>) -> Self {
+impl From<&File> for WeakFile {
+    fn from(file: &File) -> Self {
         file.downgrade()
     }
 }
-impl<'a> PartialEq<File<'a>> for WeakFile<'a> {
-    fn eq(&self, other: &File<'a>) -> bool {
+impl PartialEq<File> for WeakFile {
+    fn eq(&self, other: &File) -> bool {
         self.upgrade().file_path() == other.file_path()
     }
 }
-impl<'a> PartialEq for WeakFile<'a> {
+impl PartialEq for WeakFile {
     fn eq(&self, other: &Self) -> bool {
         self.upgrade().file_path() == other.upgrade().file_path()
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct TransitiveImports<'a> {
-    queue: VecDeque<File<'a>>,
-    processed: HashSet<Name>,
+pub struct TransitiveImports {
+    queue: VecDeque<File>,
+    processed: HashSet<String>,
 }
-impl<'a> TransitiveImports<'a> {
-    pub(crate) fn new(files: Rc<RefCell<Vec<WeakFile<'a>>>>) -> Self {
+impl TransitiveImports {
+    pub(crate) fn new(files: RefCell<Vec<WeakFile>>) -> Self {
         Self {
             queue: VecDeque::from_iter(files.borrow().iter().map(|f| f.into())),
             processed: HashSet::new(),
         }
     }
 }
-impl<'a> Iterator for TransitiveImports<'a> {
-    type Item = File<'a>;
+impl Iterator for TransitiveImports {
+    type Item = File;
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(file) = self.queue.pop_front() {
             if !self.processed.contains(file.name()) {
-                self.processed.insert(file.name().clone());
+                self.processed.insert(file.name().to_string());
                 for d in file.imports() {
                     self.queue.push_back(d);
                 }
@@ -418,11 +420,11 @@ impl<'a> Iterator for TransitiveImports<'a> {
 }
 
 /// An iterator that upgrades weak file references to `File`s.
-pub struct FileRefs<'a> {
-    files: Rc<RefCell<Vec<WeakFile<'a>>>>,
+pub struct FileRefs {
+    files: Rc<RefCell<Vec<WeakFile>>>,
     index: usize,
 }
-impl<'a> FileRefs<'a> {
+impl FileRefs {
     pub fn len(&self) -> usize {
         self.files.borrow().len()
     }
@@ -437,16 +439,16 @@ impl<'a> FileRefs<'a> {
     }
 }
 
-impl<'a> From<&Rc<RefCell<Vec<WeakFile<'a>>>>> for FileRefs<'a> {
-    fn from(files: &Rc<RefCell<Vec<WeakFile<'a>>>>) -> Self {
+impl From<&Rc<RefCell<Vec<WeakFile>>>> for FileRefs {
+    fn from(files: &Rc<RefCell<Vec<WeakFile>>>) -> Self {
         FileRefs {
             files: files.clone(),
             index: 0,
         }
     }
 }
-impl<'a> From<Rc<RefCell<Vec<WeakFile<'a>>>>> for FileRefs<'a> {
-    fn from(files: Rc<RefCell<Vec<WeakFile<'a>>>>) -> Self {
+impl From<Rc<RefCell<Vec<WeakFile>>>> for FileRefs {
+    fn from(files: Rc<RefCell<Vec<WeakFile>>>) -> Self {
         FileRefs {
             files: files.clone(),
             index: 0,
@@ -454,8 +456,8 @@ impl<'a> From<Rc<RefCell<Vec<WeakFile<'a>>>>> for FileRefs<'a> {
     }
 }
 
-impl<'a> From<WeakFile<'a>> for FileRefs<'a> {
-    fn from(file: WeakFile<'a>) -> Self {
+impl From<WeakFile> for FileRefs {
+    fn from(file: WeakFile) -> Self {
         FileRefs {
             files: Rc::new(RefCell::new(vec![file])),
             index: 0,
@@ -463,13 +465,13 @@ impl<'a> From<WeakFile<'a>> for FileRefs<'a> {
     }
 }
 
-impl<'a> From<Option<WeakFile<'a>>> for FileRefs<'a> {
-    fn from(file: Option<WeakFile<'a>>) -> Self {
+impl From<Option<WeakFile>> for FileRefs {
+    fn from(file: Option<WeakFile>) -> Self {
         file.map_or(Self::empty(), Into::into)
     }
 }
-impl<'a> Iterator for FileRefs<'a> {
-    type Item = File<'a>;
+impl Iterator for FileRefs {
+    type Item = File;
     fn next(&mut self) -> Option<Self::Item> {
         let files = self.files.borrow();
         if let Some(file) = files.get(self.index) {

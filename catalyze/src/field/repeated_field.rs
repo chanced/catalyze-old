@@ -1,26 +1,22 @@
 #![allow(clippy::new_ret_no_self)]
 use std::{cell::RefCell, rc::Rc};
 
-use anyhow::bail;
-
 use crate::{
-    proto::{FieldDescriptor, Scalar, Syntax},
-    Comments, EmbedFieldDetail, Enum, EnumFieldDetail, Field, FieldDetail, File, FileRefs, Message,
-    Name, Node, Package, ScalarFieldDetail, Type, UninterpretedOptions, WeakEnum, WeakMessage,
-    WellKnownEnum, WellKnownMessage, WellKnownType,
+    Comments, Detail, Enum, Error, Field, FieldDetail, File, FileRefs, Message, Node, Package,
+    Scalar, Syntax, Type, WeakEnum, WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
 };
 
 /// Represents a field marked as `repeated`. The field can hold
 /// a scalar value, an enum, or a message.
 #[derive(Debug, Clone)]
-pub enum RepeatedField<'a> {
-    Scalar(RepeatedScalarField<'a>),
-    Enum(RepeatedEnumField<'a>),
-    Embed(RepeatedEmbedField<'a>),
+pub enum RepeatedField {
+    Scalar(RepeatedScalarField),
+    Enum(RepeatedEnumField),
+    Embed(RepeatedEmbedField),
 }
 
-impl<'a> RepeatedField<'a> {
-    pub fn name(&self) -> &Name {
+impl RepeatedField {
+    pub fn name(&self) -> &str {
         match self {
             RepeatedField::Scalar(f) => f.name(),
             RepeatedField::Enum(f) => f.name(),
@@ -28,7 +24,7 @@ impl<'a> RepeatedField<'a> {
         }
     }
 
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         match self {
             RepeatedField::Scalar(f) => f.file(),
             RepeatedField::Enum(f) => f.file(),
@@ -36,7 +32,7 @@ impl<'a> RepeatedField<'a> {
         }
     }
 
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         match self {
             RepeatedField::Scalar(f) => f.package(),
             RepeatedField::Enum(f) => f.package(),
@@ -44,7 +40,7 @@ impl<'a> RepeatedField<'a> {
         }
     }
 
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         match self {
             RepeatedField::Scalar(f) => f.fully_qualified_name(),
             RepeatedField::Enum(f) => f.fully_qualified_name(),
@@ -52,7 +48,7 @@ impl<'a> RepeatedField<'a> {
         }
     }
     /// Returns the Message containing this RepeatedField
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         match self {
             RepeatedField::Scalar(f) => f.message(),
             RepeatedField::Enum(f) => f.message(),
@@ -67,14 +63,7 @@ impl<'a> RepeatedField<'a> {
         }
     }
 
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
-        match self {
-            RepeatedField::Scalar(f) => f.descriptor(),
-            RepeatedField::Enum(f) => f.descriptor(),
-            RepeatedField::Embed(f) => f.descriptor(),
-        }
-    }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         match self {
             RepeatedField::Scalar(f) => f.comments(),
             RepeatedField::Enum(f) => f.comments(),
@@ -89,7 +78,7 @@ impl<'a> RepeatedField<'a> {
             RepeatedField::Scalar(_) => false,
         }
     }
-    pub fn imports(&self) -> FileRefs<'a> {
+    pub fn imports(&self) -> FileRefs {
         match self {
             RepeatedField::Enum(f) => f.imports(),
             RepeatedField::Embed(f) => f.imports(),
@@ -103,19 +92,13 @@ impl<'a> RepeatedField<'a> {
             RepeatedField::Embed(f) => f.build_target(),
         }
     }
-    pub fn enum_(&self) -> Option<Enum<'a>> {
+    pub fn enum_(&self) -> Option<Enum> {
         match self {
             RepeatedField::Enum(f) => Some(f.enum_()),
             _ => None,
         }
     }
-    pub fn enumeration(&self) -> Option<Enum<'a>> {
-        match self {
-            RepeatedField::Enum(f) => Some(f.enumeration()),
-            _ => None,
-        }
-    }
-    pub fn embed(&self) -> Option<Message<'a>> {
+    pub fn embed(&self) -> Option<Message> {
         match self {
             RepeatedField::Embed(f) => Some(f.embed()),
             _ => None,
@@ -147,7 +130,7 @@ impl<'a> RepeatedField<'a> {
         matches!(self, RepeatedField::Embed(_))
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         match self {
             RepeatedField::Scalar(f) => f.set_comments(comments),
             RepeatedField::Enum(f) => f.set_comments(comments),
@@ -187,7 +170,7 @@ impl<'a> RepeatedField<'a> {
         matches!(self, RepeatedField::Enum(_))
     }
 
-    pub(crate) fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
+    pub(crate) fn set_value(&self, value: Node) -> Result<(), Error> {
         match self {
             RepeatedField::Enum(f) => f.set_value(value),
             RepeatedField::Embed(f) => f.set_value(value),
@@ -195,30 +178,32 @@ impl<'a> RepeatedField<'a> {
         }
     }
 
-    pub fn value_type(&self) -> Type<'a> {
-        self.descriptor().proto_type()
+    pub fn value_type(&self) -> Type {
+        self.descriptor().type_()
     }
 
-    pub(crate) fn new(detail: FieldDetail<'a>) -> Result<Field<'a>, anyhow::Error> {
-        let field = match detail.value_type() {
-            Type::Scalar(s) => Field::Repeated(RepeatedField::Scalar(RepeatedScalarField(
-                Rc::new(ScalarFieldDetail::new(detail, s)),
-            ))),
-            Type::Enum(_) => Field::Repeated(RepeatedField::Enum(RepeatedEnumField(Rc::new(
-                EnumFieldDetail {
-                    detail,
-                    enumeration: RefCell::new(WeakEnum::empty()),
-                },
-            )))),
-            Type::Message(_) => Field::Repeated(RepeatedField::Embed(RepeatedEmbedField(Rc::new(
-                EmbedFieldDetail {
+    pub(crate) fn new(detail: FieldDetail) -> Result<Field, Error> {
+        match detail.value_type() {
+            Type::Scalar(s) => Ok(RepeatedField::Scalar(RepeatedScalarField(Rc::new(
+                Detail::new(detail, s),
+            )))
+            .into()),
+            Type::Enum(_) => Ok(RepeatedField::Enum(RepeatedEnumField(Rc::new(Detail {
+                detail,
+                enum_: RefCell::new(WeakEnum::empty()),
+            })))
+            .into()),
+            Type::Message(_) => Ok(Field::Repeated(RepeatedField::Embed(RepeatedEmbedField(
+                Rc::new(Detail {
                     detail,
                     embed: RefCell::new(WeakMessage::new()),
-                },
-            )))),
-            Type::Group => bail!("Group is not supported. Use an embedded message instead."),
-        };
-        Ok(field)
+                }),
+            )))
+            .into()),
+            Type::Group => Err(Error::GroupNotSupported {
+                fully_qualified_name: detail.fully_qualified_name(),
+            }),
+        }
     }
     /// The jstype option determines the JavaScript type used for values of the
     /// field.  The option is permitted only for 64 bit integral and fixed types
@@ -300,7 +285,7 @@ impl<'a> RepeatedField<'a> {
     }
 
     /// Options the parser does not recognize.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         match self {
             RepeatedField::Scalar(f) => f.uninterpreted_options(),
             RepeatedField::Enum(f) => f.uninterpreted_options(),
@@ -317,50 +302,50 @@ impl<'a> RepeatedField<'a> {
     }
 }
 
-impl<'a> From<RepeatedScalarField<'a>> for RepeatedField<'a> {
-    fn from(f: RepeatedScalarField<'a>) -> Self {
+impl From<RepeatedScalarField> for RepeatedField {
+    fn from(f: RepeatedScalarField) -> Self {
         RepeatedField::Scalar(f)
     }
 }
 
-impl<'a> From<&RepeatedScalarField<'a>> for RepeatedField<'a> {
-    fn from(f: &RepeatedScalarField<'a>) -> Self {
+impl From<&RepeatedScalarField> for RepeatedField {
+    fn from(f: &RepeatedScalarField) -> Self {
         RepeatedField::Scalar(f.clone())
     }
 }
 
-impl<'a> From<RepeatedEnumField<'a>> for RepeatedField<'a> {
-    fn from(f: RepeatedEnumField<'a>) -> Self {
+impl From<RepeatedEnumField> for RepeatedField {
+    fn from(f: RepeatedEnumField) -> Self {
         RepeatedField::Enum(f)
     }
 }
 
-impl<'a> From<&RepeatedEnumField<'a>> for RepeatedField<'a> {
-    fn from(f: &RepeatedEnumField<'a>) -> Self {
+impl From<&RepeatedEnumField> for RepeatedField {
+    fn from(f: &RepeatedEnumField) -> Self {
         RepeatedField::Enum(f.clone())
     }
 }
 
-impl<'a> From<RepeatedEmbedField<'a>> for RepeatedField<'a> {
-    fn from(f: RepeatedEmbedField<'a>) -> Self {
+impl From<RepeatedEmbedField> for RepeatedField {
+    fn from(f: RepeatedEmbedField) -> Self {
         RepeatedField::Embed(f)
     }
 }
 
-impl<'a> From<&RepeatedEmbedField<'a>> for RepeatedField<'a> {
-    fn from(f: &RepeatedEmbedField<'a>) -> Self {
+impl From<&RepeatedEmbedField> for RepeatedField {
+    fn from(f: &RepeatedEmbedField) -> Self {
         RepeatedField::Embed(f.clone())
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct RepeatedEmbedField<'a>(Rc<EmbedFieldDetail<'a>>);
+pub struct RepeatedEmbedField(Rc<Detail>);
 
-impl<'a> RepeatedEmbedField<'a> {
-    pub fn name(&self) -> &Name {
+impl RepeatedEmbedField {
+    pub fn name(&self) -> &str {
         self.0.detail.name()
     }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         self.0.detail.fully_qualified_name()
     }
     pub fn is_repeated(&self) -> bool {
@@ -369,34 +354,34 @@ impl<'a> RepeatedEmbedField<'a> {
     pub fn is_map(&self) -> bool {
         self.0.detail.is_map()
     }
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.0.detail.file()
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.0.detail.package()
     }
 
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.0.detail.message()
     }
 
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+    pub fn descriptor(&self) -> FieldDescriptor {
         self.0.detail.descriptor()
     }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         self.0.detail.comments()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.0.detail.set_comments(comments);
     }
 
     pub fn has_import(&self) -> bool {
         self.file() != self.0.embed().file()
     }
-    pub fn imports(&self) -> FileRefs<'a> {
+    pub fn imports(&self) -> FileRefs {
         if self.has_import() {
             FileRefs::from(self.0.embed().weak_file())
         } else {
@@ -404,7 +389,7 @@ impl<'a> RepeatedEmbedField<'a> {
         }
     }
 
-    pub fn embed(&self) -> Message<'a> {
+    pub fn embed(&self) -> Message {
         self.0.embed()
     }
 
@@ -426,7 +411,7 @@ impl<'a> RepeatedEmbedField<'a> {
         self.0.embed().well_known_message()
     }
 
-    fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
+    fn set_value(&self, value: Node) -> Result<(), Error> {
         self.0.set_value(value)
     }
 
@@ -495,7 +480,7 @@ impl<'a> RepeatedEmbedField<'a> {
     }
 
     /// Options the parser does not recognize.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         self.descriptor().options().uninterpreted_options()
     }
 
@@ -505,19 +490,19 @@ impl<'a> RepeatedEmbedField<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct RepeatedEnumField<'a>(Rc<EnumFieldDetail<'a>>);
+pub struct RepeatedEnumField(Rc<Detail>);
 
-impl<'a> RepeatedEnumField<'a> {
-    pub fn name(&self) -> &Name {
+impl RepeatedEnumField {
+    pub fn name(&self) -> &str {
         self.0.detail.name()
     }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         self.0.detail.fully_qualified_name()
     }
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.0.detail.file()
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.0.detail.package()
     }
 
@@ -527,14 +512,14 @@ impl<'a> RepeatedEnumField<'a> {
     pub fn is_map(&self) -> bool {
         self.0.detail.is_map()
     }
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.0.detail.message()
     }
 
     pub fn syntax(&self) -> Syntax {
         self.0.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+    pub fn descriptor(&self) -> FieldDescriptor {
         self.0.detail.descriptor()
     }
     pub fn is_marked_optional(&self) -> bool {
@@ -543,41 +528,38 @@ impl<'a> RepeatedEnumField<'a> {
     pub fn is_marked_required(&self) -> bool {
         self.0.detail.is_marked_required()
     }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         self.0.detail.comments()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.0.detail.set_comments(comments);
     }
 
     pub fn has_import(&self) -> bool {
         self.0.has_import()
     }
-    pub fn imports(&self) -> FileRefs<'a> {
+    pub fn imports(&self) -> FileRefs {
         self.0.imports()
     }
 
-    pub fn enum_(&self) -> Enum<'a> {
+    pub fn enum_(&self) -> Enum {
         self.0.enum_()
-    }
-    pub fn enumeration(&self) -> Enum<'a> {
-        self.0.enumeration()
     }
     pub fn build_target(&self) -> bool {
         self.0.build_target()
     }
 
     pub fn is_well_known_type(&self) -> bool {
-        self.0.enumeration().is_well_known_type()
+        self.0.enum_().is_well_known_type()
     }
     pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
-        self.0.enumeration().well_known_enum()
+        self.0.enum_().well_known_enum()
     }
     pub fn well_known_type(&self) -> Option<WellKnownType> {
-        self.0.enumeration().well_known_type()
+        self.0.enum_().well_known_type()
     }
 
-    fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
+    fn set_value(&self, value: Node) -> Result<(), Error> {
         self.0.set_value(value)
     }
 
@@ -646,7 +628,7 @@ impl<'a> RepeatedEnumField<'a> {
     }
 
     /// Options the parser does not recognize.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         self.descriptor().options().uninterpreted_options()
     }
 
@@ -656,20 +638,20 @@ impl<'a> RepeatedEnumField<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct RepeatedScalarField<'a>(Rc<ScalarFieldDetail<'a>>);
+pub struct RepeatedScalarField(Rc<Detail>);
 
-impl<'a> RepeatedScalarField<'a> {
-    pub fn name(&self) -> &Name {
+impl RepeatedScalarField {
+    pub fn name(&self) -> &str {
         self.0.name()
     }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         self.0.fully_qualified_name()
     }
 
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.0.file()
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.0.package()
     }
 
@@ -679,20 +661,20 @@ impl<'a> RepeatedScalarField<'a> {
     pub fn is_map(&self) -> bool {
         self.0.is_map()
     }
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.0.message()
     }
 
     pub fn syntax(&self) -> Syntax {
         self.0.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+    pub fn descriptor(&self) -> FieldDescriptor {
         self.0.descriptor()
     }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         self.0.comments()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.0.set_comments(comments);
     }
 
@@ -772,7 +754,7 @@ impl<'a> RepeatedScalarField<'a> {
     }
 
     /// Options the parser does not recognize.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         self.descriptor().options().uninterpreted_options()
     }
 

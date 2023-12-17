@@ -1,99 +1,89 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{
-    container::Container, proto::EnumValueDescriptor, Comments, Enum, File, Name, Node, Package,
-    WeakEnum,
-};
+use protobuf::reflect::EnumValueDescriptor;
+
+use crate::{container::Container, Comments, Enum, File, Node, Package, WeakEnum};
 
 #[derive(Debug, Clone)]
-struct EnumValueDetail<'a> {
-    name: Name,
+struct EnumValueDetail {
     fqn: String,
-    desc: EnumValueDescriptor<'a>,
-    e: WeakEnum<'a>,
-    comments: RefCell<Comments<'a>>,
+    descriptor: EnumValueDescriptor,
+    e: WeakEnum,
+    comments: RefCell<Comments>,
 }
 
-impl<'a> EnumValueDetail<'a> {
-    pub fn name(&self) -> &Name {
-        &self.name
+impl EnumValueDetail {
+    pub fn name(&self) -> &str {
+        &self.descriptor.name()
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.fqn.clone()
+    pub fn fully_qualified_name(&self) -> &str {
+        &self.fqn
     }
-    pub fn descriptor(&self) -> EnumValueDescriptor<'a> {
-        self.desc
+    pub fn descriptor(&self) -> EnumValueDescriptor {
+        self.descriptor
     }
 
-    pub fn enumeration(&self) -> Enum<'a> {
+    pub fn into_enum(&self) -> Enum {
         self.e.clone().into()
     }
 
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         *self.comments.borrow()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.comments.replace(comments);
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct EnumValue<'a>(Rc<EnumValueDetail<'a>>);
+pub struct EnumValue(Rc<EnumValueDetail>);
 
-impl<'a> EnumValue<'a> {
-    pub(crate) fn new(desc: EnumValueDescriptor<'a>, e: Enum<'a>) -> Self {
+impl EnumValue {
+    pub(crate) fn new(desc: EnumValueDescriptor, e: Enum) -> Self {
         let fqn = format!("{}.{}", e.fully_qualified_name(), desc.name());
         EnumValue(Rc::new(EnumValueDetail {
             fqn,
-            name: desc.name().into(),
-            desc,
+            descriptor: desc,
             e: e.clone().into(),
             comments: RefCell::new(Comments::default()),
         }))
     }
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &str {
         self.0.name()
     }
 
-    /// Alias for `enum_`.
-    ///
-    /// Returns the enum that contains this enum value.
-    pub fn enumeration(&self) -> Enum<'a> {
-        self.enum_()
-    }
-
-    pub fn descriptor(&self) -> EnumValueDescriptor<'a> {
+    pub fn descriptor(&self) -> EnumValueDescriptor {
         self.0.descriptor()
     }
     /// Returns the `Enum` that contains this value.
-    pub fn enum_(&self) -> Enum<'a> {
-        self.0.enumeration()
+    pub fn enum_(&self) -> Enum {
+        self.0.into_enum()
     }
-    pub fn container(&self) -> Container<'a> {
-        self.enumeration().container()
-    }
-
-    pub fn file(&self) -> File<'a> {
-        self.enumeration().file()
+    pub fn container(&self) -> Container {
+        self.enum_().container()
     }
 
-    pub fn package(&self) -> Package<'a> {
-        self.enumeration().package()
+    pub fn file(&self) -> File {
+        self.enum_().file()
+    }
+
+    pub fn package(&self) -> Package {
+        self.enum_().package()
     }
     pub fn number(&self) -> i32 {
         self.descriptor().number()
     }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         self.0.fully_qualified_name()
     }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         self.0.comments()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.0.set_comments(comments);
     }
 
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node> {
         if path.is_empty() {
             Some(self.to_owned().into())
         } else {
@@ -102,28 +92,28 @@ impl<'a> EnumValue<'a> {
     }
 }
 
-impl<'a> PartialEq for EnumValue<'a> {
+impl PartialEq for EnumValue {
     fn eq(&self, other: &Self) -> bool {
         self.fully_qualified_name() == other.fully_qualified_name()
     }
 }
-impl<'a> PartialEq<i32> for EnumValue<'a> {
+impl PartialEq<i32> for EnumValue {
     fn eq(&self, other: &i32) -> bool {
         self.number() == *other
     }
 }
-impl<'a> PartialEq<EnumValue<'a>> for i32 {
-    fn eq(&self, other: &EnumValue<'a>) -> bool {
+impl PartialEq<EnumValue> for i32 {
+    fn eq(&self, other: &EnumValue) -> bool {
         self == &other.number()
     }
 }
-impl<'a> PartialEq<str> for EnumValue<'a> {
+impl PartialEq<str> for EnumValue {
     fn eq(&self, other: &str) -> bool {
         self.fully_qualified_name() == other
     }
 }
-impl<'a> PartialEq<EnumValue<'a>> for str {
-    fn eq(&self, other: &EnumValue<'a>) -> bool {
+impl PartialEq<EnumValue> for str {
+    fn eq(&self, other: &EnumValue) -> bool {
         self == other.fully_qualified_name()
     }
 }

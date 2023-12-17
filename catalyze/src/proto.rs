@@ -1,550 +1,298 @@
-mod enums;
-mod iter;
-mod path;
-pub use enums::*;
-pub use iter::*;
-pub use path::*;
+// #[derive(Debug, Clone, Copy)]
+// pub struct EnumValueDescriptor {
+//     desc: &'a protobuf::descriptor::EnumValueDescriptorProto,
+// }
+// impl EnumValueDescriptor {
+//     pub fn name(&self) -> &str {
+//         self.desc.name()
+//     }
+//     pub fn number(&self) -> i32 {
+//         self.desc.number()
+//     }
+//     pub fn options(&self) -> EnumValueOptions {
+//         self.desc.options.as_ref().into()
+//     }
+// }
+// impl From<&'a protobuf::descriptor::EnumValueDescriptorProto> for EnumValueDescriptor {
+//     fn from(desc: &'a protobuf::descriptor::EnumValueDescriptorProto) -> Self {
+//         Self { desc }
+//     }
+// }
+// #[cfg(test)]
+// impl Default for EnumValueDescriptor {
+//     fn default() -> Self {
+//         Self {
+//             desc: &test_data::DEFAULT_ENUM_VALUE_DESCRIPTOR_PROTO,
+//         }
+//     }
+// }
 
-use std::{
-    fmt::{self},
-    ops::Deref,
-    slice, vec,
-};
+// /// Describes a field within a message.
+// #[derive(Debug, Clone, Copy)]
+// pub struct FieldDescriptor {
+//     desc: &'a protobuf::descriptor::FieldDescriptorProto,
+// }
+// impl FieldDescriptor {
+//     pub fn name(&self) -> &str {
+//         self.desc.name()
+//     }
+//     pub fn number(&self) -> i32 {
+//         self.desc.number()
+//     }
+//     pub fn label(&self) -> Label {
+//         Label::from(self.desc.label())
+//     }
+//     pub fn is_lazy(&self) -> bool {
+//         self.options().is_lazy()
+//     }
+//     pub fn is_deprecated(&self) -> bool {
+//         self.options().is_deprecated()
+//     }
 
-lazy_static::lazy_static! {
-    static ref DEFAULT_SOURCE_CODE_INFO: protobuf::descriptor::SourceCodeInfo =
-        protobuf::descriptor::SourceCodeInfo::default();
-    static ref DEFAULT_LOCATION: protobuf::descriptor::source_code_info::Location =
-        protobuf::descriptor::source_code_info::Location::default();
-    static ref DEFAULT_FILE_OPTIONS: protobuf::descriptor::FileOptions = protobuf::descriptor::FileOptions::default();
-    static ref DEFAULT_MESSAGE_OPTIONS: protobuf::descriptor::MessageOptions =
-        protobuf::descriptor::MessageOptions::default();
-    static ref DEFAULT_ONEOF_OPTIONS: protobuf::descriptor::OneofOptions =
-        protobuf::descriptor::OneofOptions::default();
-    static ref DEFAULT_FIELD_OPTIONS: protobuf::descriptor::FieldOptions =
-        protobuf::descriptor::FieldOptions::default();
-    static ref DEFAULT_SERVICE_OPTIONS: protobuf::descriptor::ServiceOptions =
-        protobuf::descriptor::ServiceOptions::default();
-    static ref DEFAULT_METHOD_OPTIONS: protobuf::descriptor::MethodOptions =
-        protobuf::descriptor::MethodOptions::default();
-    static ref DEFAULT_ENUM_OPTIONS: protobuf::descriptor::EnumOptions = protobuf::descriptor::EnumOptions::default();
-    static ref DEFAULT_ENUM_VALUE_OPTIONS: protobuf::descriptor::EnumValueOptions =
-        protobuf::descriptor::EnumValueOptions::default();
-}
+//     /// If type_name is set, this need not be set.  If both this and type_name
+//     /// are set, this must be one of Enum, Message or Group.
+//     pub fn type_(&self) -> Type {
+//         Type::from(self.desc)
+//     }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct FileDescriptor<'a> {
-    desc: &'a protobuf::descriptor::FileDescriptorProto,
-}
+//     pub fn is_embed(&self) -> bool {
+//         matches!(self.type_(), Type::Message(_))
+//     }
+//     pub fn is_message(&self) -> bool {
+//         matches!(self.type_(), Type::Message(_))
+//     }
 
-impl<'a> FileDescriptor<'a> {
-    /// file name, relative to root of source tree
-    pub fn name(&self) -> &'a str {
-        self.desc.name()
-    }
+//     pub fn is_enum(&self) -> bool {
+//         matches!(self.type_(), Type::Enum(_))
+//     }
 
-    /// e.g. "foo", "foo.bar", etc.
-    pub fn package(&self) -> &'a str {
-        self.desc.package()
-    }
-    /// Names of files imported by this file.
-    pub fn dependencies(&self) -> slice::Iter<String> {
-        self.desc.dependency.iter()
-    }
-    /// Indexes of the public imported files in the dependency list.
-    pub fn public_dependencies(&self) -> slice::Iter<i32> {
-        self.desc.public_dependency.iter()
-    }
-    /// All top-level `Message` definitions in this file.
-    pub fn messages(&self) -> MessageDescriptorIter<'a> {
-        (&self.desc.message_type).into()
-    }
+//     pub fn is_scalar(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(_))
+//     }
 
-    // All top-level `Enum` definitions in this file.
-    pub fn enums(&self) -> EnumDescriptorIter<'a> {
-        (&self.desc.enum_type).into()
-    }
+//     pub fn is_double(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::Double))
+//     }
+//     pub fn is_float(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::Float))
+//     }
 
-    /// All top-level `Service` definitions in this file.
-    pub fn services(&self) -> ServiceDescriptorIter<'a> {
-        (&self.desc.service).into()
-    }
-    pub fn extensions(&self) -> FieldDescriptorIter<'a> {
-        (&self.desc.extension).into()
-    }
+//     pub fn is_int64(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::Int64))
+//     }
 
-    pub fn options(&self) -> FileOptions<'a> {
-        self.desc.options.as_ref().into()
-    }
-    /// This field contains optional information about the original source code.
-    /// You may safely remove this entire field without harming runtime
-    /// functionality of the descriptors -- the information is needed only by
-    /// development tools.
-    pub fn source_code_info(&self) -> SourceCodeInfo<'a> {
-        self.desc.source_code_info.as_ref().into()
-    }
-    /// The syntax of the proto file.
-    /// The supported values are "proto2" and "proto3".
-    pub fn syntax(&self) -> Syntax {
-        self.desc.syntax().into()
-    }
-}
-impl<'a> From<&'a protobuf::descriptor::FileDescriptorProto> for FileDescriptor<'a> {
-    fn from(desc: &'a protobuf::descriptor::FileDescriptorProto) -> Self {
-        Self { desc }
-    }
-}
-#[cfg(test)]
-impl<'a> Default for FileDescriptor<'a> {
-    fn default() -> Self {
-        Self {
-            desc: &test_data::DEFAULT_FILE_DESCRIPTOR_PROTO,
-        }
-    }
-}
+//     pub fn is_uint64(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::Uint64))
+//     }
 
-/// Describes a message type.
-#[derive(Debug, Clone, Copy)]
-pub struct MessageDescriptor<'a> {
-    desc: &'a protobuf::descriptor::DescriptorProto,
-}
-impl<'a> MessageDescriptor<'a> {
-    pub fn name(&self) -> &'a str {
-        self.desc.name()
-    }
-    pub fn fields(&self) -> FieldDescriptorIter<'a> {
-        let fields = &self.desc.field;
-        fields.into()
-    }
-    pub fn is_map_entry(&self) -> bool {
-        self.options().is_map_entry()
-    }
-    pub fn extensions(&self) -> FieldDescriptorIter<'a> {
-        (&self.desc.extension).into()
-    }
-    pub fn nested_messages(&self) -> MessageDescriptorIter<'a> {
-        (&self.desc.nested_type).into()
-    }
+//     pub fn is_int32(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::Int32))
+//     }
 
-    pub fn enums(&self) -> EnumDescriptorIter<'a> {
-        (&self.desc.enum_type).into()
-    }
+//     pub fn is_fixed64(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::Fixed64))
+//     }
 
-    pub fn extension_ranges(&self) -> ExtensionRanges<'a> {
-        (&self.desc.extension_range).into()
-    }
+//     pub fn is_fixed32(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::Fixed32))
+//     }
 
-    pub fn oneofs(&self) -> OneofDescriptorIter<'a> {
-        (&self.desc.oneof_decl).into()
-    }
-    pub fn options(&self) -> MessageOptions<'a> {
-        self.desc.options.as_ref().into()
-    }
-    pub fn reserved_ranges(&self) -> ReservedRanges<'a> {
-        (&self.desc.reserved_range).into()
-    }
-    /// Reserved field names, which may not be used by fields in the same message.
-    /// A given name may only be reserved once.
-    pub fn reserved_names(&self) -> slice::Iter<String> {
-        self.desc.reserved_name.iter()
-    }
-}
-impl<'a> From<&'a protobuf::descriptor::DescriptorProto> for MessageDescriptor<'a> {
-    fn from(desc: &'a protobuf::descriptor::DescriptorProto) -> Self {
-        Self { desc }
-    }
-}
-#[cfg(test)]
-impl<'a> Default for MessageDescriptor<'a> {
-    fn default() -> Self {
-        Self {
-            desc: &test_data::DEFAULT_DESCRIPTOR_PROTO,
-        }
-    }
-}
-#[derive(Debug, Clone, Copy)]
-pub struct EnumDescriptor<'a> {
-    desc: &'a protobuf::descriptor::EnumDescriptorProto,
-}
-impl<'a> EnumDescriptor<'a> {
-    pub fn name(&self) -> &'a str {
-        self.desc.name()
-    }
-    pub fn values(&self) -> EnumValueDescriptorIter<'a> {
-        (&self.desc.value).into()
-    }
-    pub fn options(&self) -> EnumOptions<'a> {
-        self.desc.options.as_ref().into()
-    }
-    /// Range of reserved numeric values. Reserved numeric values may not be used
-    /// by enum values in the same enum declaration. Reserved ranges may not
-    /// overlap.
-    pub fn reserved_ranges(&self) -> EnumReservedRanges<'a> {
-        (&self.desc.reserved_range).into()
-    }
-    pub fn reserved_names(&self) -> slice::Iter<String> {
-        self.desc.reserved_name.iter()
-    }
-}
-impl<'a> From<&'a protobuf::descriptor::EnumDescriptorProto> for EnumDescriptor<'a> {
-    fn from(desc: &'a protobuf::descriptor::EnumDescriptorProto) -> Self {
-        EnumDescriptor { desc }
-    }
-}
-#[cfg(test)]
-impl<'a> Default for EnumDescriptor<'a> {
-    fn default() -> Self {
-        Self {
-            desc: &test_data::DEFAULT_ENUM_DESCRIPTOR_PROTO,
-        }
-    }
-}
+//     pub fn is_bool(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::Bool))
+//     }
 
-#[derive(Debug, Clone, Copy)]
-pub struct EnumValueDescriptor<'a> {
-    desc: &'a protobuf::descriptor::EnumValueDescriptorProto,
-}
-impl<'a> EnumValueDescriptor<'a> {
-    pub fn name(&self) -> &'a str {
-        self.desc.name()
-    }
-    pub fn number(&self) -> i32 {
-        self.desc.number()
-    }
-    pub fn options(&self) -> EnumValueOptions<'a> {
-        self.desc.options.as_ref().into()
-    }
-}
-impl<'a> From<&'a protobuf::descriptor::EnumValueDescriptorProto> for EnumValueDescriptor<'a> {
-    fn from(desc: &'a protobuf::descriptor::EnumValueDescriptorProto) -> Self {
-        Self { desc }
-    }
-}
-#[cfg(test)]
-impl<'a> Default for EnumValueDescriptor<'a> {
-    fn default() -> Self {
-        Self {
-            desc: &test_data::DEFAULT_ENUM_VALUE_DESCRIPTOR_PROTO,
-        }
-    }
-}
+//     pub fn is_string(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::String))
+//     }
 
-/// Describes a field within a message.
-#[derive(Debug, Clone, Copy)]
-pub struct FieldDescriptor<'a> {
-    desc: &'a protobuf::descriptor::FieldDescriptorProto,
-}
-impl<'a> FieldDescriptor<'a> {
-    pub fn name(&self) -> &str {
-        self.desc.name()
-    }
-    pub fn number(&self) -> i32 {
-        self.desc.number()
-    }
-    pub fn label(&self) -> Label {
-        Label::from(self.desc.label())
-    }
-    pub fn is_lazy(&self) -> bool {
-        self.options().is_lazy()
-    }
-    pub fn is_deprecated(&self) -> bool {
-        self.options().is_deprecated()
-    }
-    /// alias for `r#type`
-    ///
-    /// If type_name is set, this need not be set.  If both this and type_name
-    /// are set, this must be one of Enum, Message or Group.
-    pub fn proto_type(&self) -> Type<'a> {
-        self.r#type()
-    }
+//     pub fn is_bytes(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::Bytes))
+//     }
 
-    /// If type_name is set, this need not be set.  If both this and type_name
-    /// are set, this must be one of Enum, Message or Group.
-    pub fn r#type(&self) -> Type<'a> {
-        Type::from(self.desc)
-    }
+//     pub fn is_uint32(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::Uint32))
+//     }
 
-    pub fn is_embed(&self) -> bool {
-        matches!(self.r#type(), Type::Message(_))
-    }
-    pub fn is_message(&self) -> bool {
-        matches!(self.r#type(), Type::Message(_))
-    }
+//     pub fn is_sfixed32(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::Sfixed32))
+//     }
 
-    pub fn is_enum(&self) -> bool {
-        matches!(self.r#type(), Type::Enum(_))
-    }
+//     pub fn is_sfixed64(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::Sfixed64))
+//     }
 
-    pub fn is_scalar(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(_))
-    }
+//     pub fn is_sint32(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::Sint32))
+//     }
 
-    pub fn is_double(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::Double))
-    }
-    pub fn is_float(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::Float))
-    }
+//     pub fn is_sint64(&self) -> bool {
+//         matches!(self.type_(), Type::Scalar(Scalar::Sint64))
+//     }
 
-    pub fn is_int64(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::Int64))
-    }
+//     pub fn is_repeated(&self) -> bool {
+//         self.label() == Label::Repeated
+//     }
 
-    pub fn is_uint64(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::Uint64))
-    }
+//     /// For message and enum types, this is the name of the type.  If the name
+//     /// starts with a '.', it is fully-qualified.  Otherwise, C++-like scoping
+//     /// rules are used to find the type (i.e. first the nested types within this
+//     /// message are searched, then within the parent, on up to the root
+//     /// namespace).
+//     pub fn type_name(&self) -> &str {
+//         self.desc.type_name()
+//     }
 
-    pub fn is_int32(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::Int32))
-    }
+//     /// For extensions, this is the name of the type being extended.  It is
+//     /// resolved in the same manner as `proto_type_name`.
+//     pub fn extendee(&self) -> &str {
+//         self.desc.extendee()
+//     }
+//     /// For numeric types, contains the original text representation of the value.
+//     /// For booleans, "true" or "false".
+//     /// For strings, contains the default text contents (not escaped in any way).
+//     /// For bytes, contains the C escaped value.  All bytes >= 128 are escaped.
+//     pub fn default_value(&self) -> &str {
+//         self.desc.default_value()
+//     }
+//     /// If set, gives the index of a oneof in the containing type's oneof_decl
+//     /// list.
+//     ///
+//     /// This field is a member of that oneof.
+//     pub fn oneof_index(&self) -> Option<i32> {
+//         if self.desc.has_oneof_index() {
+//             Some(self.desc.oneof_index())
+//         } else {
+//             None
+//         }
+//     }
 
-    pub fn is_fixed64(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::Fixed64))
-    }
+//     /// JSON name of this field. The value is set by protocol compiler. If the
+//     /// user has set a "json_name" option on this field, that option's value
+//     /// will be used. Otherwise, it's deduced from the field's name by converting
+//     /// it to camelCase.
+//     pub fn json_name(&self) -> &str {
+//         self.desc.json_name()
+//     }
 
-    pub fn is_fixed32(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::Fixed32))
-    }
+//     pub fn options(&self) -> FieldOptions {
+//         self.desc.options.as_ref().into()
+//     }
+//     /// If true, this is a proto3 "optional". When a proto3 field is optional, it
+//     /// tracks presence regardless of field type.
+//     ///
+//     /// When proto3_optional is true, this field must be belong to a oneof to
+//     /// signal to old proto3 clients that presence is tracked for this field. This
+//     /// oneof is known as a "synthetic" oneof, and this field must be its sole
+//     /// member (each proto3 optional field gets its own synthetic oneof). Synthetic
+//     /// oneofs exist in the descriptor only, and do not generate any API. Synthetic
+//     /// oneofs must be ordered after all "real" oneofs.
+//     ///
+//     /// For message fields, proto3_optional doesn't create any semantic change,
+//     /// since non-repeated message fields always track presence. However it still
+//     /// indicates the semantic detail of whether the user wrote "optional" or not.
+//     /// This can be useful for round-tripping the .proto file. For consistency we
+//     /// give message fields a synthetic oneof also, even though it is not required
+//     /// to track presence. This is especially important because the parser can't
+//     /// tell if a field is a message or an enum, so it must always create a
+//     /// synthetic oneof.
+//     ///
+//     /// Proto2 optional fields do not set this flag, because they already indicate
+//     /// optional with `LABEL_OPTIONAL`.
+//     pub fn proto3_optional(&self) -> bool {
+//         self.desc.proto3_optional()
+//     }
+//     /// returns `true` if:
+//     ///
+//     /// - `syntax` is `Syntax::Proto3` and `proto3_optional` is `true`
+//     /// - `syntax` is `Syntax::Proto2` and `label` is `Label::Optional`.
+//     pub fn is_marked_optional(&self, syntax: Syntax) -> bool {
+//         match syntax {
+//             Syntax::Proto2 => self.label() == Label::Optional,
+//             Syntax::Proto3 => self.proto3_optional(),
+//         }
+//     }
+//     pub fn is_marked_required(&self, syntax: Syntax) -> bool {
+//         syntax.supports_required_prefix() && self.label() == Label::Required
+//     }
+// }
+// impl From<&'a protobuf::descriptor::FieldDescriptorProto> for FieldDescriptor {
+//     fn from(desc: &'a protobuf::descriptor::FieldDescriptorProto) -> Self {
+//         Self { desc }
+//     }
+// }
 
-    pub fn is_bool(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::Bool))
-    }
+// #[cfg(test)]
+// impl Default for FieldDescriptor {
+//     fn default() -> Self {
+//         Self {
+//             desc: &test_data::DEFAULT_FIELD_DESCRIPTOR_PROTO,
+//         }
+//     }
+// }
 
-    pub fn is_string(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::String))
-    }
+// /// Describes a service.
+// #[derive(Debug, Clone, Copy)]
+// pub struct ServiceDescriptor {
+//     desc: protobuf::descriptor::ServiceDescriptorProto,
+// }
+// impl ServiceDescriptor {
+//     pub fn name(&self) -> &str {
+//         self.desc.name()
+//     }
+//     pub fn options(&self) -> ServiceOptions {
+//         self.desc.options.as_ref().into()
+//     }
+//     pub fn methods(&self) -> MethodDescriptorIter {
+//         (&self.desc.method).into()
+//     }
+// }
+// impl From<&'a protobuf::descriptor::ServiceDescriptorProto> for ServiceDescriptor {
+//     fn from(desc: &'a protobuf::descriptor::ServiceDescriptorProto) -> Self {
+//         Self { desc }
+//     }
+// }
+// #[cfg(test)]
+// impl Default for ServiceDescriptor {
+//     fn default() -> Self {
+//         Self {
+//             desc: &test_data::DEFAULT_SERVICE_DESCRIPTOR_PROTO,
+//         }
+//     }
+// }
 
-    pub fn is_bytes(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::Bytes))
-    }
-
-    pub fn is_uint32(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::Uint32))
-    }
-
-    pub fn is_sfixed32(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::Sfixed32))
-    }
-
-    pub fn is_sfixed64(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::Sfixed64))
-    }
-
-    pub fn is_sint32(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::Sint32))
-    }
-
-    pub fn is_sint64(&self) -> bool {
-        matches!(self.r#type(), Type::Scalar(Scalar::Sint64))
-    }
-
-    pub fn is_repeated(&self) -> bool {
-        self.label() == Label::Repeated
-    }
-
-    /// For message and enum types, this is the name of the type.  If the name
-    /// starts with a '.', it is fully-qualified.  Otherwise, C++-like scoping
-    /// rules are used to find the type (i.e. first the nested types within this
-    /// message are searched, then within the parent, on up to the root
-    /// namespace).
-    pub fn type_name(&self) -> &str {
-        self.desc.type_name()
-    }
-
-    /// For extensions, this is the name of the type being extended.  It is
-    /// resolved in the same manner as `proto_type_name`.
-    pub fn extendee(&self) -> &str {
-        self.desc.extendee()
-    }
-    /// For numeric types, contains the original text representation of the value.
-    /// For booleans, "true" or "false".
-    /// For strings, contains the default text contents (not escaped in any way).
-    /// For bytes, contains the C escaped value.  All bytes >= 128 are escaped.
-    pub fn default_value(&self) -> &str {
-        self.desc.default_value()
-    }
-    /// If set, gives the index of a oneof in the containing type's oneof_decl
-    /// list.
-    ///
-    /// This field is a member of that oneof.
-    pub fn oneof_index(&self) -> Option<i32> {
-        if self.desc.has_oneof_index() {
-            Some(self.desc.oneof_index())
-        } else {
-            None
-        }
-    }
-
-    /// JSON name of this field. The value is set by protocol compiler. If the
-    /// user has set a "json_name" option on this field, that option's value
-    /// will be used. Otherwise, it's deduced from the field's name by converting
-    /// it to camelCase.
-    pub fn json_name(&self) -> &str {
-        self.desc.json_name()
-    }
-    pub fn options(&self) -> FieldOptions<'a> {
-        self.desc.options.as_ref().into()
-    }
-    /// If true, this is a proto3 "optional". When a proto3 field is optional, it
-    /// tracks presence regardless of field type.
-    ///
-    /// When proto3_optional is true, this field must be belong to a oneof to
-    /// signal to old proto3 clients that presence is tracked for this field. This
-    /// oneof is known as a "synthetic" oneof, and this field must be its sole
-    /// member (each proto3 optional field gets its own synthetic oneof). Synthetic
-    /// oneofs exist in the descriptor only, and do not generate any API. Synthetic
-    /// oneofs must be ordered after all "real" oneofs.
-    ///
-    /// For message fields, proto3_optional doesn't create any semantic change,
-    /// since non-repeated message fields always track presence. However it still
-    /// indicates the semantic detail of whether the user wrote "optional" or not.
-    /// This can be useful for round-tripping the .proto file. For consistency we
-    /// give message fields a synthetic oneof also, even though it is not required
-    /// to track presence. This is especially important because the parser can't
-    /// tell if a field is a message or an enum, so it must always create a
-    /// synthetic oneof.
-    ///
-    /// Proto2 optional fields do not set this flag, because they already indicate
-    /// optional with `LABEL_OPTIONAL`.
-    pub fn proto3_optional(&self) -> bool {
-        self.desc.proto3_optional()
-    }
-    /// returns `true` if:
-    ///
-    /// - `syntax` is `Syntax::Proto3` and `proto3_optional` is `true`
-    /// - `syntax` is `Syntax::Proto2` and `label` is `Label::Optional`.
-    pub fn is_marked_optional(&self, syntax: Syntax) -> bool {
-        match syntax {
-            Syntax::Proto2 => self.label() == Label::Optional,
-            Syntax::Proto3 => self.proto3_optional(),
-        }
-    }
-    pub fn is_marked_required(&self, syntax: Syntax) -> bool {
-        syntax.supports_required_prefix() && self.label() == Label::Required
-    }
-}
-impl<'a> From<&'a protobuf::descriptor::FieldDescriptorProto> for FieldDescriptor<'a> {
-    fn from(desc: &'a protobuf::descriptor::FieldDescriptorProto) -> Self {
-        Self { desc }
-    }
-}
-
-#[cfg(test)]
-impl<'a> Default for FieldDescriptor<'a> {
-    fn default() -> Self {
-        Self {
-            desc: &test_data::DEFAULT_FIELD_DESCRIPTOR_PROTO,
-        }
-    }
-}
-
-/// Describes a service.
-#[derive(Debug, Clone, Copy)]
-pub struct ServiceDescriptor<'a> {
-    desc: &'a protobuf::descriptor::ServiceDescriptorProto,
-}
-impl<'a> ServiceDescriptor<'a> {
-    pub fn name(&self) -> &'a str {
-        self.desc.name()
-    }
-    pub fn options(&self) -> ServiceOptions<'a> {
-        self.desc.options.as_ref().into()
-    }
-    pub fn methods(&self) -> MethodDescriptorIter<'a> {
-        (&self.desc.method).into()
-    }
-}
-impl<'a> From<&'a protobuf::descriptor::ServiceDescriptorProto> for ServiceDescriptor<'a> {
-    fn from(desc: &'a protobuf::descriptor::ServiceDescriptorProto) -> Self {
-        Self { desc }
-    }
-}
-#[cfg(test)]
-impl<'a> Default for ServiceDescriptor<'a> {
-    fn default() -> Self {
-        Self {
-            desc: &test_data::DEFAULT_SERVICE_DESCRIPTOR_PROTO,
-        }
-    }
-}
-
-/// Describes a method.
-#[derive(Debug, Clone, Copy)]
-pub struct MethodDescriptor<'a> {
-    desc: &'a protobuf::descriptor::MethodDescriptorProto,
-}
-impl<'a> MethodDescriptor<'a> {
-    pub fn name(&self) -> &'a str {
-        self.desc.name()
-    }
-    /// Input type name.
-    ///
-    /// These are resolved in the same way as
-    /// `FieldDescriptor.type_name`, but must refer to a message type
-    pub fn input_type(&self) -> &'a str {
-        self.desc.input_type()
-    }
-    /// Output type name.
-    ///
-    /// These are resolved in the same way as
-    /// `FieldDescriptor.type_name`, but must refer to a message type
-    pub fn output_type(&self) -> &'a str {
-        self.desc.output_type()
-    }
-    /// Identifies if client streams multiple client messages
-    pub fn client_streaming(&self) -> bool {
-        self.desc.client_streaming()
-    }
-    /// Identifies if server streams multiple server messages
-    pub fn server_streaming(&self) -> bool {
-        self.desc.server_streaming()
-    }
-    pub fn options(&self) -> MethodOptions<'a> {
-        self.desc.options.as_ref().into()
-    }
-}
-impl<'a> From<&'a protobuf::descriptor::MethodDescriptorProto> for MethodDescriptor<'a> {
-    fn from(desc: &'a protobuf::descriptor::MethodDescriptorProto) -> Self {
-        Self { desc }
-    }
-}
-#[cfg(test)]
-impl<'a> Default for MethodDescriptor<'a> {
-    fn default() -> Self {
-        Self {
-            desc: &test_data::DEFAULT_METHOD_DESCRIPTOR_PROTO,
-        }
-    }
-}
-
-/// Describes a oneof.
-#[derive(Debug, Clone, Copy)]
-pub struct OneofDescriptor<'a> {
-    desc: &'a protobuf::descriptor::OneofDescriptorProto,
-}
-impl<'a> OneofDescriptor<'a> {
-    pub fn name(&self) -> &'a str {
-        self.desc.name()
-    }
-    pub fn options(&self) -> OneofOptions<'a> {
-        self.desc.options.as_ref().into()
-    }
-}
-impl<'a> From<&'a protobuf::descriptor::OneofDescriptorProto> for OneofDescriptor<'a> {
-    fn from(desc: &'a protobuf::descriptor::OneofDescriptorProto) -> Self {
-        Self { desc }
-    }
-}
-#[cfg(test)]
-impl<'a> Default for OneofDescriptor<'a> {
-    fn default() -> Self {
-        Self {
-            desc: &test_data::DEFAULT_ONEOF_DESCRIPTOR,
-        }
-    }
-}
+// /// Describes a oneof.
+// #[derive(Debug, Clone, Copy)]
+// pub struct OneofDescriptor {
+//     desc: &'a protobuf::descriptor::OneofDescriptorProto,
+// }
+// impl OneofDescriptor {
+//     pub fn name(&self) -> &str {
+//         self.desc.name()
+//     }
+//     pub fn options(&self) -> OneofOptions {
+//         self.desc.options.as_ref().into()
+//     }
+// }
+// impl From<&'a protobuf::descriptor::OneofDescriptorProto> for OneofDescriptor {
+//     fn from(desc: &'a protobuf::descriptor::OneofDescriptorProto) -> Self {
+//         Self { desc }
+//     }
+// }
+// #[cfg(test)]
+// impl Default for OneofDescriptor {
+//     fn default() -> Self {
+//         Self {
+//             desc: &test_data::DEFAULT_ONEOF_DESCRIPTOR,
+//         }
+//     }
+// }
 // ===================================================================
 // Options
+
+use ::std::option::Option;
+use std::fmt;
+
+use crate::uninterpreted_option::UninterpretedOption;
 
 /// Each of the definitions above may have "options" attached.  These are
 /// just annotations which may cause code to be generated slightly differently
@@ -575,15 +323,15 @@ impl<'a> Default for OneofDescriptor<'a> {
 ///   If this turns out to be popular, a web service will be set up
 ///   to automatically assign option numbers.
 #[derive(Debug, Clone, Copy)]
-pub struct FileOptions<'a> {
+pub struct FileOptions {
     opts: Option<&'a protobuf::descriptor::FileOptions>,
 }
-impl<'a> From<Option<&'a protobuf::descriptor::FileOptions>> for FileOptions<'a> {
+impl From<Option<&'a protobuf::descriptor::FileOptions>> for FileOptions {
     fn from(opts: Option<&'a protobuf::descriptor::FileOptions>) -> Self {
         Self { opts }
     }
 }
-impl<'a> FileOptions<'a> {
+impl FileOptions {
     /// Java package where classes generated from this .proto will be
     /// placed.  By default, the proto package is used, but this is often
     /// inappropriate because proto packages do not normally start with backwards
@@ -717,7 +465,7 @@ impl<'a> FileOptions<'a> {
     }
     /// The parser stores options it doesn't recognize here.
     /// See the documentation for the "Options" section above.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         (&self.opts().uninterpreted_option).into()
     }
     fn opts(&self) -> &'a protobuf::descriptor::FileOptions {
@@ -726,10 +474,10 @@ impl<'a> FileOptions<'a> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct EnumValueOptions<'a> {
+pub struct EnumValueOptions {
     opts: Option<&'a protobuf::descriptor::EnumValueOptions>,
 }
-impl<'a> EnumValueOptions<'a> {
+impl EnumValueOptions {
     /// Is this enum value deprecated?
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for the enum value, or it will be completely ignored; in the very least,
@@ -741,24 +489,24 @@ impl<'a> EnumValueOptions<'a> {
         self.opts().deprecated()
     }
     /// Options not recognized by the parser.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         (&self.opts().uninterpreted_option).into()
     }
     fn opts(&self) -> &'a protobuf::descriptor::EnumValueOptions {
         self.opts.unwrap_or(&DEFAULT_ENUM_VALUE_OPTIONS)
     }
 }
-impl<'a> From<Option<&'a protobuf::descriptor::EnumValueOptions>> for EnumValueOptions<'a> {
+impl From<Option<&'a protobuf::descriptor::EnumValueOptions>> for EnumValueOptions {
     fn from(opts: Option<&'a protobuf::descriptor::EnumValueOptions>) -> Self {
         Self { opts }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct MessageOptions<'a> {
+pub struct MessageOptions {
     opts: Option<&'a protobuf::descriptor::MessageOptions>,
 }
-impl<'a> MessageOptions<'a> {
+impl MessageOptions {
     /// Set true to use the old proto1 MessageSet wire format for extensions.
     /// This is provided for backwards-compatibility with the MessageSet wire
     /// format.  You should not use this for any other reason:  It's less
@@ -819,24 +567,24 @@ impl<'a> MessageOptions<'a> {
         self.opts().no_standard_descriptor_accessor()
     }
     /// The parser stores options it doesn't recognize here. See above.
-    pub fn uninterpreted_option(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_option(&self) -> &[UninterpretedOption] {
         (&self.opts().uninterpreted_option).into()
     }
     fn opts(&self) -> &'a protobuf::descriptor::MessageOptions {
         self.opts.unwrap_or(&DEFAULT_MESSAGE_OPTIONS)
     }
 }
-impl<'a> From<Option<&'a protobuf::descriptor::MessageOptions>> for MessageOptions<'a> {
+impl From<Option<&'a protobuf::descriptor::MessageOptions>> for MessageOptions {
     fn from(opts: Option<&'a protobuf::descriptor::MessageOptions>) -> Self {
         MessageOptions { opts }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct FieldOptions<'a> {
+pub struct FieldOptions {
     opts: Option<&'a protobuf::descriptor::FieldOptions>,
 }
-impl<'a> FieldOptions<'a> {
+impl FieldOptions {
     pub fn new(opts: Option<&'a protobuf::descriptor::FieldOptions>) -> Self {
         Self { opts }
     }
@@ -916,25 +664,25 @@ impl<'a> FieldOptions<'a> {
     }
 
     /// Options the parser does not recognize.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         (&self.opts().uninterpreted_option).into()
     }
 
-    fn opts(&self) -> &'a protobuf::descriptor::FieldOptions {
-        self.opts.unwrap_or(&DEFAULT_FIELD_OPTIONS)
+    fn opts(&self) -> Option<&protobuf::descriptor::FieldOptions> {
+        self.opts.as_ref()
     }
 }
-impl<'a> From<Option<&'a protobuf::descriptor::FieldOptions>> for FieldOptions<'a> {
+impl From<Option<&'a protobuf::descriptor::FieldOptions>> for FieldOptions {
     fn from(opts: Option<&'a protobuf::descriptor::FieldOptions>) -> Self {
         Self { opts }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct EnumOptions<'a> {
+pub struct EnumOptions {
     opts: Option<&'a protobuf::descriptor::EnumOptions>,
 }
-impl<'a> EnumOptions<'a> {
+impl EnumOptions {
     /// Is this enum deprecated?
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for the enum, or it will be completely ignored; in the very least, this
@@ -946,7 +694,7 @@ impl<'a> EnumOptions<'a> {
         self.opts().deprecated()
     }
     /// Options not recognized by the parser.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         (&self.opts().uninterpreted_option).into()
     }
     /// Allows mapping different tag names to the same value.
@@ -957,7 +705,7 @@ impl<'a> EnumOptions<'a> {
         self.opts.unwrap_or(&DEFAULT_ENUM_OPTIONS)
     }
 }
-impl<'a> From<Option<&'a protobuf::descriptor::EnumOptions>> for EnumOptions<'a> {
+impl From<Option<&'a protobuf::descriptor::EnumOptions>> for EnumOptions {
     fn from(opts: Option<&'a protobuf::descriptor::EnumOptions>) -> Self {
         Self { opts }
     }
@@ -968,10 +716,10 @@ impl<'a> From<Option<&'a protobuf::descriptor::EnumOptions>> for EnumOptions<'a>
 /// Note: Field numbers 1 through 32 are reserved for Google's internal RPC
 /// framework.
 #[derive(Debug, Clone, Copy)]
-pub struct ServiceOptions<'a> {
+pub struct ServiceOptions {
     opts: Option<&'a protobuf::descriptor::ServiceOptions>,
 }
-impl<'a> ServiceOptions<'a> {
+impl ServiceOptions {
     /// Is this service deprecated?
     /// Depending on the target platform, this can emit Deprecated annotations
     /// for the service, or it will be completely ignored; in the very least,
@@ -983,14 +731,14 @@ impl<'a> ServiceOptions<'a> {
         self.opts().deprecated()
     }
     /// The parser stores options it doesn't recognize here. See above.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         (&self.opts().uninterpreted_option).into()
     }
     fn opts(&self) -> &'a protobuf::descriptor::ServiceOptions {
         self.opts.unwrap_or(&DEFAULT_SERVICE_OPTIONS)
     }
 }
-impl<'a> From<Option<&'a protobuf::descriptor::ServiceOptions>> for ServiceOptions<'a> {
+impl From<Option<&'a protobuf::descriptor::ServiceOptions>> for ServiceOptions {
     fn from(opts: Option<&'a protobuf::descriptor::ServiceOptions>) -> Self {
         Self { opts }
     }
@@ -1000,10 +748,10 @@ impl<'a> From<Option<&'a protobuf::descriptor::ServiceOptions>> for ServiceOptio
 ///
 /// Note:  Field numbers 1 through 32 are reserved for Google's internal RPC
 /// framework.
-pub struct MethodOptions<'a> {
+pub struct MethodOptions {
     opts: Option<&'a protobuf::descriptor::MethodOptions>,
 }
-impl<'a> MethodOptions<'a> {
+impl MethodOptions {
     // Note:  Field numbers 1 through 32 are reserved for Google's internal RPC
     //   framework.  We apologize for hoarding these numbers to ourselves, but
     //   we were already using them long before we decided to release Protocol
@@ -1020,7 +768,7 @@ impl<'a> MethodOptions<'a> {
         self.opts().deprecated()
     }
     /// The parser stores options it doesn't recognize here. See above.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         (&self.opts().uninterpreted_option).into()
     }
 
@@ -1034,92 +782,28 @@ impl<'a> MethodOptions<'a> {
         self.opts.unwrap_or(&DEFAULT_METHOD_OPTIONS)
     }
 }
-impl<'a> From<Option<&'a protobuf::descriptor::MethodOptions>> for MethodOptions<'a> {
+impl From<Option<&'a protobuf::descriptor::MethodOptions>> for MethodOptions {
     fn from(opts: Option<&'a protobuf::descriptor::MethodOptions>) -> Self {
         Self { opts }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct OneofOptions<'a> {
+pub struct OneofOptions {
     opts: Option<&'a protobuf::descriptor::OneofOptions>,
 }
-impl<'a> OneofOptions<'a> {
+impl OneofOptions {
     /// The parser stores options it doesn't recognize here. See above.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         (&self.opts().uninterpreted_option).into()
     }
     pub fn opts(&self) -> &'a protobuf::descriptor::OneofOptions {
         self.opts.unwrap_or(&DEFAULT_ONEOF_OPTIONS)
     }
 }
-impl<'a> From<Option<&'a protobuf::descriptor::OneofOptions>> for OneofOptions<'a> {
+impl From<Option<&'a protobuf::descriptor::OneofOptions>> for OneofOptions {
     fn from(opts: Option<&'a protobuf::descriptor::OneofOptions>) -> Self {
         Self { opts }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct UninterpretedOptions<'a> {
-    pub(crate) opts: &'a [protobuf::descriptor::UninterpretedOption],
-}
-impl<'a> UninterpretedOptions<'a> {
-    pub fn iter(&self) -> UninterpretedOptionsIter<'a> {
-        self.into()
-    }
-}
-impl<'a> IntoIterator for UninterpretedOptions<'a> {
-    type Item = UninterpretedOption<'a>;
-    type IntoIter = UninterpretedOptionsIter<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.into()
-    }
-}
-impl<'a> From<&'a Vec<protobuf::descriptor::UninterpretedOption>> for UninterpretedOptions<'a> {
-    fn from(opts: &'a Vec<protobuf::descriptor::UninterpretedOption>) -> Self {
-        UninterpretedOptions { opts }
-    }
-}
-
-/// A message representing a option the parser does not recognize. This only
-/// appears in options protos created by the compiler::Parser class.
-/// DescriptorPool resolves these when building Descriptor objects. Therefore,
-/// options protos in descriptor objects (e.g. returned by Descriptor::options(),
-/// or produced by Descriptor::CopyTo()) will never have UninterpretedOptions
-/// in them.
-#[derive(Debug, Clone, Copy)]
-pub struct UninterpretedOption<'a> {
-    opt: &'a protobuf::descriptor::UninterpretedOption,
-}
-impl<'a> UninterpretedOption<'a> {
-    pub fn name_parts(&self) -> NameParts<'a> {
-        NameParts::from(&self.opt.name)
-    }
-
-    pub fn identifier_value(&self) -> &'a str {
-        self.opt.identifier_value()
-    }
-    pub fn positive_int_value(&self) -> u64 {
-        self.opt.positive_int_value()
-    }
-    pub fn negative_int_value(&self) -> i64 {
-        self.opt.negative_int_value()
-    }
-    pub fn double_value(&self) -> f64 {
-        self.opt.double_value()
-    }
-    pub fn string_value(&self) -> &'a [u8] {
-        self.opt.string_value()
-    }
-    pub fn aggregate_value(&self) -> &'a str {
-        self.opt.aggregate_value()
-    }
-}
-
-impl<'a> From<&'a protobuf::descriptor::UninterpretedOption> for UninterpretedOption<'a> {
-    fn from(opt: &'a protobuf::descriptor::UninterpretedOption) -> Self {
-        UninterpretedOption { opt }
     }
 }
 
@@ -1127,84 +811,57 @@ impl<'a> From<&'a protobuf::descriptor::UninterpretedOption> for UninterpretedOp
 /// fields or extension ranges in the same message. Reserved ranges may
 /// not overlap.
 #[derive(Debug, Clone, Copy)]
-pub struct ReservedRange<'a> {
-    range: &'a protobuf::descriptor::descriptor_proto::ReservedRange,
+pub struct ReservedRange {
+    start: Option<i32>,
+    end: Option<i32>,
 }
-impl<'a> ReservedRange<'a> {
+impl ReservedRange {
     /// Inclusive.
     pub fn start(&self) -> i32 {
-        self.range.start()
+        self.range.start
     }
 
     /// Exclusive.
     pub fn end(&self) -> i32 {
-        self.range.end()
+        self.range.end
     }
 
     pub fn in_range(&self, val: i32) -> bool {
         self.start() <= val && val < self.end()
     }
 }
-impl<'a> PartialEq for ReservedRange<'a> {
+impl PartialEq for ReservedRange {
     fn eq(&self, other: &Self) -> bool {
         self.start() == other.start() && self.end() == other.end()
     }
 }
-impl<'a> From<&'a protobuf::descriptor::descriptor_proto::ReservedRange> for ReservedRange<'a> {
-    fn from(range: &'a protobuf::descriptor::descriptor_proto::ReservedRange) -> Self {
-        ReservedRange { range }
+impl From<protobuf::descriptor::descriptor_proto::ReservedRange> for ReservedRange {
+    fn from(range: protobuf::descriptor::descriptor_proto::ReservedRange) -> Self {
+        ReservedRange {
+            start: range.start,
+            end: range.end,
+        }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct ReservedRanges<'a> {
-    ranges: &'a [protobuf::descriptor::descriptor_proto::ReservedRange],
+pub struct ExtensionRange {
+    // message fields
+    // @@protoc_insertion_point(field:google.protobuf.DescriptorProto.ExtensionRange.start)
+    pub start: ::std::option::Option<i32>,
+    // @@protoc_insertion_point(field:google.protobuf.DescriptorProto.ExtensionRange.end)
+    pub end: ::std::option::Option<i32>,
+    // @@protoc_insertion_point(field:google.protobuf.DescriptorProto.ExtensionRange.options)
+    pub options: crate::MessageField<protobuf::descriptor::ExtensionRangeOptions>,
+    // special fields
+    // @@protoc_insertion_point(special_field:google.protobuf.DescriptorProto.ExtensionRange.special_fields)
 }
-impl<'a> IntoIterator for ReservedRanges<'a> {
-    type Item = ReservedRange<'a>;
-    type IntoIter = ReservedRangeIter<'a>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.ranges.into()
-    }
-}
-impl<'a> ReservedRanges<'a> {
-    pub fn iter(&self) -> ReservedRangeIter<'a> {
-        self.ranges.into()
-    }
-    pub fn len(&self) -> usize {
-        self.ranges.len()
-    }
-    pub fn is_empty(&self) -> bool {
-        self.ranges.is_empty()
-    }
-    pub fn get(&self, index: usize) -> Option<ReservedRange<'a>> {
-        self.ranges.get(index).map(Into::into)
-    }
-    pub fn is_range_reserved(&self, min: i32, max: i32) -> bool {
-        self.iter().any(|r| r.start() <= min && r.end() >= max)
-    }
-    pub fn is_in_reserved_range(&self, num: i32) -> bool {
-        self.iter().any(|r| r.start() <= num && r.end() >= num)
-    }
-}
-impl<'a> From<&'a Vec<protobuf::descriptor::descriptor_proto::ReservedRange>>
-    for ReservedRanges<'a>
-{
-    fn from(ranges: &'a Vec<protobuf::descriptor::descriptor_proto::ReservedRange>) -> Self {
-        ReservedRanges { ranges }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct ExtensionRange<'a> {
-    range: &'a protobuf::descriptor::descriptor_proto::ExtensionRange,
-}
-impl<'a> PartialEq for ExtensionRange<'a> {
+impl PartialEq for ExtensionRange {
     fn eq(&self, other: &Self) -> bool {
         self.range.start() == other.start() && self.end() == other.end()
     }
 }
-impl<'a> ExtensionRange<'a> {
+impl ExtensionRange {
     /// Inclusive.
     pub fn start(&self) -> i32 {
         self.range.start()
@@ -1217,18 +874,18 @@ impl<'a> ExtensionRange<'a> {
         self.start() <= val && val < self.end()
     }
 }
-impl<'a> From<&'a protobuf::descriptor::descriptor_proto::ExtensionRange> for ExtensionRange<'a> {
+impl From<&'a protobuf::descriptor::descriptor_proto::ExtensionRange> for ExtensionRange {
     fn from(range: &'a protobuf::descriptor::descriptor_proto::ExtensionRange) -> Self {
         ExtensionRange { range }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct ExtensionRanges<'a> {
+pub struct ExtensionRanges {
     ranges: &'a [protobuf::descriptor::descriptor_proto::ExtensionRange],
 }
-impl<'a> ExtensionRanges<'a> {
-    pub fn iter(&self) -> ExtensionRangeIter<'a> {
+impl ExtensionRanges {
+    pub fn iter(&self) -> ExtensionRangeIter {
         self.ranges.into()
     }
     pub fn len(&self) -> usize {
@@ -1237,26 +894,24 @@ impl<'a> ExtensionRanges<'a> {
     pub fn is_empty(&self) -> bool {
         self.ranges.is_empty()
     }
-    pub fn first(&self) -> Option<ExtensionRange<'a>> {
+    pub fn first(&self) -> Option<ExtensionRange> {
         self.ranges.first().map(|r| r.into())
     }
-    pub fn last(&self) -> Option<ExtensionRange<'a>> {
+    pub fn last(&self) -> Option<ExtensionRange> {
         self.ranges.last().map(|r| r.into())
     }
-    pub fn get(&self, n: usize) -> Option<ExtensionRange<'a>> {
+    pub fn get(&self, n: usize) -> Option<ExtensionRange> {
         self.ranges.get(n).map(|r| r.into())
     }
 }
-impl<'a> IntoIterator for ExtensionRanges<'a> {
-    type Item = ExtensionRange<'a>;
-    type IntoIter = ExtensionRangeIter<'a>;
+impl IntoIterator for ExtensionRanges {
+    type Item = ExtensionRange;
+    type IntoIter = ExtensionRangeIter;
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
-impl<'a> From<&'a Vec<protobuf::descriptor::descriptor_proto::ExtensionRange>>
-    for ExtensionRanges<'a>
-{
+impl From<&'a Vec<protobuf::descriptor::descriptor_proto::ExtensionRange>> for ExtensionRanges {
     fn from(ranges: &'a Vec<protobuf::descriptor::descriptor_proto::ExtensionRange>) -> Self {
         ExtensionRanges { ranges }
     }
@@ -1269,17 +924,17 @@ impl<'a> From<&'a Vec<protobuf::descriptor::descriptor_proto::ExtensionRange>>
 /// is inclusive such that it can appropriately represent the entire int32
 /// domain.
 #[derive(Debug, PartialEq)]
-pub struct EnumReservedRange<'a> {
+pub struct EnumReservedRange {
     rr: &'a protobuf::descriptor::enum_descriptor_proto::EnumReservedRange,
 }
-impl<'a> From<&'a protobuf::descriptor::enum_descriptor_proto::EnumReservedRange>
-    for EnumReservedRange<'a>
+impl From<&'a protobuf::descriptor::enum_descriptor_proto::EnumReservedRange>
+    for EnumReservedRange
 {
     fn from(r: &'a protobuf::descriptor::enum_descriptor_proto::EnumReservedRange) -> Self {
         Self { rr: r }
     }
 }
-impl<'a> EnumReservedRange<'a> {
+impl EnumReservedRange {
     /// Inclusive
     pub fn start(&self) -> i32 {
         self.rr.start()
@@ -1291,18 +946,18 @@ impl<'a> EnumReservedRange<'a> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct EnumReservedRanges<'a> {
+pub struct EnumReservedRanges {
     ranges: &'a [protobuf::descriptor::enum_descriptor_proto::EnumReservedRange],
 }
-impl<'a> IntoIterator for EnumReservedRanges<'a> {
-    type Item = EnumReservedRange<'a>;
-    type IntoIter = EnumReservedRangeIter<'a>;
+impl IntoIterator for EnumReservedRanges {
+    type Item = EnumReservedRange;
+    type IntoIter = EnumReservedRangeIter;
     fn into_iter(self) -> Self::IntoIter {
         self.ranges.into()
     }
 }
-impl<'a> EnumReservedRanges<'a> {
-    pub fn iter(&self) -> EnumReservedRangeIter<'a> {
+impl EnumReservedRanges {
+    pub fn iter(&self) -> EnumReservedRangeIter {
         self.ranges.into()
     }
     pub fn len(&self) -> usize {
@@ -1311,7 +966,7 @@ impl<'a> EnumReservedRanges<'a> {
     pub fn is_empty(&self) -> bool {
         self.ranges.is_empty()
     }
-    pub fn get(&self, index: usize) -> Option<EnumReservedRange<'a>> {
+    pub fn get(&self, index: usize) -> Option<EnumReservedRange> {
         self.ranges.get(index).map(|r| r.into())
     }
     pub fn is_range_reserved(&self, min: i32, max: i32) -> bool {
@@ -1321,8 +976,8 @@ impl<'a> EnumReservedRanges<'a> {
         self.iter().any(|r| r.start() <= num && r.end() >= num)
     }
 }
-impl<'a> From<&'a Vec<protobuf::descriptor::enum_descriptor_proto::EnumReservedRange>>
-    for EnumReservedRanges<'a>
+impl From<&'a Vec<protobuf::descriptor::enum_descriptor_proto::EnumReservedRange>>
+    for EnumReservedRanges
 {
     fn from(
         ranges: &'a Vec<protobuf::descriptor::enum_descriptor_proto::EnumReservedRange>,
@@ -1338,14 +993,14 @@ impl<'a> From<&'a Vec<protobuf::descriptor::enum_descriptor_proto::EnumReservedR
 pub struct NamePart<'a> {
     part: &'a protobuf::descriptor::uninterpreted_option::NamePart,
 }
-impl<'a> Eq for NamePart<'a> {}
-impl<'a> PartialEq<NamePart<'a>> for NamePart<'a> {
+impl Eq for NamePart {}
+impl PartialEq<NamePart> for NamePart {
     fn eq(&self, other: &Self) -> bool {
         self.part == other.part
     }
 }
 
-impl<'a> fmt::Debug for NamePart<'a> {
+impl fmt::Debug for NamePart {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("NamePart")
             .field("value", &self.part.name_part())
@@ -1354,30 +1009,30 @@ impl<'a> fmt::Debug for NamePart<'a> {
     }
 }
 
-impl<'a> PartialEq<String> for NamePart<'a> {
+impl PartialEq<String> for NamePart {
     fn eq(&self, other: &String) -> bool {
         self.as_str() == other
     }
 }
-impl<'a> fmt::Display for NamePart<'a> {
+impl fmt::Display for NamePart {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_str())
     }
 }
-impl<'a> PartialEq<&str> for NamePart<'a> {
+impl PartialEq<&str> for NamePart {
     fn eq(&self, other: &&str) -> bool {
         self.as_str() == *other
     }
 }
 
-impl<'a> NamePart<'a> {
+impl NamePart {
     /// alias for value
     /// the value of the part `NamePart`
-    pub fn name_part(&self) -> &'a str {
+    pub fn name_part(&self) -> &str {
         self.part.name_part()
     }
     /// the value of the part
-    pub fn value(&self) -> &'a str {
+    pub fn value(&self) -> &str {
         self.name_part()
     }
     /// is_extension is true if the segment represents an extension (denoted
@@ -1394,13 +1049,13 @@ impl<'a> NamePart<'a> {
     }
 }
 
-impl<'a> NamePart<'a> {
+impl NamePart {
     pub fn as_str(&self) -> &str {
         self.part.name_part()
     }
 }
 
-impl<'a> Deref for NamePart<'a> {
+impl Deref for NamePart {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
@@ -1408,34 +1063,32 @@ impl<'a> Deref for NamePart<'a> {
     }
 }
 
-impl<'a> From<&'a protobuf::descriptor::uninterpreted_option::NamePart> for NamePart<'a> {
+impl From<&'a protobuf::descriptor::uninterpreted_option::NamePart> for NamePart {
     fn from(part: &'a protobuf::descriptor::uninterpreted_option::NamePart) -> Self {
         Self { part }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct NameParts<'a> {
+pub struct NameParts {
     parts: &'a [protobuf::descriptor::uninterpreted_option::NamePart],
 }
 
-impl<'a> ToString for NameParts<'a> {
+impl ToString for NameParts {
     fn to_string(&self) -> String {
         self.formatted_value()
     }
 }
 
-impl<'a> From<&'a std::vec::Vec<protobuf::descriptor::uninterpreted_option::NamePart>>
-    for NameParts<'a>
-{
+impl From<&'a std::vec::Vec<protobuf::descriptor::uninterpreted_option::NamePart>> for NameParts {
     fn from(
         prost_parts: &'a std::vec::Vec<protobuf::descriptor::uninterpreted_option::NamePart>,
     ) -> Self {
         Self { parts: prost_parts }
     }
 }
-impl<'a> std::iter::IntoIterator for &NameParts<'a> {
-    type Item = NamePart<'a>;
+impl std::iter::IntoIterator for &NameParts {
+    type Item = NamePart;
     type IntoIter = vec::IntoIter<Self::Item>;
     fn into_iter(self) -> Self::IntoIter {
         self.parts
@@ -1446,11 +1099,11 @@ impl<'a> std::iter::IntoIterator for &NameParts<'a> {
     }
 }
 
-impl<'a> NameParts<'a> {
-    pub fn iter(&self) -> NamePartIter<'a> {
+impl NameParts {
+    pub fn iter(&self) -> NamePartIter {
         self.into()
     }
-    pub fn get(&self, idx: usize) -> Option<NamePart<'a>> {
+    pub fn get(&self, idx: usize) -> Option<NamePart> {
         self.parts.get(idx).map(NamePart::from)
     }
 
@@ -1471,41 +1124,41 @@ impl<'a> NameParts<'a> {
     }
 }
 
-pub struct NamePartIter<'a> {
+pub struct NamePartIter {
     iter: std::slice::Iter<'a, protobuf::descriptor::uninterpreted_option::NamePart>,
 }
-impl<'a> Iterator for NamePartIter<'a> {
-    type Item = NamePart<'a>;
+impl Iterator for NamePartIter {
+    type Item = NamePart;
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(NamePart::from)
     }
 }
 
-impl<'a> From<&NameParts<'a>> for NamePartIter<'a> {
-    fn from(parts: &NameParts<'a>) -> Self {
+impl From<&NameParts> for NamePartIter {
+    fn from(parts: &NameParts) -> Self {
         Self {
             iter: parts.parts.iter(),
         }
     }
 }
-impl<'a> From<&'a [protobuf::descriptor::uninterpreted_option::NamePart]> for NamePartIter<'a> {
+impl From<&'a [protobuf::descriptor::uninterpreted_option::NamePart]> for NamePartIter {
     fn from(parts: &'a [protobuf::descriptor::uninterpreted_option::NamePart]) -> Self {
         Self { iter: parts.iter() }
     }
 }
-impl<'a> From<&'a Vec<protobuf::descriptor::uninterpreted_option::NamePart>> for NamePartIter<'a> {
+impl From<&'a Vec<protobuf::descriptor::uninterpreted_option::NamePart>> for NamePartIter {
     fn from(parts: &'a Vec<protobuf::descriptor::uninterpreted_option::NamePart>) -> Self {
         Self { iter: parts.iter() }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct SourceCodeInfo<'a> {
+pub struct SourceCodeInfo {
     pub(crate) info: &'a protobuf::descriptor::SourceCodeInfo,
 }
 
-impl<'a> SourceCodeInfo<'a> {
-    pub fn iter(&self) -> LocationIter<'a> {
+impl SourceCodeInfo {
+    pub fn iter(&self) -> LocationIter {
         self.into()
     }
     pub fn len(&self) -> usize {
@@ -1516,13 +1169,13 @@ impl<'a> SourceCodeInfo<'a> {
     }
 }
 
-impl<'a> From<&'a protobuf::descriptor::SourceCodeInfo> for SourceCodeInfo<'a> {
+impl From<&'a protobuf::descriptor::SourceCodeInfo> for SourceCodeInfo {
     fn from(info: &'a protobuf::descriptor::SourceCodeInfo) -> Self {
         SourceCodeInfo { info }
     }
 }
 
-impl<'a> From<Option<&'a protobuf::descriptor::SourceCodeInfo>> for SourceCodeInfo<'a> {
+impl From<Option<&'a protobuf::descriptor::SourceCodeInfo>> for SourceCodeInfo {
     fn from(info: Option<&'a protobuf::descriptor::SourceCodeInfo>) -> Self {
         SourceCodeInfo {
             info: info.unwrap_or(&DEFAULT_SOURCE_CODE_INFO),
@@ -1530,16 +1183,16 @@ impl<'a> From<Option<&'a protobuf::descriptor::SourceCodeInfo>> for SourceCodeIn
     }
 }
 
-impl<'a> IntoIterator for SourceCodeInfo<'a> {
-    type Item = Location<'a>;
-    type IntoIter = LocationIter<'a>;
+impl IntoIterator for SourceCodeInfo {
+    type Item = Location;
+    type IntoIter = LocationIter;
 
     fn into_iter(self) -> Self::IntoIter {
         LocationIter::from(&self)
     }
 }
 
-impl<'a> Default for Location<'a> {
+impl Default for Location {
     fn default() -> Self {
         Location {
             loc: &DEFAULT_LOCATION,
@@ -1547,123 +1200,123 @@ impl<'a> Default for Location<'a> {
     }
 }
 
-#[cfg(test)]
-mod tests {
+// #[cfg(test)]
+// mod tests {
 
-    use super::*;
+//     use super::*;
 
-    #[test]
-    fn test_to_string() {
-        let mut p1 = protobuf::descriptor::uninterpreted_option::NamePart::new();
-        p1.set_name_part("foo".to_string());
-        let mut p2 = protobuf::descriptor::uninterpreted_option::NamePart::new();
-        p2.set_name_part("bar".to_string());
-        p2.set_is_extension(true);
-        let mut p3 = protobuf::descriptor::uninterpreted_option::NamePart::new();
-        p3.set_name_part("baz".to_string());
-        let parts = vec![p1, p2, p3];
-        let name_parts: NameParts<'_> = NameParts::from(&parts);
-        assert_eq!(name_parts.to_string(), "foo.(bar).baz");
-        assert_eq!(name_parts.get(0).unwrap(), "foo")
-    }
-}
+//     #[test]
+//     fn test_to_string() {
+//         let mut p1 = protobuf::descriptor::uninterpreted_option::NamePart::new();
+//         p1.set_name_part("foo".to_string());
+//         let mut p2 = protobuf::descriptor::uninterpreted_option::NamePart::new();
+//         p2.set_name_part("bar".to_string());
+//         p2.set_is_extension(true);
+//         let mut p3 = protobuf::descriptor::uninterpreted_option::NamePart::new();
+//         p3.set_name_part("baz".to_string());
+//         let parts = vec![p1, p2, p3];
+//         let name_parts: NameParts<'_> = NameParts::from(&parts);
+//         assert_eq!(name_parts.to_string(), "foo.(bar).baz");
+//         assert_eq!(name_parts.get(0).unwrap(), "foo")
+//     }
+// }
 
-/// Comments associated to entities in the source code.
-#[derive(Debug, Clone, Copy)]
-pub struct Location<'a> {
-    loc: &'a protobuf::descriptor::source_code_info::Location,
-}
-impl<'a> From<&'a protobuf::descriptor::source_code_info::Location> for Location<'a> {
-    fn from(loc: &'a protobuf::descriptor::source_code_info::Location) -> Self {
-        Self { loc }
-    }
-}
+// /// Comments associated to entities in the source code.
+// #[derive(Debug, Clone, Copy)]
+// pub struct Location {
+//     loc: protobuf::descriptor::source_code_info::Location,
+// }
+// impl From<protobuf::descriptor::source_code_info::Location> for Location {
+//     fn from(loc: protobuf::descriptor::source_code_info::Location) -> Self {
+//         Self { loc }
+//     }
+// }
 
-impl<'a> Location<'a> {
-    /// Identifies which part of the FileDescriptorProto was defined at this
-    /// location.
-    ///
-    /// Each element is a field number or an index.  They form a path from
-    /// the root FileDescriptorProto to the place where the definition.  For
-    /// example, this path:
-    ///   [ 4, 3, 2, 7, 1 ]
-    /// refers to:
-    ///   file.message_type(3)  // 4, 3
-    ///       .field(7)         // 2, 7
-    ///       .name()           // 1
-    /// This is because FileDescriptorProto.message_type has field number 4:
-    ///   repeated DescriptorProto message_type = 4;
-    /// and DescriptorProto.field has field number 2:
-    ///   repeated FieldDescriptorProto field = 2;
-    /// and FieldDescriptorProto.name has field number 1:
-    ///   optional string name = 1;
-    ///
-    /// Thus, the above path gives the location of a field name.  If we removed
-    /// the last element:
-    ///   [ 4, 3, 2, 7 ]
-    /// this path refers to the whole field declaration (from the beginning
-    /// of the label to the terminating semicolon).
-    pub fn path(&self) -> &'a [i32] {
-        &self.loc.path
-    }
-    /// Always has exactly three or four elements: start line, start column,
-    /// end line (optional, otherwise assumed same as start line), end column.
-    /// These are packed into a single field for efficiency.  Note that line
-    /// and column numbers are zero-based -- typically you will want to add
-    /// 1 to each before displaying to a user
-    pub fn span(&self) -> &'a [i32] {
-        &self.loc.span
-    }
+// impl Location {
+//     /// Identifies which part of the FileDescriptorProto was defined at this
+//     /// location.
+//     ///
+//     /// Each element is a field number or an index.  They form a path from
+//     /// the root FileDescriptorProto to the place where the definition.  For
+//     /// example, this path:
+//     ///   [ 4, 3, 2, 7, 1 ]
+//     /// refers to:
+//     ///   file.message_type(3)  // 4, 3
+//     ///       .field(7)         // 2, 7
+//     ///       .name()           // 1
+//     /// This is because FileDescriptorProto.message_type has field number 4:
+//     ///   repeated DescriptorProto message_type = 4;
+//     /// and DescriptorProto.field has field number 2:
+//     ///   repeated FieldDescriptorProto field = 2;
+//     /// and FieldDescriptorProto.name has field number 1:
+//     ///   optional string name = 1;
+//     ///
+//     /// Thus, the above path gives the location of a field name.  If we removed
+//     /// the last element:
+//     ///   [ 4, 3, 2, 7 ]
+//     /// this path refers to the whole field declaration (from the beginning
+//     /// of the label to the terminating semicolon).
+//     pub fn path(&self) -> &'a [i32] {
+//         &self.loc.path
+//     }
+//     /// Always has exactly three or four elements: start line, start column,
+//     /// end line (optional, otherwise assumed same as start line), end column.
+//     /// These are packed into a single field for efficiency.  Note that line
+//     /// and column numbers are zero-based -- typically you will want to add
+//     /// 1 to each before displaying to a user
+//     pub fn span(&self) -> &'a [i32] {
+//         &self.loc.span
+//     }
 
-    /// Returns any comment immediately preceding the node, without anyElsewhere
-    /// whitespace between it and the comment.
-    pub fn leading_comments(&self) -> &'a str {
-        self.loc.leading_comments()
-    }
+//     /// Returns any comment immediately preceding the node, without anyElsewhere
+//     /// whitespace between it and the comment.
+//     pub fn leading_comments(&self) -> &str {
+//         self.loc.leading_comments()
+//     }
 
-    /// Returns each comment block or line above the
-    /// entity but separated by whitespace.a
-    pub fn leading_detached_comments(&self) -> std::slice::Iter<'a, String> {
-        self.loc.leading_detached_comments.iter()
-    }
-    /// Returns any comment immediately following the entity, without any
-    /// whitespace between it and the comment. If the comment would be a leading
-    /// comment for another entity, it won't be considered a trailing comment.
-    pub fn trailing_comments(&self) -> &'a str {
-        self.loc.trailing_comments()
-    }
+//     /// Returns each comment block or line above the
+//     /// entity but separated by whitespace.a
+//     pub fn leading_detached_comments(&self) -> std::slice::Iter<'a, String> {
+//         self.loc.leading_detached_comments.iter()
+//     }
+//     /// Returns any comment immediately following the entity, without any
+//     /// whitespace between it and the comment. If the comment would be a leading
+//     /// comment for another entity, it won't be considered a trailing comment.
+//     pub fn trailing_comments(&self) -> &str {
+//         self.loc.trailing_comments()
+//     }
 
-    pub fn is_file_syntax_location(&self) -> bool {
-        self.path().len() == 1 && FileDescriptorPath::Syntax == self.path()[0]
-    }
+//     pub fn is_file_syntax_location(&self) -> bool {
+//         self.path().len() == 1 && FileDescriptorPath::Syntax == self.path()[0]
+//     }
 
-    pub fn is_file_package_location(&self) -> bool {
-        self.path().len() == 1 && FileDescriptorPath::Package == self.path()[0]
-    }
+//     pub fn is_file_package_location(&self) -> bool {
+//         self.path().len() == 1 && FileDescriptorPath::Package == self.path()[0]
+//     }
 
-    pub fn file_descriptor_path(&self) -> Result<FileDescriptorPath, anyhow::Error> {
-        FileDescriptorPath::try_from(self.path().first())
-    }
+//     pub fn file_descriptor_path(&self) -> Result<FileDescriptorPath, crate::Error> {
+//         FileDescriptorPath::try_from(self.path().first())
+//     }
 
-    pub fn has_comments(&self) -> bool {
-        !self.leading_comments().is_empty()
-            || self.leading_detached_comments().count() > 0
-            || !self.trailing_comments().is_empty()
-    }
-}
+//     pub fn has_comments(&self) -> bool {
+//         !self.leading_comments().is_empty()
+//             || self.leading_detached_comments().count() > 0
+//             || !self.trailing_comments().is_empty()
+//     }
+// }
 
-#[cfg(test)]
+// #[cfg(test)]
 
-mod test_data {
+// mod test_data {
 
-    lazy_static::lazy_static! {
-        pub static ref DEFAULT_FILE_DESCRIPTOR_PROTO:protobuf::descriptor::FileDescriptorProto = protobuf::descriptor::FileDescriptorProto::default();
-        pub static ref DEFAULT_DESCRIPTOR_PROTO:protobuf::descriptor::DescriptorProto = protobuf::descriptor::DescriptorProto::default();
-        pub static ref DEFAULT_FIELD_DESCRIPTOR_PROTO:protobuf::descriptor::FieldDescriptorProto = protobuf::descriptor::FieldDescriptorProto::default();
-        pub static ref DEFAULT_ENUM_DESCRIPTOR_PROTO:protobuf::descriptor::EnumDescriptorProto = protobuf::descriptor::EnumDescriptorProto::default();
-        pub static ref DEFAULT_ENUM_VALUE_DESCRIPTOR_PROTO:protobuf::descriptor::EnumValueDescriptorProto = protobuf::descriptor::EnumValueDescriptorProto::default();
-        pub static ref DEFAULT_SERVICE_DESCRIPTOR_PROTO:protobuf::descriptor::ServiceDescriptorProto = protobuf::descriptor::ServiceDescriptorProto::default();
-        pub static ref DEFAULT_METHOD_DESCRIPTOR_PROTO:protobuf::descriptor::MethodDescriptorProto = protobuf::descriptor::MethodDescriptorProto::default();
-        pub static ref DEFAULT_ONEOF_DESCRIPTOR:protobuf::descriptor::OneofDescriptorProto = protobuf::descriptor::OneofDescriptorProto::default();
-    }
-}
+//     lazy_static::lazy_static! {
+//         pub static ref DEFAULT_FILE_DESCRIPTOR_PROTO:protobuf::descriptor::FileDescriptorProto = protobuf::descriptor::FileDescriptorProto::default();
+//         pub static ref DEFAULT_DESCRIPTOR_PROTO:protobuf::descriptor::DescriptorProto = protobuf::descriptor::DescriptorProto::default();
+//         pub static ref DEFAULT_FIELD_DESCRIPTOR_PROTO:protobuf::descriptor::FieldDescriptorProto = protobuf::descriptor::FieldDescriptorProto::default();
+//         pub static ref DEFAULT_ENUM_DESCRIPTOR_PROTO:protobuf::descriptor::EnumDescriptorProto = protobuf::descriptor::EnumDescriptorProto::default();
+//         pub static ref DEFAULT_ENUM_VALUE_DESCRIPTOR_PROTO:protobuf::descriptor::EnumValueDescriptorProto = protobuf::descriptor::EnumValueDescriptorProto::default();
+//         pub static ref DEFAULT_SERVICE_DESCRIPTOR_PROTO:protobuf::descriptor::ServiceDescriptorProto = protobuf::descriptor::ServiceDescriptorProto::default();
+//         pub static ref DEFAULT_METHOD_DESCRIPTOR_PROTO:protobuf::descriptor::MethodDescriptorProto = protobuf::descriptor::MethodDescriptorProto::default();
+//         pub static ref DEFAULT_ONEOF_DESCRIPTOR:protobuf::descriptor::OneofDescriptorProto = protobuf::descriptor::OneofDescriptorProto::default();
+//     }
+// }

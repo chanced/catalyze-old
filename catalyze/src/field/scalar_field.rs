@@ -1,30 +1,24 @@
 #![allow(clippy::new_ret_no_self)]
 use std::rc::Rc;
 
-use anyhow::bail;
-
 use super::FieldDetail;
-use crate::{
-    proto::{FieldDescriptor, Scalar},
-    proto::{Syntax, Type},
-    Comments, Field, File, Message, Name, Package, UninterpretedOptions,
-};
+use crate::{Comments, Field, File, Message, Package, Scalar, Syntax, Type, UninterpretedOption};
 
 #[derive(Debug, Clone)]
-pub(crate) struct ScalarFieldDetail<'a> {
-    detail: FieldDetail<'a>,
+pub(crate) struct Detail {
+    detail: FieldDetail,
     scalar: Scalar,
 }
 
-impl<'a> ScalarFieldDetail<'a> {
-    pub(crate) fn new(detail: FieldDetail<'a>, scalar: Scalar) -> Self {
+impl Detail {
+    pub(crate) fn new(detail: FieldDetail, scalar: Scalar) -> Self {
         Self { detail, scalar }
     }
 
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &str {
         self.detail.name()
     }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         self.detail.fully_qualified_name()
     }
     pub fn build_target(&self) -> bool {
@@ -39,7 +33,7 @@ impl<'a> ScalarFieldDetail<'a> {
     pub fn is_map(&self) -> bool {
         self.detail.is_map()
     }
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.detail.message()
     }
     /// Returns `Rc<U>`
@@ -47,21 +41,18 @@ impl<'a> ScalarFieldDetail<'a> {
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
-        self.detail.descriptor()
-    }
 
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         self.detail.comments()
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.detail.package()
     }
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.detail.file()
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.detail.set_comments(comments);
     }
 
@@ -73,50 +64,48 @@ impl<'a> ScalarFieldDetail<'a> {
     }
 }
 #[derive(Debug, Clone)]
-pub struct ScalarField<'a>(Rc<ScalarFieldDetail<'a>>);
+pub struct ScalarField(Rc<Detail>);
 
-impl<'a> ScalarField<'a> {
-    pub(crate) fn new(detail: FieldDetail<'a>) -> Result<Field<'a>, anyhow::Error> {
+impl ScalarField {
+    /// # Panics
+    /// Panics if the field's value type is not a scalar.
+    pub(crate) fn new(detail: FieldDetail) -> Field {
         match detail.value_type() {
-            Type::Scalar(s) => Ok(Field::Scalar(Self(Rc::new(ScalarFieldDetail {
-                detail,
-                scalar: s,
-            })))),
-            invalid_type => bail!("Expected Scalar value type, received {:?}", invalid_type),
+            Type::Scalar(s) => Field::Scalar(Self(Rc::new(Detail { detail, scalar: s }))),
+            invalid_type => panic!(
+                "ScalarField::new called with non-scalar type: {:?}",
+                invalid_type
+            ),
         }
     }
 
     pub fn scalar(&self) -> Scalar {
         self.0.scalar
     }
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &str {
         self.0.name()
     }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         self.0.fully_qualified_name()
     }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         self.0.comments()
     }
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.0.file()
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.0.package()
     }
     pub fn syntax(&self) -> Syntax {
         self.0.syntax()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.0.set_comments(comments);
     }
 
     pub fn build_target(&self) -> bool {
         self.0.build_target()
-    }
-
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
-        self.0.descriptor()
     }
 
     pub fn is_marked_required(&self) -> bool {
@@ -131,8 +120,8 @@ impl<'a> ScalarField<'a> {
         self.syntax().is_proto2() || self.is_marked_optional()
     }
 
-    pub fn value_type(&self) -> Type<'a> {
-        self.descriptor().proto_type()
+    pub fn value_type(&self) -> Type {
+        self.descriptor().type_()
     }
 
     /// The jstype option determines the JavaScript type used for values of the
@@ -200,11 +189,11 @@ impl<'a> ScalarField<'a> {
     }
 
     /// Options the parser does not recognize.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         self.descriptor().options().uninterpreted_options()
     }
 
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.0.message()
     }
 
@@ -214,4 +203,4 @@ impl<'a> ScalarField<'a> {
 }
 
 // #[derive(Debug, Clone)]
-// pub(crate) struct WeakScalarField<'a>(Weak<MappedScalarFieldDetail<'a>>);
+// pub(crate) struct WeakScalarField(Weak<MappedScalarFieldDetail>);

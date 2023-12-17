@@ -1,8 +1,6 @@
-use anyhow::bail;
-
 use crate::{
-    iter::Iter, Comments, Enum, EnumValue, Extension, Field, File, Message, Method, Name, Oneof,
-    Package, Service,
+    iter::Iter, Comments, Enum, EnumValue, Extension, Field, File, Message, Method, Oneof, Package,
+    Service,
 };
 use crate::{Ast, MapField, RepeatedField};
 use std::collections::VecDeque;
@@ -10,22 +8,53 @@ use std::convert::From;
 use std::fmt::{self, Display};
 use std::marker::PhantomData;
 
-#[derive(Debug, Clone)]
-pub enum Node<'a> {
-    Package(Package<'a>),
-    File(File<'a>),
-    Message(Message<'a>),
-    Oneof(Oneof<'a>),
-    Enum(Enum<'a>),
-    EnumValue(EnumValue<'a>),
-    Service(Service<'a>),
-    Method(Method<'a>),
-    Field(Field<'a>),
-    Extension(Extension<'a>),
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Kind {
+    Package,
+    File,
+    Message,
+    Oneof,
+    Enum,
+    EnumValue,
+    Service,
+    Method,
+    Field,
+    Extension,
 }
 
-impl<'a> Node<'a> {
-    pub fn name(&self) -> &Name {
+impl Display for Kind {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Kind::Package => write!(fmt, "Package"),
+            Kind::File => write!(fmt, "File"),
+            Kind::Message => write!(fmt, "Message"),
+            Kind::Oneof => write!(fmt, "Oneof"),
+            Kind::Enum => write!(fmt, "Enum"),
+            Kind::EnumValue => write!(fmt, "EnumValue"),
+            Kind::Service => write!(fmt, "Service"),
+            Kind::Method => write!(fmt, "Method"),
+            Kind::Field => write!(fmt, "Field"),
+            Kind::Extension => write!(fmt, "Extension"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Node {
+    Package(Package),
+    File(File),
+    Message(Message),
+    Oneof(Oneof),
+    Enum(Enum),
+    EnumValue(EnumValue),
+    Service(Service),
+    Method(Method),
+    Field(Field),
+    Extension(Extension),
+}
+
+impl Node {
+    pub fn name(&self) -> &str {
         match self {
             Node::Package(p) => p.name(),
             Node::File(f) => f.name(),
@@ -39,8 +68,21 @@ impl<'a> Node<'a> {
             Node::Extension(e) => e.name(),
         }
     }
-
-    pub fn nodes(&self) -> Nodes<'a> {
+    pub fn kind(&self) -> Kind {
+        match self {
+            Node::Package(_) => Kind::Package,
+            Node::File(_) => Kind::File,
+            Node::Message(_) => Kind::Message,
+            Node::Field(_) => Kind::Field,
+            Node::Oneof(_) => Kind::Oneof,
+            Node::Enum(_) => Kind::Enum,
+            Node::EnumValue(_) => Kind::EnumValue,
+            Node::Service(_) => Kind::Service,
+            Node::Method(_) => Kind::Method,
+            Node::Extension(_) => Kind::Extension,
+        }
+    }
+    pub fn nodes(&self) -> Nodes {
         match self {
             Node::Package(p) => p.nodes(),
             Node::File(f) => f.nodes(),
@@ -50,7 +92,7 @@ impl<'a> Node<'a> {
             _ => Nodes::empty(),
         }
     }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         match self {
             Node::Package(p) => p.fully_qualified_name(),
             Node::File(f) => f.fully_qualified_name(),
@@ -64,67 +106,21 @@ impl<'a> Node<'a> {
             Node::Extension(e) => e.fully_qualified_name(),
         }
     }
-    pub fn as_package(self) -> anyhow::Result<Package<'a>> {
-        match self {
-            Node::Package(p) => Ok(p),
-            _ => bail!("err: {} is not a Package", self),
-        }
-    }
-    pub fn as_file(self) -> anyhow::Result<File<'a>> {
-        match self {
-            Node::File(f) => Ok(f),
-            _ => bail!("err: {} is not a File", self),
-        }
-    }
-    pub fn as_message(self) -> anyhow::Result<Message<'a>> {
-        match self {
-            Node::Message(m) => Ok(m),
-            _ => bail!("err: {} is not a Message", self),
-        }
-    }
-    pub fn as_oneof(self) -> anyhow::Result<Oneof<'a>> {
-        match self {
-            Node::Oneof(o) => Ok(o),
-            _ => bail!("err: {} is not a Oneof", self),
-        }
-    }
-    pub fn as_enum(self) -> anyhow::Result<Enum<'a>> {
-        match self {
-            Node::Enum(e) => Ok(e),
-            _ => bail!("err: {} is not a Enum", self),
-        }
-    }
-    pub fn as_enum_value(self) -> anyhow::Result<EnumValue<'a>> {
-        match self {
-            Node::EnumValue(ev) => Ok(ev),
-            _ => bail!("err: {} is not a EnumValue", self),
-        }
-    }
-    pub fn as_service(self) -> anyhow::Result<Service<'a>> {
-        match self {
-            Node::Service(s) => Ok(s),
-            _ => bail!("err: {} is not a Service", self),
-        }
-    }
-    pub fn as_method(self) -> anyhow::Result<Method<'a>> {
-        match self {
-            Node::Method(m) => Ok(m),
-            _ => bail!("err: {} is not a Method", self),
-        }
-    }
-    pub fn as_field(self) -> anyhow::Result<Field<'a>> {
-        match self {
-            Node::Field(f) => Ok(f),
-            _ => bail!("err: {} is not a Field", self),
-        }
-    }
-    pub fn as_extension(self) -> anyhow::Result<Extension<'a>> {
-        match self {
-            Node::Extension(e) => Ok(e),
-            _ => bail!("err: {} is not a Extension", self),
-        }
-    }
-    pub(crate) fn set_comments(&self, c: Comments<'a>) {
+    // pub fn into_package(self) -> Result<Package, Node> {
+    //     let Self::Package(p) = self else {
+    //         return Err(self);
+    //     };
+    //     Ok(p)
+    // }
+
+    // pub fn into_file(self) -> Result<File, Node> {
+    //     let Self::File(f) = self else {
+    //         return Err(self);
+    //     };
+    //     Ok(f)
+    // }
+
+    pub(crate) fn set_comments(&self, c: Comments) {
         match self {
             Node::Message(m) => m.set_comments(c),
             Node::Field(f) => f.set_comments(c),
@@ -139,7 +135,7 @@ impl<'a> Node<'a> {
         }
     }
 
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         match self {
             Node::Package(p) => p.clone(),
             Node::File(f) => f.package(),
@@ -154,14 +150,14 @@ impl<'a> Node<'a> {
         }
     }
 
-    pub(crate) fn add_dependent(&self, dep: Message<'a>) {
+    pub(crate) fn add_dependent(&self, dep: Message) {
         match self {
             Node::Message(m) => m.add_dependent(dep),
             Node::Enum(e) => e.add_dependent(dep),
             _ => unreachable!(),
         }
     }
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node> {
         match self {
             Node::File(f) => f.node_at_path(path),
             Node::Message(m) => m.node_at_path(path),
@@ -175,8 +171,268 @@ impl<'a> Node<'a> {
             Node::Package(_) => unreachable!(),
         }
     }
+
+    /// Returns `true` if the node is [`Package`].
+    ///
+    /// [`Package`]: Node::Package
+    #[must_use]
+    pub fn is_package(&self) -> bool {
+        matches!(self, Self::Package(..))
+    }
+
+    #[must_use]
+    pub fn as_package(&self) -> Option<&Package> {
+        if let Self::Package(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn try_into_package(self) -> Result<Package, Self> {
+        if let Self::Package(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Returns `true` if the node is [`File`].
+    ///
+    /// [`File`]: Node::File
+    #[must_use]
+    pub fn is_file(&self) -> bool {
+        matches!(self, Self::File(..))
+    }
+
+    #[must_use]
+    pub fn as_file(&self) -> Option<&File> {
+        if let Self::File(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn try_into_file(self) -> Result<File, Self> {
+        if let Self::File(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Returns `true` if the node is [`Message`].
+    ///
+    /// [`Message`]: Node::Message
+    #[must_use]
+    pub fn is_message(&self) -> bool {
+        matches!(self, Self::Message(..))
+    }
+
+    /// Returns `true` if the node is [`Oneof`].
+    ///
+    /// [`Oneof`]: Node::Oneof
+    #[must_use]
+    pub fn is_oneof(&self) -> bool {
+        matches!(self, Self::Oneof(..))
+    }
+
+    #[must_use]
+    pub fn as_oneof(&self) -> Option<&Oneof> {
+        if let Self::Oneof(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn try_into_oneof(self) -> Result<Oneof, Self> {
+        if let Self::Oneof(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Returns `true` if the node is [`Enum`].
+    ///
+    /// [`Enum`]: Node::Enum
+    #[must_use]
+    pub fn is_enum(&self) -> bool {
+        matches!(self, Self::Enum(..))
+    }
+
+    #[must_use]
+    pub fn as_enum(&self) -> Option<&Enum> {
+        if let Self::Enum(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn try_into_enum(self) -> Result<Enum, Self> {
+        if let Self::Enum(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    #[must_use]
+    pub fn as_message(&self) -> Option<&Message> {
+        if let Self::Message(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn try_into_message(self) -> Result<Message, Self> {
+        if let Self::Message(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Returns `true` if the node is [`EnumValue`].
+    ///
+    /// [`EnumValue`]: Node::EnumValue
+    #[must_use]
+    pub fn is_enum_value(&self) -> bool {
+        matches!(self, Self::EnumValue(..))
+    }
+
+    #[must_use]
+    pub fn as_enum_value(&self) -> Option<&EnumValue> {
+        if let Self::EnumValue(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn try_into_enum_value(self) -> Result<EnumValue, Self> {
+        if let Self::EnumValue(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Returns `true` if the node is [`Service`].
+    ///
+    /// [`Service`]: Node::Service
+    #[must_use]
+    pub fn is_service(&self) -> bool {
+        matches!(self, Self::Service(..))
+    }
+
+    #[must_use]
+    pub fn as_service(&self) -> Option<&Service> {
+        if let Self::Service(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn try_into_service(self) -> Result<Service, Self> {
+        if let Self::Service(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Returns `true` if the node is [`Method`].
+    ///
+    /// [`Method`]: Node::Method
+    #[must_use]
+    pub fn is_method(&self) -> bool {
+        matches!(self, Self::Method(..))
+    }
+
+    #[must_use]
+    pub fn as_method(&self) -> Option<&Method> {
+        if let Self::Method(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn try_into_method(self) -> Result<Method, Self> {
+        if let Self::Method(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Returns `true` if the node is [`Field`].
+    ///
+    /// [`Field`]: Node::Field
+    #[must_use]
+    pub fn is_field(&self) -> bool {
+        matches!(self, Self::Field(..))
+    }
+
+    #[must_use]
+    pub fn as_field(&self) -> Option<&Field> {
+        if let Self::Field(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn try_into_field(self) -> Result<Field, Self> {
+        if let Self::Field(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Returns `true` if the node is [`Extension`].
+    ///
+    /// [`Extension`]: Node::Extension
+    #[must_use]
+    pub fn is_extension(&self) -> bool {
+        matches!(self, Self::Extension(..))
+    }
+
+    #[must_use]
+    pub fn as_extension(&self) -> Option<&Extension> {
+        if let Self::Extension(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn try_into_extension(self) -> Result<Extension, Self> {
+        if let Self::Extension(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
 }
-impl<'a> Display for Node<'a> {
+impl Display for Node {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Node::Package(p) => write!(fmt, "Package({})", p.name()),
@@ -230,148 +486,152 @@ impl<'a> Display for Node<'a> {
     }
 }
 
-impl<'a> From<File<'a>> for Node<'a> {
-    fn from(file: File<'a>) -> Self {
+pub trait IntoNode {
+    fn into_node(self) -> Node;
+}
+
+impl From<File> for Node {
+    fn from(file: File) -> Self {
         Node::File(file)
     }
 }
-impl<'a> From<&File<'a>> for Node<'a> {
-    fn from(file: &File<'a>) -> Self {
+impl From<&File> for Node {
+    fn from(file: &File) -> Self {
         Node::File(file.clone())
     }
 }
 
-impl<'a> From<Package<'a>> for Node<'a> {
-    fn from(p: Package<'a>) -> Self {
+impl From<Package> for Node {
+    fn from(p: Package) -> Self {
         Node::Package(p)
     }
 }
 
-impl<'a> From<&Package<'a>> for Node<'a> {
-    fn from(p: &Package<'a>) -> Self {
+impl From<&Package> for Node {
+    fn from(p: &Package) -> Self {
         Node::Package(p.clone())
     }
 }
 
-impl<'a> From<Message<'a>> for Node<'a> {
-    fn from(m: Message<'a>) -> Self {
+impl From<Message> for Node {
+    fn from(m: Message) -> Self {
         Node::Message(m)
     }
 }
 
-impl<'a> From<&Message<'a>> for Node<'a> {
-    fn from(m: &Message<'a>) -> Self {
+impl From<&Message> for Node {
+    fn from(m: &Message) -> Self {
         Node::Message(m.clone())
     }
 }
 
-impl<'a> From<Oneof<'a>> for Node<'a> {
-    fn from(oneof: Oneof<'a>) -> Self {
+impl From<Oneof> for Node {
+    fn from(oneof: Oneof) -> Self {
         Node::Oneof(oneof)
     }
 }
-impl<'a> From<&Oneof<'a>> for Node<'a> {
-    fn from(oneof: &Oneof<'a>) -> Self {
+impl From<&Oneof> for Node {
+    fn from(oneof: &Oneof) -> Self {
         Node::Oneof(oneof.clone())
     }
 }
-impl<'a> From<Field<'a>> for Node<'a> {
-    fn from(field: Field<'a>) -> Self {
+impl From<Field> for Node {
+    fn from(field: Field) -> Self {
         Node::Field(field)
     }
 }
-impl<'a> From<&Field<'a>> for Node<'a> {
-    fn from(field: &Field<'a>) -> Self {
+impl From<&Field> for Node {
+    fn from(field: &Field) -> Self {
         Node::Field(field.clone())
     }
 }
 
-impl<'a> From<Enum<'a>> for Node<'a> {
-    fn from(e: Enum<'a>) -> Self {
+impl From<Enum> for Node {
+    fn from(e: Enum) -> Self {
         Node::Enum(e)
     }
 }
 
-impl<'a> From<&Enum<'a>> for Node<'a> {
-    fn from(e: &Enum<'a>) -> Self {
+impl From<&Enum> for Node {
+    fn from(e: &Enum) -> Self {
         Node::Enum(e.clone())
     }
 }
 
-impl<'a> From<EnumValue<'a>> for Node<'a> {
-    fn from(ev: EnumValue<'a>) -> Self {
+impl From<EnumValue> for Node {
+    fn from(ev: EnumValue) -> Self {
         Node::EnumValue(ev)
     }
 }
 
-impl<'a> From<&EnumValue<'a>> for Node<'a> {
-    fn from(ev: &EnumValue<'a>) -> Self {
+impl From<&EnumValue> for Node {
+    fn from(ev: &EnumValue) -> Self {
         Node::EnumValue(ev.clone())
     }
 }
 
-impl<'a> From<Service<'a>> for Node<'a> {
-    fn from(s: Service<'a>) -> Self {
+impl From<Service> for Node {
+    fn from(s: Service) -> Self {
         Node::Service(s)
     }
 }
 
-impl<'a> From<&Service<'a>> for Node<'a> {
-    fn from(s: &Service<'a>) -> Self {
+impl From<&Service> for Node {
+    fn from(s: &Service) -> Self {
         Node::Service(s.clone())
     }
 }
 
-impl<'a> From<Method<'a>> for Node<'a> {
-    fn from(m: Method<'a>) -> Self {
+impl From<Method> for Node {
+    fn from(m: Method) -> Self {
         Node::Method(m)
     }
 }
 
-impl<'a> From<&Method<'a>> for Node<'a> {
-    fn from(m: &Method<'a>) -> Self {
+impl From<&Method> for Node {
+    fn from(m: &Method) -> Self {
         Node::Method(m.clone())
     }
 }
 
-impl<'a> From<Extension<'a>> for Node<'a> {
-    fn from(e: Extension<'a>) -> Self {
+impl From<Extension> for Node {
+    fn from(e: Extension) -> Self {
         Node::Extension(e)
     }
 }
 
-impl<'a> From<&Extension<'a>> for Node<'a> {
-    fn from(e: &Extension<'a>) -> Self {
+impl From<&Extension> for Node {
+    fn from(e: &Extension) -> Self {
         Node::Extension(e.clone())
     }
 }
 
-// File(File<'a>),
-//     Message(Message<'a>),
-//     Oneof(Oneof<'a>),
-//     Enum(Enum<'a>),
-//     EnumValue(EnumValue<'a>),
-//     Service(Service<'a>),
-//     Method(Method<'a>),
-//     Field(Field<'a>),
-//     Extension(Extension<'a>),
+// File(File),
+//     Message(Message),
+//     Oneof(Oneof),
+//     Enum(Enum),
+//     EnumValue(EnumValue),
+//     Service(Service),
+//     Method(Method),
+//     Field(Field),
+//     Extension(Extension),
 
 #[derive(Debug, Clone)]
-pub enum NodeIter<'a, T = Node<'a>> {
-    Nodes(Nodes<'a>),
-    Packages(Iter<Package<'a>>),
-    Files(Iter<File<'a>>),
-    Messages(Iter<Message<'a>>),
-    Oneofs(Iter<Oneof<'a>>),
-    Enums(Iter<Enum<'a>>),
-    EnumValues(Iter<EnumValue<'a>>),
-    Services(Iter<Service<'a>>),
-    Methods(Iter<Method<'a>>),
-    Fields(Iter<Field<'a>>),
-    Extensions(Iter<Extension<'a>>),
+pub enum NodeIter<T = Node> {
+    Nodes(Nodes),
+    Packages(Iter<Package>),
+    Files(Iter<File>),
+    Messages(Iter<Message>),
+    Oneofs(Iter<Oneof>),
+    Enums(Iter<Enum>),
+    EnumValues(Iter<EnumValue>),
+    Services(Iter<Service>),
+    Methods(Iter<Method>),
+    Fields(Iter<Field>),
+    Extensions(Iter<Extension>),
     _Phantom(PhantomData<T>),
 }
-impl<'a, T> NodeIter<'a, T> {
+impl<'a, T> NodeIter<T> {
     pub fn len(&self) -> usize {
         match self {
             NodeIter::Nodes(nodes) => nodes.len(),
@@ -392,8 +652,8 @@ impl<'a, T> NodeIter<'a, T> {
         self.len() == 0
     }
 }
-impl<'a> Iterator for NodeIter<'a, Node<'a>> {
-    type Item = Node<'a>;
+impl Iterator for NodeIter<Node> {
+    type Item = Node;
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             NodeIter::Nodes(nodes) => nodes.next(),
@@ -411,72 +671,72 @@ impl<'a> Iterator for NodeIter<'a, Node<'a>> {
         }
     }
 }
-impl<'a> From<Nodes<'a>> for NodeIter<'a> {
-    fn from(i: Nodes<'a>) -> Self {
+impl From<Nodes> for NodeIter {
+    fn from(i: Nodes) -> Self {
         NodeIter::Nodes(i)
     }
 }
 
-impl<'a> From<Iter<Message<'a>>> for NodeIter<'a> {
-    fn from(i: Iter<Message<'a>>) -> Self {
+impl From<Iter<Message>> for NodeIter {
+    fn from(i: Iter<Message>) -> Self {
         NodeIter::Messages(i)
     }
 }
-impl<'a> From<Iter<Oneof<'a>>> for NodeIter<'a> {
-    fn from(i: Iter<Oneof<'a>>) -> Self {
+impl From<Iter<Oneof>> for NodeIter {
+    fn from(i: Iter<Oneof>) -> Self {
         NodeIter::Oneofs(i)
     }
 }
-impl<'a> From<Iter<Enum<'a>>> for NodeIter<'a> {
-    fn from(i: Iter<Enum<'a>>) -> Self {
+impl From<Iter<Enum>> for NodeIter {
+    fn from(i: Iter<Enum>) -> Self {
         NodeIter::Enums(i)
     }
 }
-impl<'a> From<Iter<EnumValue<'a>>> for NodeIter<'a> {
-    fn from(i: Iter<EnumValue<'a>>) -> Self {
+impl From<Iter<EnumValue>> for NodeIter {
+    fn from(i: Iter<EnumValue>) -> Self {
         NodeIter::EnumValues(i)
     }
 }
-impl<'a> From<Iter<Service<'a>>> for NodeIter<'a> {
-    fn from(i: Iter<Service<'a>>) -> Self {
+impl From<Iter<Service>> for NodeIter {
+    fn from(i: Iter<Service>) -> Self {
         NodeIter::Services(i)
     }
 }
-impl<'a> From<Iter<Method<'a>>> for NodeIter<'a> {
-    fn from(i: Iter<Method<'a>>) -> Self {
+impl From<Iter<Method>> for NodeIter {
+    fn from(i: Iter<Method>) -> Self {
         NodeIter::Methods(i)
     }
 }
-impl<'a> From<Iter<Field<'a>>> for NodeIter<'a> {
-    fn from(i: Iter<Field<'a>>) -> Self {
+impl From<Iter<Field>> for NodeIter {
+    fn from(i: Iter<Field>) -> Self {
         NodeIter::Fields(i)
     }
 }
-impl<'a> From<Iter<Extension<'a>>> for NodeIter<'a> {
-    fn from(i: Iter<Extension<'a>>) -> Self {
+impl From<Iter<Extension>> for NodeIter {
+    fn from(i: Iter<Extension>) -> Self {
         NodeIter::Extensions(i)
     }
 }
-impl<'a> From<Iter<File<'a>>> for NodeIter<'a> {
-    fn from(i: Iter<File<'a>>) -> Self {
+impl From<Iter<File>> for NodeIter {
+    fn from(i: Iter<File>) -> Self {
         NodeIter::Files(i)
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Nodes<'a, T = Node<'a>> {
+pub struct Nodes<T = Node> {
     _marker: PhantomData<T>,
-    iters: VecDeque<NodeIter<'a>>,
+    iters: VecDeque<NodeIter>,
 }
 
-impl<'a> Nodes<'a> {
-    pub fn new(iters: Vec<NodeIter<'a>>) -> Nodes<'a> {
+impl Nodes {
+    pub fn new(iters: Vec<NodeIter>) -> Nodes {
         Nodes {
             _marker: PhantomData,
             iters: iters.into(),
         }
     }
-    pub fn empty() -> Nodes<'a> {
+    pub fn empty() -> Nodes {
         Nodes {
             _marker: PhantomData,
             iters: VecDeque::new(),
@@ -489,16 +749,16 @@ impl<'a> Nodes<'a> {
     pub fn is_empty(&self) -> bool {
         self.iters.iter().all(NodeIter::is_empty)
     }
-    pub fn push_back<I: Into<NodeIter<'a>>>(&mut self, i: I) {
+    pub fn push_back<I: Into<NodeIter>>(&mut self, i: I) {
         self.iters.push_back(i.into());
     }
-    pub fn push_front<I: Into<NodeIter<'a>>>(&mut self, i: I) {
+    pub fn push_front<I: Into<NodeIter>>(&mut self, i: I) {
         self.iters.push_front(i.into());
     }
 }
 
-impl<'a> Iterator for Nodes<'a, Node<'a>> {
-    type Item = Node<'a>;
+impl Iterator for Nodes<Node> {
+    type Item = Node;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(i) = self.iters.front_mut() {
@@ -514,25 +774,25 @@ impl<'a> Iterator for Nodes<'a, Node<'a>> {
     }
 }
 
-pub struct AllNodes<'a, T = Node<'a>> {
-    iter: Nodes<'a>,
+pub struct AllNodes<T = Node> {
+    iter: Nodes,
     _marker: PhantomData<T>,
 }
 
-impl<'a> AllNodes<'a, Node<'a>> {
-    pub fn new(node: Node<'a>) -> AllNodes<'a, Node<'a>> {
+impl AllNodes<Node> {
+    pub fn new(node: Node) -> AllNodes<Node> {
         AllNodes {
             iter: node.nodes(),
             _marker: PhantomData,
         }
     }
-    pub fn push_back(&mut self, nodes: Nodes<'a>) {
+    pub fn push_back(&mut self, nodes: Nodes) {
         self.iter.push_back(nodes);
     }
 }
 
-impl<'a> Iterator for AllNodes<'a> {
-    type Item = Node<'a>;
+impl Iterator for AllNodes {
+    type Item = Node;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(n) = self.iter.next() {
@@ -546,8 +806,8 @@ impl<'a> Iterator for AllNodes<'a> {
         }
     }
 }
-impl<'a> From<Nodes<'a>> for AllNodes<'a> {
-    fn from(i: Nodes<'a>) -> Self {
+impl From<Nodes> for AllNodes {
+    fn from(i: Nodes) -> Self {
         AllNodes {
             iter: i,
             _marker: PhantomData,
@@ -555,8 +815,8 @@ impl<'a> From<Nodes<'a>> for AllNodes<'a> {
     }
 }
 
-impl<'a> From<&Ast<'a>> for AllNodes<'a> {
-    fn from(ast: &Ast<'a>) -> Self {
+impl From<&Ast> for AllNodes {
+    fn from(ast: &Ast) -> Self {
         AllNodes {
             iter: Nodes::new(vec![NodeIter::Packages(ast.packages())]),
             _marker: PhantomData,

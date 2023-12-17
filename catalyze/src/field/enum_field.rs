@@ -2,42 +2,39 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use anyhow::bail;
-
 use crate::{
-    proto::FieldDescriptor, proto::Syntax, Comments, Enum, Field, FieldDetail, File, FileRefs,
-    Message, Name, Node, Package, Type, UninterpretedOptions, WeakEnum, WellKnownEnum,
-    WellKnownType,
+    uninterpreted_option::UninterpretedOption, Comments, Enum, Error, Field, FieldDetail, File,
+    FileRefs, Kind, Message, Node, Package, Syntax, Type, WeakEnum, WellKnownEnum, WellKnownType,
 };
 
 #[derive(Debug, Clone)]
-pub(crate) struct EnumFieldDetail<'a> {
-    pub detail: FieldDetail<'a>,
-    pub enumeration: RefCell<WeakEnum<'a>>,
+pub(crate) struct Detail {
+    pub detail: FieldDetail,
+    pub enum_: RefCell<WeakEnum>,
 }
 
-impl<'a> EnumFieldDetail<'a> {
+impl Detail {
     pub fn is_repeated(&self) -> bool {
         self.detail.is_repeated()
     }
     pub fn is_map(&self) -> bool {
         self.detail.is_map()
     }
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.detail.message()
     }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         self.detail.comments()
     }
 
-    pub fn set_comments(&self, comments: Comments<'a>) {
+    pub fn set_comments(&self, comments: Comments) {
         self.detail.set_comments(comments)
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.detail.package()
     }
     pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
-        self.enumeration().well_known_enum()
+        self.enum_().well_known_enum()
     }
     pub fn is_marked_required(&self) -> bool {
         self.detail.is_marked_required()
@@ -49,24 +46,18 @@ impl<'a> EnumFieldDetail<'a> {
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
-        self.detail.descriptor()
-    }
-    pub fn enum_(&self) -> Enum<'a> {
-        self.enumeration.borrow().clone().into()
+    pub fn enum_(&self) -> Enum {
+        self.enum_.borrow().clone().into()
     }
     pub fn build_target(&self) -> bool {
         self.file().build_target()
     }
-    pub fn enumeration(&self) -> Enum<'a> {
-        self.enum_()
-    }
 
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.detail.file()
     }
 
-    pub fn imports(&self) -> FileRefs<'a> {
+    pub fn imports(&self) -> FileRefs {
         let e = self.enum_();
         if self.file() != e.file() {
             FileRefs::from(e.weak_file())
@@ -76,86 +67,81 @@ impl<'a> EnumFieldDetail<'a> {
     }
 
     pub fn has_import(&self) -> bool {
-        self.enumeration().file() != self.detail.file()
+        self.enum_().file() != self.detail.file()
     }
     pub fn is_well_known_type(&self) -> bool {
-        self.enumeration().is_well_known_type()
+        self.enum_().is_well_known_type()
     }
 
     pub fn well_known_type(&self) -> Option<WellKnownType> {
-        self.enumeration().well_known_type()
+        self.enum_().well_known_type()
     }
 
-    pub(crate) fn set_value(&self, node: Node<'a>) -> Result<(), anyhow::Error> {
+    pub(crate) fn set_value(&self, node: Node) -> Result<(), Error> {
         match node {
             Node::Enum(v) => {
-                self.enumeration.replace(v.into());
+                self.enum_.replace(v.into());
                 Ok(())
             }
-            _ => bail!("expected Enum, received {}", node),
+            _ => Err(Error::invalid_node(Kind::Enum, node)),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct EnumField<'a>(Rc<EnumFieldDetail<'a>>);
+pub struct EnumField(Rc<Detail>);
 
-impl<'a> EnumField<'a> {
-    pub(crate) fn new(detail: FieldDetail<'a>) -> Result<Field<'a>, anyhow::Error> {
+impl EnumField {
+    pub(crate) fn new(detail: FieldDetail) -> Field {
         if !matches!(detail.value_type(), Type::Enum(_)) {
-            bail!("expected Enum, received {:?}", detail.value_type());
+            panic!(
+                "EnumField::new called with non-enum type: {:?}",
+                detail.value_type()
+            );
         }
-        let e = EnumFieldDetail {
+        let e = Detail {
             detail,
-            enumeration: RefCell::new(WeakEnum::empty()),
+            enum_: RefCell::new(WeakEnum::empty()),
         };
         let f = EnumField(Rc::new(e));
-        Ok(Field::Enum(f))
+        Field::Enum(f)
     }
 
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &str {
         self.0.detail.name()
     }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         self.0.detail.fully_qualified_name()
     }
     pub fn well_known_enum(&self) -> Option<WellKnownEnum> {
         self.0.well_known_enum()
     }
     /// Returns the `Enum` of this `EnumField`.
-    pub fn enum_(&self) -> Enum<'a> {
-        self.0.enumeration.borrow().clone().into()
+    pub fn enum_(&self) -> Enum {
+        self.0.enum_.borrow().clone().into()
     }
 
     pub fn build_target(&self) -> bool {
         self.0.build_target()
     }
-
     pub fn is_repeated(&self) -> bool {
         self.0.is_repeated()
     }
     pub fn is_map(&self) -> bool {
         self.0.is_map()
     }
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.0.message()
     }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         self.0.comments()
     }
 
-    pub fn set_comments(&self, comments: Comments<'a>) {
+    pub fn set_comments(&self, comments: Comments) {
         self.0.set_comments(comments)
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.0.package()
-    }
-
-    /// alias for `enum_`
-    ///
-    /// Returns the `Enum` of this `EnumField`.
-    pub fn enumeration(&self) -> Enum<'a> {
-        self.enum_()
     }
 
     pub fn has_presence(&self) -> bool {
@@ -164,11 +150,11 @@ impl<'a> EnumField<'a> {
     pub fn syntax(&self) -> Syntax {
         self.0.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
-        self.0.descriptor()
-    }
+    // pub fn descriptor(&self) -> FieldDescriptor {
+    //     self.0.descriptor()
+    // }
 
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.0.detail.file()
     }
 
@@ -179,7 +165,7 @@ impl<'a> EnumField<'a> {
     pub fn has_import(&self) -> bool {
         self.0.has_import()
     }
-    pub fn imports(&self) -> FileRefs<'a> {
+    pub fn imports(&self) -> FileRefs {
         self.0.imports()
     }
 
@@ -195,12 +181,12 @@ impl<'a> EnumField<'a> {
         self.0.is_marked_optional()
     }
 
-    pub(crate) fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
-        self.0.set_value(value)
+    pub(crate) fn set_value(&self, node: Node) -> Result<(), Error> {
+        self.0.set_value(node)
     }
 
-    pub fn value_type(&self) -> Type<'a> {
-        self.descriptor().proto_type()
+    pub fn value_type(&self) -> Type {
+        self.descriptor().type_()
     }
     /// The jstype option determines the JavaScript type used for values of the
     /// field.  The option is permitted only for 64 bit integral and fixed types
@@ -266,7 +252,7 @@ impl<'a> EnumField<'a> {
     }
 
     /// Options the parser does not recognize.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         self.descriptor().options().uninterpreted_options()
     }
 

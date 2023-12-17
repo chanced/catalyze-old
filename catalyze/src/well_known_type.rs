@@ -1,4 +1,4 @@
-use anyhow::bail;
+use crate::Error;
 
 pub const WELL_KNNOWN_TYPE_PACKAGE: &str = "google.protobuf";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -8,7 +8,7 @@ pub enum WellKnownType {
 }
 
 impl std::str::FromStr for WellKnownType {
-    type Err = anyhow::Error;
+    type Err = crate::Error;
 
     fn from_str(s: &str) -> ::std::result::Result<WellKnownType, Self::Err> {
         match s {
@@ -32,7 +32,7 @@ impl std::str::FromStr for WellKnownType {
             "FieldCardinality" => Ok(WellKnownType::Enum(WellKnownEnum::FieldCardinality)),
             "NullValue" => Ok(WellKnownType::Enum(WellKnownEnum::NullValue)),
             "Syntax" => Ok(WellKnownType::Enum(WellKnownEnum::Syntax)),
-            _ => bail!("Not a Well-Known Type: {}", s),
+            value => Error::not_well_known_type(value),
         }
     }
 }
@@ -170,7 +170,7 @@ pub enum WellKnownMessage {
     /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Mixin>
     Mixin,
     /// A protocol buffer option, which can be attached to a message, field,
-    /// enumeration, etc.
+    /// enum_, etc.
     ///
     /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#option>
     Option,
@@ -226,56 +226,6 @@ pub enum WellKnownMessage {
     Value,
 }
 
-impl std::str::FromStr for WellKnownMessage {
-    type Err = anyhow::Error;
-    fn from_str(s: &str) -> ::std::result::Result<WellKnownMessage, Self::Err> {
-        match s {
-            "Any" => Ok(WellKnownMessage::Any),
-            "Api" => Ok(WellKnownMessage::Api),
-            "BoolValue" => Ok(WellKnownMessage::BoolValue),
-            "BytesValue" => Ok(WellKnownMessage::BytesValue),
-            "DoubleValue" => Ok(WellKnownMessage::DoubleValue),
-            "Duration" => Ok(WellKnownMessage::Duration),
-            "Empty" => Ok(WellKnownMessage::Empty),
-            "Enum" => Ok(WellKnownMessage::Enum),
-            "EnumValue" => Ok(WellKnownMessage::EnumValue),
-            "Field" => Ok(WellKnownMessage::Field),
-            "FieldKind" => Ok(WellKnownMessage::FieldKind),
-            "FieldMask" => Ok(WellKnownMessage::FieldMask),
-            "FloatValue" => Ok(WellKnownMessage::FloatValue),
-            "Int32Value" => Ok(WellKnownMessage::Int32Value),
-            "Int64Value" => Ok(WellKnownMessage::Int64Value),
-            "ListValue" => Ok(WellKnownMessage::ListValue),
-            "Method" => Ok(WellKnownMessage::Method),
-            "Mixin" => Ok(WellKnownMessage::Mixin),
-            "Option" => Ok(WellKnownMessage::Option),
-            "SourceContext" => Ok(WellKnownMessage::SourceContext),
-            "StringValue" => Ok(WellKnownMessage::StringValue),
-            "Struct" => Ok(WellKnownMessage::Struct),
-            "Timestamp" => Ok(WellKnownMessage::Timestamp),
-            "Type" => Ok(WellKnownMessage::Type),
-            "UInt32Value" => Ok(WellKnownMessage::UInt32Value),
-            "UInt64Value" => Ok(WellKnownMessage::UInt64Value),
-            "Value" => Ok(WellKnownMessage::Value),
-            _ => bail!("Not a Well-Known Message: {}", s),
-        }
-    }
-}
-
-impl std::str::FromStr for WellKnownEnum {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> ::std::result::Result<WellKnownEnum, Self::Err> {
-        match s {
-            "FieldCardinality" => Ok(WellKnownEnum::FieldCardinality),
-            "FieldKind" => Ok(WellKnownEnum::FieldKind),
-            "NullValue" => Ok(WellKnownEnum::NullValue),
-            "Syntax" => Ok(WellKnownEnum::Syntax),
-            _ => bail!("Not a Well-Known Type: {}", s),
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WellKnownEnum {
     /// Whether a field is optional, required, or repeated.
@@ -287,7 +237,7 @@ pub enum WellKnownEnum {
     /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#kind>
     FieldKind,
 
-    /// NullValue is a singleton enumeration to represent the null value for the
+    /// NullValue is a singleton enum_ to represent the null value for the
     /// Value type union.
     ///
     /// <https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#nullvalue>

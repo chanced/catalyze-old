@@ -1,16 +1,17 @@
 use std::fmt;
 
-use anyhow::bail;
+use crate::Error;
+use protobuf::descriptor::field_descriptor_proto::Type as FieldDescriptorType;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Type<'a> {
+pub enum Type {
     Scalar(Scalar),
-    Enum(&'a str),    //= 14,
-    Message(&'a str), //= 11,
-    /// not supported
+    Enum(String),    // 14,
+    Message(String), // 11,
+    /// Group is not supported
     Group, //  = 10,
 }
-impl<'a> Type<'a> {
+impl Type {
     pub fn is_group(&self) -> bool {
         matches!(self, Self::Group)
     }
@@ -24,72 +25,38 @@ impl<'a> Type<'a> {
         matches!(self, Self::Enum(_))
     }
 }
-// impl<'a> fmt::Display for Type<'a> {
-//     fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         match self {
-//             Type::Scalar(_s) => todo!(),
-//             Type::Enum(_) => todo!(),
-//             Type::Message(_) => todo!(),
-//             Type::Group => todo!(),
-//         }
-//     }
-// }
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::Scalar(s) => fmt::Display::fmt(s, f),
+            Type::Enum(e) => fmt::Display::fmt(e, f),
+            Type::Message(m) => fmt::Display::fmt(m, f),
+            Type::Group => unreachable!("Group is not supported"),
+        }
+    }
+}
 
-impl<'a> From<&'a protobuf::descriptor::FieldDescriptorProto> for Type<'a> {
-    fn from(fd: &'a protobuf::descriptor::FieldDescriptorProto) -> Self {
-        match fd.type_() {
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_DOUBLE => {
-                Type::Scalar(Scalar::Double)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_FLOAT => {
-                Type::Scalar(Scalar::Float)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_INT64 => {
-                Type::Scalar(Scalar::Int64)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_UINT64 => {
-                Type::Scalar(Scalar::Uint64)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_INT32 => {
-                Type::Scalar(Scalar::Int32)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_FIXED64 => {
-                Type::Scalar(Scalar::Fixed64)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_FIXED32 => {
-                Type::Scalar(Scalar::Fixed32)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_BOOL => {
-                Type::Scalar(Scalar::Bool)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_STRING => {
-                Type::Scalar(Scalar::String)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_BYTES => {
-                Type::Scalar(Scalar::Bytes)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_UINT32 => {
-                Type::Scalar(Scalar::Uint32)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_SFIXED32 => {
-                Type::Scalar(Scalar::Sfixed32)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_SFIXED64 => {
-                Type::Scalar(Scalar::Sfixed64)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_SINT32 => {
-                Type::Scalar(Scalar::Sint32)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_SINT64 => {
-                Type::Scalar(Scalar::Sint64)
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_ENUM => {
-                Type::Enum(fd.type_name())
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_MESSAGE => {
-                Type::Message(fd.type_name())
-            }
-            protobuf::descriptor::field_descriptor_proto::Type::TYPE_GROUP => Type::Group,
+impl From<FieldDescriptorType> for Type {
+    fn from(t: FieldDescriptorType) -> Self {
+        match t.type_() {
+            FieldDescriptorType::TYPE_DOUBLE => Type::Scalar(Scalar::Double),
+            FieldDescriptorType::TYPE_FLOAT => Type::Scalar(Scalar::Float),
+            FieldDescriptorType::TYPE_INT64 => Type::Scalar(Scalar::Int64),
+            FieldDescriptorType::TYPE_UINT64 => Type::Scalar(Scalar::Uint64),
+            FieldDescriptorType::TYPE_INT32 => Type::Scalar(Scalar::Int32),
+            FieldDescriptorType::TYPE_FIXED64 => Type::Scalar(Scalar::Fixed64),
+            FieldDescriptorType::TYPE_FIXED32 => Type::Scalar(Scalar::Fixed32),
+            FieldDescriptorType::TYPE_BOOL => Type::Scalar(Scalar::Bool),
+            FieldDescriptorType::TYPE_STRING => Type::Scalar(Scalar::String),
+            FieldDescriptorType::TYPE_BYTES => Type::Scalar(Scalar::Bytes),
+            FieldDescriptorType::TYPE_UINT32 => Type::Scalar(Scalar::Uint32),
+            FieldDescriptorType::TYPE_SFIXED32 => Type::Scalar(Scalar::Sfixed32),
+            FieldDescriptorType::TYPE_SFIXED64 => Type::Scalar(Scalar::Sfixed64),
+            FieldDescriptorType::TYPE_SINT32 => Type::Scalar(Scalar::Sint32),
+            FieldDescriptorType::TYPE_SINT64 => Type::Scalar(Scalar::Sint64),
+            FieldDescriptorType::TYPE_ENUM => Type::Enum(t.type_name()),
+            FieldDescriptorType::TYPE_MESSAGE => Type::Message(t.type_name()),
+            FieldDescriptorType::TYPE_GROUP => Type::Group,
         }
     }
 }
@@ -145,7 +112,7 @@ impl fmt::Display for Scalar {
     }
 }
 impl TryFrom<i32> for Scalar {
-    type Error = anyhow::Error;
+    type Error = crate::Error;
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         match value {
             1 => Ok(Scalar::Double),
@@ -164,7 +131,7 @@ impl TryFrom<i32> for Scalar {
             16 => Ok(Scalar::Sfixed64),
             17 => Ok(Scalar::Sint32),
             18 => Ok(Scalar::Sint64),
-            v => bail!("Unknown Scalar: {}", v),
+            v => Err(Error::invalid_scalar(value)),
         }
     }
 }
@@ -188,29 +155,20 @@ impl From<protobuf::descriptor::field_options::CType> for CType {
     }
 }
 
-impl TryFrom<Option<i32>> for CType {
-    type Error = anyhow::Error;
-
-    fn try_from(value: Option<i32>) -> Result<Self, Self::Error> {
-        match value {
-            Some(v) => CType::try_from(v),
-            None => bail!("CType is None"),
-        }
-    }
-}
 impl TryFrom<i32> for CType {
-    type Error = anyhow::Error;
+    type Error = crate::Error;
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         match value {
             0 => Ok(CType::String),
             1 => Ok(CType::Cord),
             2 => Ok(CType::StringPiece),
-            _ => bail!("invalid CType: {}", value),
+            _ => Err(Error::invalid_c_type(value)),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(i32)]
 pub enum JsType {
     /// Use the default type.
     Normal = 0,
@@ -230,24 +188,14 @@ impl From<protobuf::descriptor::field_options::JSType> for JsType {
     }
 }
 
-impl TryFrom<Option<i32>> for JsType {
-    type Error = anyhow::Error;
-
-    fn try_from(value: Option<i32>) -> Result<Self, Self::Error> {
-        match value {
-            Some(v) => JsType::try_from(v),
-            None => bail!("JsType is None"),
-        }
-    }
-}
 impl TryFrom<i32> for JsType {
-    type Error = anyhow::Error;
+    type Error = i32;
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         match value {
             0 => Ok(JsType::Normal),
             1 => Ok(JsType::String),
             2 => Ok(JsType::Number),
-            _ => bail!("invalid JsType {}", value),
+            _ => Err(value),
         }
     }
 }
@@ -270,24 +218,14 @@ impl From<protobuf::descriptor::field_descriptor_proto::Label> for Label {
     }
 }
 
-impl TryFrom<Option<i32>> for Label {
-    type Error = anyhow::Error;
-
-    fn try_from(value: Option<i32>) -> Result<Self, Self::Error> {
-        match value {
-            Some(v) => Label::try_from(v),
-            None => bail!("Label is None"),
-        }
-    }
-}
 impl TryFrom<i32> for Label {
-    type Error = anyhow::Error;
+    type Error = crate::Error;
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         match value {
             1 => Ok(Label::Required),
             2 => Ok(Label::Optional),
             3 => Ok(Label::Repeated),
-            _ => bail!("invalid Label {}", value),
+            _ => Err(Error::invalid_label(value)),
         }
     }
 }
@@ -318,23 +256,14 @@ impl From<protobuf::descriptor::file_options::OptimizeMode> for OptimizeMode {
     }
 }
 
-impl TryFrom<Option<i32>> for OptimizeMode {
-    type Error = anyhow::Error;
-    fn try_from(value: Option<i32>) -> Result<Self, Self::Error> {
-        match value {
-            Some(v) => OptimizeMode::try_from(v),
-            None => bail!("OptimizeMode cannot be None"),
-        }
-    }
-}
 impl TryFrom<i32> for OptimizeMode {
-    type Error = anyhow::Error;
+    type Error = crate::Error;
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         match value {
             1 => Ok(OptimizeMode::Speed),
             2 => Ok(OptimizeMode::CodeSize),
             3 => Ok(OptimizeMode::LiteRuntime),
-            _ => bail!("OptimizeMode cannot be {}", value),
+            _ => Err(Error::invalid_optimize_mode(value)),
         }
     }
 }
@@ -366,25 +295,15 @@ impl From<protobuf::descriptor::method_options::IdempotencyLevel> for Idempotenc
         }
     }
 }
-impl TryFrom<Option<i32>> for IdempotencyLevel {
-    type Error = anyhow::Error;
-
-    fn try_from(value: Option<i32>) -> Result<Self, Self::Error> {
-        match value {
-            Some(v) => IdempotencyLevel::try_from(v),
-            None => bail!("IdempotencyLevel can not be None"),
-        }
-    }
-}
 impl TryFrom<i32> for IdempotencyLevel {
-    type Error = anyhow::Error;
+    type Error = crate::Error;
 
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         match value {
             0 => Ok(IdempotencyLevel::IdempotencyUnknown),
             1 => Ok(IdempotencyLevel::NoSideEffects),
             2 => Ok(IdempotencyLevel::Idempotent),
-            _ => bail!("IdempotencyLevel cannot be {}", value),
+            _ => Err(Error::invalid_idempotency_level(value)),
         }
     }
 }
@@ -417,14 +336,14 @@ impl Syntax {
 }
 
 impl TryFrom<String> for Syntax {
-    type Error = anyhow::Error;
+    type Error = crate::Error<'static>;
 
     fn try_from(v: String) -> Result<Self, Self::Error> {
-        match v.as_str() {
+        match &*v.to_lowercase() {
             "proto2" => Ok(Syntax::Proto2),
             "proto3" => Ok(Syntax::Proto3),
             "" => Ok(Syntax::Proto2),
-            _ => bail!("invalid syntax: {}", v),
+            _ => Err(Error::invalid_syntax(v)),
         }
     }
 }

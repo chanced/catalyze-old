@@ -1,6 +1,6 @@
-use std::{path::PathBuf, fs::Permissions};
+use std::{fs::Permissions, path::PathBuf};
 
-use syn::TokenStream;
+use proc_macro2::TokenStream;
 
 pub enum Op {
     /// Creates a new file. If `overwrite` is `true` , any previous file content
@@ -18,8 +18,12 @@ pub enum Content {
     TokenStream(TokenStream),
     /// Writes the given string to the file.
     String(String),
-    /// 
-    Custom(Permissions, Vec<u8>),
+    /// Custom Artifacts are files generated directly against the file system,
+    /// and do not use protoc for the generation. Artifacts with `Custom` should
+    /// be used if custom permissions need to be set (such as executable scripts
+    /// or read-only configs) or when the file needs to be created outside of
+    /// the protoc-plugin's generation output directory.
+    Custom(Option<Permissions>, Vec<u8>),
 }
 
 pub struct Artifact {
@@ -27,17 +31,4 @@ pub struct Artifact {
     pub content: Content,
     pub op: Op,
     pub tags: Vec<String>,
-    /// Custom Artifacts are files generated directly against the file system,
-    /// and do not use protoc for the generation. These artifacts should be used
-    /// over Generic or Rust Artifacts when custom permissions need to be set
-    /// (such as executable scripts or read-only configs) or when the file needs
-    /// to be created outside of the protoc-plugin's generation output
-    /// directory.
-    // Custom {
-    //     path: PathBuf,
-    //     contents: Vec<u8>,
-    //     tags: Vec<String>,
-    //     op: Op,
-    // },
 }
-

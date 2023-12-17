@@ -3,49 +3,46 @@ use std::marker::PhantomData;
 use std::rc::{Rc, Weak};
 use std::str::FromStr;
 
-use anyhow::bail;
-
 use crate::extension::WeakExtension;
 
 use crate::iter::Iter;
-use crate::Syntax;
-use crate::{container::Container, container::WeakContainer, Name};
+use crate::{container::Container, container::WeakContainer};
 use crate::{
     AllEnums, Comments, Enum, Extension, Field, File, Node, Nodes, Oneof, WeakFile,
     WellKnownMessage,
 };
 use crate::{DescriptorPath, MessageDescriptor};
+use crate::{Error, Syntax};
 use crate::{Package, WellKnownType};
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug, Clone)]
-pub(crate) struct MessageDetail<'a> {
-    name: Name,
-    descriptor: MessageDescriptor<'a>,
+pub(crate) struct MessageDetail {
+    descriptor: MessageDescriptor,
     fqn: String,
 
-    messages: Rc<RefCell<Vec<Message<'a>>>>,
-    enums: Rc<RefCell<Vec<Enum<'a>>>>,
-    fields: Rc<RefCell<Vec<Field<'a>>>>,
-    oneofs: Rc<RefCell<Vec<Oneof<'a>>>>,
-    real_oneofs: Rc<RefCell<Vec<Oneof<'a>>>>,
-    synthetic_oneofs: Rc<RefCell<Vec<Oneof<'a>>>>,
-    dependents: Rc<RefCell<Vec<WeakMessage<'a>>>>,
-    imports: Rc<RefCell<Vec<WeakFile<'a>>>>,
-    import_set: Rc<RefCell<HashSet<String>>>,
-    container: RefCell<WeakContainer<'a>>,
-    maps: Rc<RefCell<HashMap<String, Message<'a>>>>,
+    messages: RefCell<Rc<[Message]>>,
+    enums: RefCell<Rc<[Enum]>>,
+    fields: RefCell<Rc<[Field]>>,
+    oneofs: RefCell<Rc<[Oneof]>>,
+    real_oneofs: RefCell<Rc<[Oneof]>>,
+    synthetic_oneofs: RefCell<Rc<[Oneof]>>,
+    dependents: RefCell<Rc<[WeakMessage]>>,
+    imports: RefCell<Rc<[WeakFile]>>,
+    import_set: RefCell<HashSet<String>>,
+    container: RefCell<WeakContainer>,
+    maps: RefCell<HashMap<String, Message>>,
     /// `Extension`s defined by this message.
-    defined_extensions: Rc<RefCell<Vec<Extension<'a>>>>,
+    defined_extensions: RefCell<Rc<[Extension]>>,
     /// `Extension`s applied to this `Message`
-    applied_extensions: Rc<RefCell<Vec<WeakExtension<'a>>>>,
-    comments: RefCell<Comments<'a>>,
+    applied_extensions: Rc<RefCell<Rc<[WeakExtension]>>>,
+    comments: RefCell<Comments>,
     wkt: Option<WellKnownMessage>,
 }
 
-impl<'a> MessageDetail<'a> {
-    fn new(desc: MessageDescriptor<'a>, container: Container<'a>) -> Rc<Self> {
+impl MessageDetail {
+    fn new(desc: MessageDescriptor, container: Container) -> Rc<Self> {
         let fqn = format!("{}.{}", container.fully_qualified_name(), desc.name());
 
         let wkt = if container.package().is_well_known_type() {
@@ -54,7 +51,6 @@ impl<'a> MessageDetail<'a> {
             None
         };
         Rc::new(Self {
-            name: desc.name().into(),
             container: RefCell::new(container.into()),
             fqn,
             descriptor: desc,
@@ -83,13 +79,10 @@ impl<'a> MessageDetail<'a> {
 /// Oneof blocks.
 ///
 /// Fields within Oneof blocks fields will be accessible on both the Message and the Oneof.
-pub struct Message<'a>(Rc<MessageDetail<'a>>);
+pub struct Message(Rc<MessageDetail>);
 
-impl<'a> Message<'a> {
-    pub fn new(
-        desc: MessageDescriptor<'a>,
-        container: Container<'a>,
-    ) -> Result<Self, anyhow::Error> {
+impl Message {
+    pub fn new(desc: MessageDescriptor, container: Container) -> Result<Self, Error> {
         let msg = Self(MessageDetail::new(desc, container))
             .hydrate_nested_msgs()?
             .hydrate_enums()
@@ -99,24 +92,24 @@ impl<'a> Message<'a> {
         Ok(msg)
     }
 
-    pub fn as_container(&self) -> Container<'a> {
+    pub fn as_container(&self) -> Container {
         self.into()
     }
-    pub fn descriptor(&self) -> MessageDescriptor<'a> {
+    pub fn descriptor(&self) -> MessageDescriptor {
         self.0.descriptor
     }
-    pub fn name(&self) -> &Name {
-        &self.0.name
+    pub fn name(&self) -> &str {
+        self.0.descriptor.name()
     }
 
-    pub fn dependents(&self) -> Dependents<'a> {
+    pub fn dependents(&self) -> Dependents {
         self.0.dependents.clone().into()
     }
     pub fn build_target(&self) -> bool {
         self.0.container.borrow().build_target()
     }
 
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.0.container.borrow().package()
     }
     pub fn is_map_entry(&self) -> bool {
@@ -131,74 +124,71 @@ impl<'a> Message<'a> {
     pub fn well_known_message(&self) -> Option<WellKnownMessage> {
         self.0.wkt
     }
-    pub fn container(&self) -> Container<'a> {
+    pub fn container(&self) -> Container {
         self.0.container.borrow().clone().into()
     }
     pub fn syntax(&self) -> Syntax {
         self.container().syntax()
     }
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.0.container.borrow().file()
     }
-    pub(crate) fn maps(&self) -> HashMap<String, Message<'a>> {
+    pub(crate) fn maps(&self) -> HashMap<&str, Message> {
         self.0
             .maps
             .borrow()
             .iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
+            .map(|(k, v)| (*k, v.clone()))
             .collect()
     }
-    pub fn fields(&self) -> Iter<Field<'a>> {
+    pub fn fields(&self) -> Iter<Field> {
         Iter::from(&self.0.fields)
     }
 
     pub fn messages(&self) -> Iter<Self> {
         Iter::from(&self.0.messages)
     }
-    pub fn message(&self, name: &str) -> Option<Message<'a>> {
+    pub fn message(&self, name: &str) -> Option<Message> {
         self.embed(name)
     }
-    pub fn embed(&self, name: &str) -> Option<Message<'a>> {
+    pub fn embed(&self, name: &str) -> Option<Message> {
         self.messages().find(|msg| msg.name() == name)
     }
-    pub fn enum_(&self, name: &str) -> Option<Enum<'a>> {
+    pub fn enum_(&self, name: &str) -> Option<Enum> {
         self.enums().find(|enum_| enum_.name() == name)
     }
-    pub fn enumeration(&self, name: &str) -> Option<Enum<'a>> {
-        self.enum_(name)
-    }
-    pub fn oneofs(&self) -> Iter<Oneof<'a>> {
+    pub fn oneofs(&self) -> Iter<Oneof> {
         Iter::from(&self.0.oneofs)
     }
-    pub fn real_oneofs(&self) -> Iter<Oneof<'a>> {
+    pub fn real_oneofs(&self) -> Iter<Oneof> {
         Iter::from(&self.0.real_oneofs)
     }
-    pub fn synthetic_oneofs(&self) -> Iter<Oneof<'a>> {
+    pub fn synthetic_oneofs(&self) -> Iter<Oneof> {
         Iter::from(&self.0.synthetic_oneofs)
     }
-    pub fn enums(&self) -> Iter<Enum<'a>> {
+    pub fn enums(&self) -> Iter<Enum> {
         Iter::from(&self.0.enums)
     }
-    pub fn all_messages(&self) -> AllMessages<'a> {
+    pub fn all_messages(&self) -> AllMessages {
         AllMessages::new(self.0.messages.clone())
     }
 
-    pub fn all_enums(&self) -> AllEnums<'a> {
+    pub fn all_enums(&self) -> AllEnums {
         AllEnums::new(self.0.enums.clone(), self.0.messages.clone())
     }
 
-    // pub fn dependents(&self) -> UpgradeIter<Message<'a>, Into<Message<'a>>> {
+    // pub fn dependents(&self) -> UpgradeIter<Message, Into<Message>> {
     //     UpgradeIter::new(self.0.dependents.clone().borrow().into_iter())
     // }
 
-    pub fn defined_extensions(&self) -> Iter<Extension<'a>> {
+    pub fn defined_extensions(&self) -> Iter<Extension> {
         Iter::from(&self.0.defined_extensions)
     }
 
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         *self.0.comments.borrow()
     }
-    pub fn field(&self, name: &str) -> Option<Field<'a>> {
+    pub fn field(&self, name: &str) -> Option<Field> {
         self.0
             .fields
             .borrow()
@@ -206,7 +196,7 @@ impl<'a> Message<'a> {
             .find(|f| f.name() == name)
             .cloned()
     }
-    pub fn nodes(&self) -> Nodes<'a> {
+    pub fn nodes(&self) -> Nodes {
         Nodes::new(vec![
             self.enums().into(),
             self.messages().into(),
@@ -215,27 +205,27 @@ impl<'a> Message<'a> {
             self.defined_extensions().into(),
         ])
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
+    pub fn fully_qualified_name(&self) -> &str {
+        &self.0.fqn
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.0.comments.replace(comments);
     }
 
-    pub(crate) fn add_dependent(&self, dependent: Message<'a>) {
+    pub(crate) fn add_dependent(&self, dependent: Message) {
         self.0.dependents.borrow_mut().push(dependent.into());
     }
 
-    pub(crate) fn add_applied_extension(&self, extension: Extension<'a>) {
+    pub(crate) fn add_applied_extension(&self, extension: Extension) {
         self.0
             .applied_extensions
             .borrow_mut()
             .push(extension.into());
     }
 
-    pub(crate) fn register_import(&self, file: File<'a>) {
+    pub(crate) fn register_import(&self, file: File) {
         let mut set = self.0.import_set.borrow_mut();
-        if set.contains(&file.name().to_string()) {
+        if set.contains(&*file.name()) {
             return;
         }
         self.container().register_import(file.clone());
@@ -243,15 +233,15 @@ impl<'a> Message<'a> {
         self.0.imports.borrow_mut().push(file.into());
     }
 
-    pub(crate) fn weak_file(&self) -> WeakFile<'a> {
+    pub(crate) fn weak_file(&self) -> WeakFile {
         self.0.container.borrow().weak_file()
     }
 
-    pub(crate) fn replace_field(&self, idx: usize, field: Field<'a>) {
+    pub(crate) fn replace_field(&self, idx: usize, field: Field) {
         self.0.fields.borrow_mut()[idx] = field;
     }
 
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node> {
         let msg = self.clone();
         if path.is_empty() {
             return Some(Node::Message(msg));
@@ -262,7 +252,7 @@ impl<'a> Message<'a> {
 
         let next = path[1] as usize;
         DescriptorPath::try_from(path[0]).ok().and_then(|p| {
-            let node: Option<Node<'a>> = match p {
+            let node: Option<Node> = match p {
                 DescriptorPath::EnumType => msg
                     .0
                     .enums
@@ -298,7 +288,7 @@ impl<'a> Message<'a> {
         })
     }
 
-    fn hydrate_fields(self) -> anyhow::Result<Message<'a>> {
+    fn hydrate_fields(self) -> Result<Message, Error> {
         {
             let oneofs = self.0.oneofs.borrow_mut();
             let mut fields = self.0.fields.borrow_mut();
@@ -359,7 +349,7 @@ impl<'a> Message<'a> {
         self
     }
 
-    fn hydrate_nested_msgs(self) -> anyhow::Result<Self> {
+    fn hydrate_nested_msgs(self) -> Result<Self, Error> {
         {
             let container = self.as_container();
             let mut msgs = self.0.messages.borrow_mut();
@@ -367,7 +357,7 @@ impl<'a> Message<'a> {
             for md in self.descriptor().nested_messages() {
                 let m = Message::new(md, container.clone())?;
                 if m.is_map_entry() {
-                    maps.insert(m.fully_qualified_name(), m);
+                    maps.insert(m.fully_qualified_name().to_string(), m);
                 } else {
                     msgs.push(m);
                 }
@@ -377,7 +367,7 @@ impl<'a> Message<'a> {
     }
 
     #[cfg(test)]
-    pub fn add_node(&self, n: Node<'a>) {
+    pub fn add_node(&self, n: Node) {
         match n {
             Node::Message(m) => self.0.messages.borrow_mut().push(m),
             Node::Enum(e) => self.0.enums.borrow_mut().push(e),
@@ -389,60 +379,60 @@ impl<'a> Message<'a> {
     }
 }
 
-impl<'a> PartialEq for Message<'a> {
+impl PartialEq for Message {
     fn eq(&self, other: &Self) -> bool {
         self.fully_qualified_name() == other.fully_qualified_name()
     }
 }
 
-impl<'a> From<&WeakMessage<'a>> for Message<'a> {
-    fn from(weak: &WeakMessage<'a>) -> Self {
+impl From<&WeakMessage> for Message {
+    fn from(weak: &WeakMessage) -> Self {
         Message(weak.0.upgrade().expect("message was dropped"))
     }
 }
 
-impl<'a> From<WeakMessage<'a>> for Message<'a> {
-    fn from(weak: WeakMessage<'a>) -> Self {
+impl From<WeakMessage> for Message {
+    fn from(weak: WeakMessage) -> Self {
         Message(weak.0.upgrade().expect("Message was dropped"))
     }
 }
 
-impl<'a> TryFrom<Container<'a>> for Message<'a> {
-    type Error = anyhow::Error;
-    fn try_from(container: Container<'a>) -> Result<Self, Self::Error> {
+impl TryFrom<Container> for Message {
+    type Error = Container;
+    fn try_from(container: Container) -> Result<Self, Self::Error> {
         match container {
             Container::Message(m) => Ok(m),
-            _ => bail!("container is not a Message"),
+            _ => Err(container),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct WeakMessage<'a>(Weak<MessageDetail<'a>>);
+pub(crate) struct WeakMessage(Weak<MessageDetail>);
 
-impl<'a> WeakMessage<'a> {
-    pub(crate) fn new() -> WeakMessage<'a> {
+impl WeakMessage {
+    pub(crate) fn new() -> WeakMessage {
         WeakMessage(Weak::new())
     }
     pub fn build_target(&self) -> bool {
         self.upgrade().build_target()
     }
-    // pub fn container(&self) -> Container<'a> {
+    // pub fn container(&self) -> Container {
     //     self.upgrade().container()
     // }
     // pub fn name(&self) -> &Name {
     //     self.upgrade().name()
     // }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.upgrade().package()
     }
-    fn upgrade(&self) -> Message<'a> {
+    fn upgrade(&self) -> Message {
         self.into()
     }
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.upgrade().file()
     }
-    pub(crate) fn weak_file(&self) -> WeakFile<'a> {
+    pub(crate) fn weak_file(&self) -> WeakFile {
         self.upgrade().weak_file()
     }
     pub fn is_well_known_type(&self) -> bool {
@@ -456,31 +446,31 @@ impl<'a> WeakMessage<'a> {
     }
 }
 
-impl<'a> From<&Message<'a>> for WeakMessage<'a> {
-    fn from(m: &Message<'a>) -> Self {
+impl From<&Message> for WeakMessage {
+    fn from(m: &Message) -> Self {
         WeakMessage(Rc::downgrade(&m.0))
     }
 }
 
-impl<'a> From<Message<'a>> for WeakMessage<'a> {
-    fn from(m: Message<'a>) -> Self {
+impl From<Message> for WeakMessage {
+    fn from(m: Message) -> Self {
         WeakMessage(Rc::downgrade(&m.0))
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct AllMessages<'a> {
-    q: VecDeque<Message<'a>>,
+pub struct AllMessages {
+    q: VecDeque<Message>,
 }
-impl<'a> AllMessages<'a> {
-    pub(crate) fn new(msgs: Rc<RefCell<Vec<Message<'a>>>>) -> Self {
+impl AllMessages {
+    pub(crate) fn new(msgs: Rc<RefCell<Vec<Message>>>) -> Self {
         Self {
             q: VecDeque::from_iter(msgs.borrow().iter().cloned()),
         }
     }
 }
-impl<'a> Iterator for AllMessages<'a> {
-    type Item = Message<'a>;
+impl Iterator for AllMessages {
+    type Item = Message;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(msg) = self.q.pop_front() {
             for v in msg.messages() {
@@ -494,14 +484,14 @@ impl<'a> Iterator for AllMessages<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Dependents<'a, T = Message<'a>> {
-    vec: Rc<RefCell<Vec<WeakMessage<'a>>>>,
+pub struct Dependents<T = Message> {
+    vec: RefCell<[WeakMessage]>,
     idx: usize,
     _marker: PhantomData<T>,
 }
 
-impl<'a> Iterator for Dependents<'a> {
-    type Item = Message<'a>;
+impl Iterator for Dependents {
+    type Item = Message;
     fn next(&mut self) -> Option<Self::Item> {
         if self.idx < self.vec.borrow().len() {
             let msg = self.vec.borrow()[self.idx].upgrade();
@@ -513,8 +503,8 @@ impl<'a> Iterator for Dependents<'a> {
     }
 }
 
-impl<'a> From<Rc<RefCell<Vec<WeakMessage<'a>>>>> for Dependents<'a> {
-    fn from(vec: Rc<RefCell<Vec<WeakMessage<'a>>>>) -> Self {
+impl From<Rc<RefCell<Vec<WeakMessage>>>> for Dependents {
+    fn from(vec: Rc<RefCell<Vec<WeakMessage>>>) -> Self {
         Self {
             vec,
             idx: 0,
@@ -522,8 +512,8 @@ impl<'a> From<Rc<RefCell<Vec<WeakMessage<'a>>>>> for Dependents<'a> {
         }
     }
 }
-impl<'a> From<WeakMessage<'a>> for Option<Message<'a>> {
-    fn from(msg: WeakMessage<'a>) -> Self {
+impl From<WeakMessage> for Option<Message> {
+    fn from(msg: WeakMessage) -> Self {
         msg.0.upgrade().map(Message)
     }
 }

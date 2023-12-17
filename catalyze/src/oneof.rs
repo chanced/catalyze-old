@@ -4,31 +4,29 @@ use std::{
 };
 
 use crate::{
-    iter::Iter, proto::OneofDescriptor, Comments, Field, File, FileRefs, Message, Name, Node,
-    Package, WeakFile, WeakMessage,
+    iter::Iter, proto::OneofDescriptor, Comments, Field, File, FileRefs, Message, Node, Package,
+    WeakFile, WeakMessage,
 };
 
 #[derive(Debug, Clone)]
-pub(crate) struct OneofDetail<'a> {
-    pub name: Name,
-    pub desc: OneofDescriptor<'a>,
+pub(crate) struct OneofDetail {
+    pub descriptor: OneofDescriptor,
     fqn: String,
-    fields: Rc<RefCell<Vec<Field<'a>>>>,
-    msg: WeakMessage<'a>,
+    fields: Rc<RefCell<Vec<Field>>>,
+    msg: WeakMessage,
     is_synthetic: bool,
-    comments: RefCell<Comments<'a>>,
-    imports: Rc<RefCell<Vec<WeakFile<'a>>>>,
+    comments: RefCell<Comments>,
+    imports: Rc<RefCell<Vec<WeakFile>>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Oneof<'a>(Rc<OneofDetail<'a>>);
+pub struct Oneof(Rc<OneofDetail>);
 
-impl<'a> Oneof<'a> {
-    pub fn new(desc: OneofDescriptor<'a>, msg: Message<'a>) -> Self {
-        let fully_qualified_name = format!("{}.{}", msg.fully_qualified_name(), desc.name());
+impl Oneof {
+    pub fn new(descriptor: OneofDescriptor, msg: Message) -> Self {
+        let fully_qualified_name = format!("{}.{}", msg.fully_qualified_name(), descriptor.name());
         Oneof(Rc::new(OneofDetail {
-            name: desc.name().into(),
-            desc,
+            descriptor,
             fqn: fully_qualified_name,
             fields: Rc::new(RefCell::new(Vec::default())),
             msg: msg.clone().into(),
@@ -37,35 +35,35 @@ impl<'a> Oneof<'a> {
             imports: Rc::new(RefCell::new(Vec::default())),
         }))
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.fqn.clone()
+    pub fn fully_qualified_name(&self) -> &str {
+        &self.0.fqn
     }
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &str {
         &self.0.name
     }
-    pub fn fields(&self) -> Iter<Field<'a>> {
+    pub fn fields(&self) -> Iter<Field> {
         Iter::from(&self.0.fields)
     }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         *self.0.comments.borrow()
     }
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.0.msg.clone().into()
     }
 
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.0.msg.file()
     }
-    pub fn descriptor(&self) -> OneofDescriptor<'a> {
-        self.0.desc
+    pub fn descriptor(&self) -> OneofDescriptor {
+        self.0.descriptor
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.file().package()
     }
-    pub fn imports(&self) -> FileRefs<'a> {
+    pub fn imports(&self) -> FileRefs {
         FileRefs::from(&self.0.imports)
     }
-    pub(crate) fn add_field(&self, field: Field<'a>) {
+    pub(crate) fn add_field(&self, field: Field) {
         self.0.fields.borrow_mut().push(field.clone());
     }
 
@@ -77,11 +75,11 @@ impl<'a> Oneof<'a> {
         }
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.0.comments.replace(comments);
     }
 
-    fn downgrade(&self) -> WeakOneof<'a> {
+    fn downgrade(&self) -> WeakOneof {
         WeakOneof(Rc::downgrade(&self.0))
     }
 
@@ -91,7 +89,7 @@ impl<'a> Oneof<'a> {
     pub fn is_synthetic(&self) -> bool {
         self.0.is_synthetic
     }
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node> {
         if path.is_empty() {
             Some(Node::Oneof(self.clone()))
         } else {
@@ -100,32 +98,32 @@ impl<'a> Oneof<'a> {
     }
 }
 
-impl<'a> From<WeakOneof<'a>> for Oneof<'a> {
-    fn from(oneof: WeakOneof<'a>) -> Self {
+impl From<WeakOneof> for Oneof {
+    fn from(oneof: WeakOneof) -> Self {
         oneof.upgrade()
     }
 }
-impl<'a> From<&WeakOneof<'a>> for Oneof<'a> {
-    fn from(oneof: &WeakOneof<'a>) -> Self {
+impl From<&WeakOneof> for Oneof {
+    fn from(oneof: &WeakOneof) -> Self {
         oneof.upgrade()
     }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct WeakOneof<'a>(Weak<OneofDetail<'a>>);
+pub(crate) struct WeakOneof(Weak<OneofDetail>);
 
-impl<'a> WeakOneof<'a> {
-    fn upgrade(&self) -> Oneof<'a> {
+impl WeakOneof {
+    fn upgrade(&self) -> Oneof {
         Oneof(self.0.upgrade().expect("Failed to upgrade Oneof"))
     }
 }
-impl<'a> From<Oneof<'a>> for WeakOneof<'a> {
-    fn from(oneof: Oneof<'a>) -> Self {
+impl From<Oneof> for WeakOneof {
+    fn from(oneof: Oneof) -> Self {
         oneof.downgrade()
     }
 }
-impl<'a> From<&Oneof<'a>> for WeakOneof<'a> {
-    fn from(oneof: &Oneof<'a>) -> Self {
+impl From<&Oneof> for WeakOneof {
+    fn from(oneof: &Oneof) -> Self {
         oneof.downgrade()
     }
 }

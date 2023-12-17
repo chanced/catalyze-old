@@ -6,7 +6,6 @@ mod oneof_field;
 mod repeated_field;
 mod scalar_field;
 
-use anyhow::{anyhow, bail};
 pub use embed_field::*;
 pub use enum_field::*;
 pub use map_field::*;
@@ -15,48 +14,92 @@ pub use repeated_field::*;
 pub use scalar_field::*;
 
 use crate::{
-    proto::{FieldDescriptor, Scalar, Syntax, Type},
-    CType, Comments, Enum, File, FileRefs, JsType, Message, Name, Node, Oneof, Package,
-    UninterpretedOptions, WeakMessage, WellKnownType,
+    CType, Comments, Enum, Error, File, FileRefs, InvalidMapEntryReason, JsType, Kind, Message,
+    Node, Oneof, Package, WeakMessage, WellKnownType,
 };
 use std::{cell::RefCell, convert::From};
 #[derive(Debug, Clone)]
-pub enum Field<'a> {
-    Embed(EmbedField<'a>),
-    Enum(EnumField<'a>),
-    Map(MapField<'a>),
-    Oneof(OneofField<'a>),
-    Repeated(RepeatedField<'a>),
-    Scalar(ScalarField<'a>),
+pub enum Field {
+    Embed(EmbedField),
+    Enum(EnumField),
+    Map(MapField),
+    Oneof(OneofField),
+    Repeated(RepeatedField),
+    Scalar(ScalarField),
 }
 
-impl<'a> Field<'a> {
-    pub fn new(
-        desc: FieldDescriptor<'a>,
-        msg: Message<'a>,
-        oneof: Option<Oneof<'a>>,
-    ) -> Result<Field<'a>, anyhow::Error> {
-        let detail = FieldDetail::new(desc, msg, None)?;
+impl From<EmbedField> for Field {
+    fn from(v: EmbedField) -> Self {
+        Self::Embed(v)
+    }
+}
 
-        if desc.proto_type().is_group() {
-            bail!("Group is not supported")
+impl From<OneofField> for Field {
+    fn from(v: OneofField) -> Self {
+        Self::Oneof(v)
+    }
+}
+
+impl From<RepeatedField> for Field {
+    fn from(v: RepeatedField) -> Self {
+        Self::Repeated(v)
+    }
+}
+
+impl From<ScalarField> for Field {
+    fn from(f: ScalarField) -> Self {
+        Field::Scalar(f)
+    }
+}
+
+impl From<EnumField> for Field {
+    fn from(f: EnumField) -> Self {
+        Field::Enum(f)
+    }
+}
+impl From<MapField> for Field {
+    fn from(f: MapField) -> Self {
+        Field::Map(f)
+    }
+}
+impl From<&ScalarField> for Field {
+    fn from(f: &ScalarField) -> Self {
+        f.clone().into()
+    }
+}
+
+impl From<&EnumField> for Field {
+    fn from(f: &EnumField) -> Self {
+        f.clone().into()
+    }
+}
+impl From<&MapField> for Field {
+    fn from(f: &MapField) -> Self {
+        f.clone().into()
+    }
+}
+
+impl Field {
+    pub fn new(desc: FieldDescriptor, msg: Message, oneof: Option<Oneof>) -> Result<Field, Error> {
+        let detail = FieldDetail::new(desc, msg, None);
+        if desc.type_().is_group() {
+            return Err(Error::group_not_supported(detail.fully_qualified_name()));
         }
-
         if let Some(oneof) = oneof {
             OneofField::new(detail, oneof)
         } else if detail.is_repeated() {
             RepeatedField::new(detail)
         } else {
             match detail.value_type() {
-                Type::Scalar(_) => ScalarField::new(detail),
-                Type::Enum(_) => EnumField::new(detail),
-                Type::Message(_) => EmbedField::new(detail),
-                Type::Group => bail!("group is not supported; use an embedded message instead"),
+                Type::Scalar(_) => Ok(ScalarField::new(detail)),
+                Type::Enum(_) => Ok(EnumField::new(detail)),
+                Type::Message(_) => Ok(EmbedField::new(detail)),
+                Type::Group => Err(Error::group_not_supported(detail.fully_qualified_name())),
             }
         }
     }
-
-    pub fn fully_qualified_name(&self) -> String {
+    #[inline]
+    pub fn fully_qualified_name(&self) -> &str {
         match self {
             Field::Enum(f) => f.fully_qualified_name(),
             Field::Map(f) => f.fully_qualified_name(),
@@ -66,7 +109,8 @@ impl<'a> Field<'a> {
             Field::Scalar(f) => f.fully_qualified_name(),
         }
     }
-    pub fn message(&self) -> Message<'a> {
+    #[inline]
+    pub fn message(&self) -> Message {
         match self {
             Self::Embed(f) => f.message(),
             Self::Enum(f) => f.message(),
@@ -76,7 +120,7 @@ impl<'a> Field<'a> {
             Self::Scalar(f) => f.message(),
         }
     }
-    pub fn value_type(&self) -> Type<'a> {
+    pub fn value_type(&self) -> Type {
         match self {
             Self::Embed(f) => f.value_type(),
             Self::Enum(f) => f.value_type(),
@@ -86,7 +130,7 @@ impl<'a> Field<'a> {
             Self::Scalar(f) => f.value_type(),
         }
     }
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &str {
         match self {
             Field::Embed(f) => f.name(),
             Field::Enum(f) => f.name(),
@@ -96,7 +140,7 @@ impl<'a> Field<'a> {
             Field::Scalar(f) => f.name(),
         }
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+    pub fn descriptor(&self) -> FieldDescriptor {
         match self {
             Field::Embed(f) => f.descriptor(),
             Field::Enum(f) => f.descriptor(),
@@ -118,7 +162,7 @@ impl<'a> Field<'a> {
         }
     }
 
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         match self {
             Field::Embed(f) => f.comments(),
             Field::Enum(f) => f.comments(),
@@ -139,7 +183,7 @@ impl<'a> Field<'a> {
         }
     }
 
-    pub fn imports(&self) -> FileRefs<'a> {
+    pub fn imports(&self) -> FileRefs {
         match self {
             Field::Embed(f) => f.imports(),
             Field::Enum(f) => f.imports(),
@@ -169,7 +213,9 @@ impl<'a> Field<'a> {
             Field::Scalar(f) => f.build_target(),
         }
     }
-    pub fn enum_(&self) -> Option<Enum<'a>> {
+
+    /// Returns `Option::Some(Enum)` if this field contains an `Enum`.
+    pub fn enum_(&self) -> Option<Enum> {
         match self {
             Field::Enum(f) => Some(f.enum_()),
             Field::Map(f) => f.enum_(),
@@ -178,16 +224,9 @@ impl<'a> Field<'a> {
             _ => None,
         }
     }
-    pub fn enumeration(&self) -> Option<Enum<'a>> {
-        match self {
-            Field::Enum(f) => Some(f.enumeration()),
-            Field::Map(f) => f.enumeration(),
-            Field::Oneof(f) => f.enumeration(),
-            Field::Repeated(f) => f.enumeration(),
-            _ => None,
-        }
-    }
-    pub fn embed(&self) -> Option<Message<'a>> {
+    /// Returns `Option::Some(Message)` if this field should hold an embedded
+    /// `Message`.
+    pub fn embed(&self) -> Option<Message> {
         match self {
             Field::Embed(f) => Some(f.embed()),
             Field::Map(f) => f.embed(),
@@ -196,7 +235,7 @@ impl<'a> Field<'a> {
             _ => None,
         }
     }
-
+    /// Returns `true` if this `Field` is a [`Scalar`] type.
     pub fn scalar(&self) -> Option<Scalar> {
         match self {
             Field::Map(f) => f.scalar(),
@@ -207,10 +246,12 @@ impl<'a> Field<'a> {
         }
     }
 
+    /// Returns `true` if this field is marked repeated.
     pub fn is_repeated(&self) -> bool {
         matches!(self, Field::Repeated(_))
     }
 
+    /// Returns `true` if this field should hold an embedded `Message`.
     pub fn is_embed(&self) -> bool {
         match self {
             Field::Embed(_) => true,
@@ -342,7 +383,7 @@ impl<'a> Field<'a> {
         matches!(self, Field::Map(_))
     }
 
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         match self {
             Field::Embed(f) => f.file(),
             Field::Enum(f) => f.file(),
@@ -352,7 +393,7 @@ impl<'a> Field<'a> {
             Field::Scalar(f) => f.file(),
         }
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         match self {
             Field::Embed(f) => f.package(),
             Field::Enum(f) => f.package(),
@@ -362,7 +403,7 @@ impl<'a> Field<'a> {
             Field::Scalar(f) => f.package(),
         }
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         match self {
             Field::Embed(f) => f.set_comments(comments),
             Field::Enum(f) => f.set_comments(comments),
@@ -373,7 +414,7 @@ impl<'a> Field<'a> {
         }
     }
 
-    pub(crate) fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
+    pub(crate) fn set_value(&self, value: Node) -> Result<(), Error> {
         match self {
             Field::Embed(f) => f.set_value(value),
             Field::Enum(f) => f.set_value(value),
@@ -384,7 +425,7 @@ impl<'a> Field<'a> {
         }
     }
 
-    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node<'a>> {
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node> {
         if path.is_empty() {
             Some(self.into())
         } else {
@@ -512,7 +553,7 @@ impl<'a> Field<'a> {
     }
 
     /// Options the parser does not recognize.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         match self {
             Field::Embed(f) => f.uninterpreted_options(),
             Field::Enum(f) => f.uninterpreted_options(),
@@ -522,155 +563,221 @@ impl<'a> Field<'a> {
             Field::Scalar(f) => f.uninterpreted_options(),
         }
     }
-    pub(crate) fn into_map(self) -> anyhow::Result<Self> {
-        let embed = self.embed().ok_or_else(|| {
-            anyhow!(
-                "err: {} does not contain an embeded MapEntry",
-                self.fully_qualified_name()
-            )
+    pub(crate) fn into_map(self) -> Result<Self, Error> {
+        let embed = self.embed().ok_or_else(|| Error::InvalidMapEntry {
+            reason: InvalidMapEntryReason::FieldNotEmbed,
+            fully_qualified_name: self.fully_qualified_name(),
+            name: self.name(),
+            syntax: self.syntax(),
         })?;
         if !embed.is_map_entry() {
-            anyhow::bail!(
-                "err: {} does not contain an embeded MapEntry",
-                self.fully_qualified_name()
-            );
+            return Err(Error::invalid_map_entry(
+                InvalidMapEntryReason::EmbedNotMap,
+                self.fully_qualified_name(),
+                self.name(),
+                self.syntax(),
+            ));
         }
         let msg = self.message();
-        let fd = FieldDetail::new(self.descriptor(), msg, Some(embed))?;
+        let fd = FieldDetail::new(self.descriptor(), msg, Some(embed));
         fd.set_comments(self.comments());
         let mf = Field::Map(MapField::new(fd)?);
-
         Ok(mf)
     }
-}
 
-impl<'a> From<ScalarField<'a>> for Field<'a> {
-    fn from(f: ScalarField<'a>) -> Self {
-        Field::Scalar(f)
+    #[must_use]
+    pub fn as_embed(&self) -> Option<&EmbedField> {
+        if let Self::Embed(v) = self {
+            Some(v)
+        } else {
+            None
+        }
     }
-}
 
-impl<'a> From<EnumField<'a>> for Field<'a> {
-    fn from(f: EnumField<'a>) -> Self {
-        Field::Enum(f)
+    #[must_use]
+    pub fn try_into_embed(self) -> Result<EmbedField, Self> {
+        if let Self::Embed(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
     }
-}
-impl<'a> From<MapField<'a>> for Field<'a> {
-    fn from(f: MapField<'a>) -> Self {
-        Field::Map(f)
-    }
-}
-impl<'a> From<&ScalarField<'a>> for Field<'a> {
-    fn from(f: &ScalarField<'a>) -> Self {
-        f.clone().into()
-    }
-}
 
-impl<'a> From<&EnumField<'a>> for Field<'a> {
-    fn from(f: &EnumField<'a>) -> Self {
-        f.clone().into()
+    #[must_use]
+    pub fn as_enum(&self) -> Option<&EnumField> {
+        if let Self::Enum(v) = self {
+            Some(v)
+        } else {
+            None
+        }
     }
-}
-impl<'a> From<&MapField<'a>> for Field<'a> {
-    fn from(f: &MapField<'a>) -> Self {
-        f.clone().into()
+
+    #[must_use]
+    pub fn try_into_enum(self) -> Result<EnumField, Self> {
+        if let Self::Enum(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    #[must_use]
+    pub fn as_map(&self) -> Option<&MapField> {
+        if let Self::Map(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn try_into_map(self) -> Result<MapField, Self> {
+        if let Self::Map(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Returns `true` if the field is [`Oneof`].
+    ///
+    /// [`Oneof`]: Field::Oneof
+    #[must_use]
+    pub fn is_oneof(&self) -> bool {
+        matches!(self, Self::Oneof(..))
+    }
+
+    #[must_use]
+    pub fn as_oneof(&self) -> Option<&OneofField> {
+        if let Self::Oneof(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn try_into_oneof(self) -> Result<OneofField, Self> {
+        if let Self::Oneof(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    #[must_use]
+    pub fn as_repeated(&self) -> Option<&RepeatedField> {
+        if let Self::Repeated(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn try_into_repeated(self) -> Result<RepeatedField, Self> {
+        if let Self::Repeated(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+
+    #[must_use]
+    pub fn as_scalar(&self) -> Option<&ScalarField> {
+        if let Self::Scalar(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn try_into_scalar(self) -> Result<ScalarField, Self> {
+        if let Self::Scalar(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
     }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct FieldDetail<'a> {
-    msg: WeakMessage<'a>,
-    name: Name,
+pub(crate) struct FieldDetail {
+    msg: WeakMessage,
     fqn: String,
     syntax: Syntax,
-    desc: FieldDescriptor<'a>,
-    comments: RefCell<Comments<'a>>,
-    map_entry: Option<WeakMessage<'a>>,
+    descriptor: FieldDescriptor,
+    comments: RefCell<Comments>,
+    map_entry: Option<WeakMessage>,
 }
 
-impl<'a> FieldDetail<'a> {
-    pub fn new(
-        desc: FieldDescriptor<'a>,
-        msg: Message<'a>,
-        map_entry: Option<Message<'a>>,
-    ) -> Result<Self, anyhow::Error> {
-        let name = desc.name().into();
-
-        let fqn = format!("{}.{}", msg.fully_qualified_name(), &name);
-        // let key = embed.fields().get(0).ok_or(anyhow!(
-        //     "err: {} does not contain a key",
-        //     embed.fully_qualified_name()
-        // ))?;
-        // let val = embed.fields().get(1).ok_or(anyhow!(
-        //     "err: {} does not contain a value",
-        //     embed.fully_qualified_name()
-        // ))?;
-        Ok(Self {
-            name,
+impl FieldDetail {
+    pub fn new(desc: FieldDescriptor, msg: Message, map_entry: Option<Message>) -> Self {
+        let fqn = format!("{}.{}", msg.fully_qualified_name(), desc.name());
+        Self {
             fqn,
             map_entry: map_entry.map(Into::into),
             syntax: msg.syntax(),
-            desc,
+            descriptor: desc,
             msg: msg.clone().into(),
             comments: RefCell::new(Comments::default()),
-        })
+        }
     }
-
-    pub fn name(&self) -> &Name {
-        &self.name
+    pub fn name(&self) -> &str {
+        self.descriptor.name()
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.fqn.clone()
+    pub fn fully_qualified_name(&self) -> &str {
+        &self.fqn
     }
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.msg.clone().into()
     }
 
-    pub fn map_entry(&self) -> Result<Message<'a>, anyhow::Error> {
-        self.map_entry
-            .clone()
-            .map(Into::into)
-            .ok_or_else(|| anyhow!("field is not a map entry"))
+    /// Returns `Option::Some(Message)` if this field is a map entry.
+    pub fn map_entry(&self) -> Option<Message> {
+        self.map_entry.clone().map(Into::into)
     }
+    /// Returns the [`Syntax`] of the `File` containing this field.
     pub fn syntax(&self) -> Syntax {
         self.syntax
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
-        self.desc
+    pub fn descriptor(&self) -> FieldDescriptor {
+        self.descriptor
     }
     pub fn is_map(&self) -> bool {
         self.map_entry.is_some()
     }
     pub fn is_repeated(&self) -> bool {
-        self.desc.is_repeated()
+        self.descriptor.is_repeated()
     }
     pub fn is_marked_optional(&self) -> bool {
-        self.desc.is_marked_optional(self.syntax)
+        self.descriptor.is_marked_optional(self.syntax)
     }
     pub fn is_marked_required(&self) -> bool {
-        self.desc.is_marked_required(self.syntax)
+        self.descriptor.is_marked_required(self.syntax)
     }
     pub fn value_type(&self) -> Type {
-        self.desc.r#type()
+        self.descriptor.type_()
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.comments.replace(comments);
     }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         *self.comments.borrow()
     }
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.msg.file()
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.file().package()
     }
     pub fn build_target(&self) -> bool {
         self.file().build_target()
     }
 
-    // pub fn map_value(&self) -> Result<Field<'a>, anyhow::Error> {
+    // pub fn map_value(&self) -> Result<Field, crate::Error> {
     //     self.map_entry()?
     //         .fields()
     //         .get(1)

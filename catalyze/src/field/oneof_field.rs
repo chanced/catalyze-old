@@ -3,50 +3,48 @@
 use core::panic;
 use std::{cell::RefCell, rc::Rc};
 
-use anyhow::bail;
-
 use crate::{
     proto::{FieldDescriptor, Scalar, Syntax},
-    Comments, Enum, Field, File, FileRefs, JsType, Message, Name, Node, Oneof, Package, Type,
-    UninterpretedOptions, WeakEnum, WeakMessage, WeakOneof, WellKnownType,
+    Comments, Enum, Error, Field, File, FileRefs, JsType, Kind, Message, Node, Oneof, Package,
+    Type, WeakEnum, WeakMessage, WeakOneof, WellKnownType,
 };
 
 use super::FieldDetail;
 #[derive(Debug, Clone)]
-pub(crate) struct OneofFieldDetail<'a> {
-    pub detail: FieldDetail<'a>,
-    pub oneof: WeakOneof<'a>,
+pub(crate) struct OneofFieldDetail {
+    pub detail: FieldDetail,
+    pub oneof: WeakOneof,
 }
-impl<'a> OneofFieldDetail<'a> {
-    pub fn name(&self) -> &Name {
+impl OneofFieldDetail {
+    pub fn name(&self) -> &str {
         self.detail.name()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+    pub fn descriptor(&self) -> FieldDescriptor {
         self.detail.descriptor()
     }
 
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         self.detail.fully_qualified_name()
     }
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.detail.message()
     }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         self.detail.comments()
     }
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
     }
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.detail.file()
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.detail.package()
     }
-    pub fn oneof(&self) -> Oneof<'a> {
+    pub fn oneof(&self) -> Oneof {
         self.oneof.clone().into()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.detail.set_comments(comments);
     }
 
@@ -63,35 +61,35 @@ impl<'a> OneofFieldDetail<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub enum OneofField<'a> {
-    Scalar(OneofScalarField<'a>),
-    Enum(OneofEnumField<'a>),
-    Embed(OneofEmbedField<'a>),
+pub enum OneofField {
+    Scalar(OneofScalarField),
+    Enum(OneofEnumField),
+    Embed(OneofEmbedField),
 }
 
-impl<'a> OneofField<'a> {
-    pub fn name(&self) -> &Name {
+impl OneofField {
+    pub fn name(&self) -> &str {
         match self {
             OneofField::Scalar(f) => f.name(),
             OneofField::Enum(f) => f.name(),
             OneofField::Embed(f) => f.name(),
         }
     }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         match self {
             OneofField::Scalar(f) => f.fully_qualified_name(),
             OneofField::Enum(f) => f.fully_qualified_name(),
             OneofField::Embed(f) => f.fully_qualified_name(),
         }
     }
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         match self {
             OneofField::Scalar(f) => f.message(),
             OneofField::Enum(f) => f.message(),
             OneofField::Embed(f) => f.message(),
         }
     }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         match self {
             OneofField::Scalar(f) => f.comments(),
             OneofField::Enum(f) => f.comments(),
@@ -99,14 +97,14 @@ impl<'a> OneofField<'a> {
         }
     }
 
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         match self {
             OneofField::Scalar(f) => f.file(),
             OneofField::Enum(f) => f.file(),
             OneofField::Embed(f) => f.file(),
         }
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         match self {
             OneofField::Scalar(f) => f.package(),
             OneofField::Enum(f) => f.package(),
@@ -121,7 +119,7 @@ impl<'a> OneofField<'a> {
             OneofField::Embed(f) => f.has_import(),
         }
     }
-    pub fn imports(&self) -> FileRefs<'a> {
+    pub fn imports(&self) -> FileRefs {
         match self {
             OneofField::Scalar(_) => FileRefs::empty(),
             OneofField::Enum(f) => f.imports(),
@@ -136,16 +134,13 @@ impl<'a> OneofField<'a> {
             OneofField::Embed(f) => f.build_target(),
         }
     }
-    pub fn enum_(&self) -> Option<Enum<'a>> {
+    pub fn enum_(&self) -> Option<Enum> {
         match self {
             OneofField::Enum(f) => Some(f.enum_()),
             _ => None,
         }
     }
-    pub fn enumeration(&self) -> Option<Enum<'a>> {
-        self.enum_()
-    }
-    pub fn embed(&self) -> Option<Message<'a>> {
+    pub fn embed(&self) -> Option<Message> {
         match self {
             OneofField::Embed(f) => Some(f.embed()),
             _ => None,
@@ -160,7 +155,7 @@ impl<'a> OneofField<'a> {
             _ => None,
         }
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         match self {
             OneofField::Scalar(f) => f.set_comments(comments),
             OneofField::Enum(f) => f.set_comments(comments),
@@ -168,7 +163,7 @@ impl<'a> OneofField<'a> {
         }
     }
 
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+    pub fn descriptor(&self) -> FieldDescriptor {
         match self {
             OneofField::Scalar(f) => f.descriptor(),
             OneofField::Enum(f) => f.descriptor(),
@@ -240,7 +235,7 @@ impl<'a> OneofField<'a> {
         }
     }
 
-    pub(crate) fn set_value(&self, value: crate::Node<'a>) -> Result<(), anyhow::Error> {
+    pub(crate) fn set_value(&self, value: Node) -> Result<(), Error> {
         match self {
             OneofField::Enum(f) => f.set_value(value),
             OneofField::Embed(f) => f.set_value(value),
@@ -248,14 +243,11 @@ impl<'a> OneofField<'a> {
         }
     }
 
-    pub fn value_type(&self) -> Type<'a> {
-        self.descriptor().proto_type()
+    pub fn value_type(&self) -> Type {
+        self.descriptor().type_()
     }
 
-    pub(crate) fn new(
-        detail: FieldDetail<'a>,
-        oneof: Oneof<'a>,
-    ) -> Result<crate::Field<'a>, anyhow::Error> {
+    pub(crate) fn new(detail: FieldDetail, oneof: Oneof) -> Result<crate::Field, Error> {
         match detail.value_type() {
             Type::Scalar(scalar) => Ok(Field::Oneof(OneofField::Scalar(OneofScalarField(
                 Rc::new(OneofScalarFieldDetail {
@@ -272,7 +264,7 @@ impl<'a> OneofField<'a> {
                         detail,
                         oneof: oneof.into(),
                     },
-                    enumeration: RefCell::new(WeakEnum::empty()),
+                    enum_: RefCell::new(WeakEnum::empty()),
                 },
             ))))),
             Type::Message(_) => Ok(Field::Oneof(OneofField::Embed(OneofEmbedField(Rc::new(
@@ -284,7 +276,7 @@ impl<'a> OneofField<'a> {
                     embed: RefCell::new(WeakMessage::new()),
                 },
             ))))),
-            Type::Group => bail!("Group is not supported. Use an embedded Message instead."),
+            Type::Group => Err(Error::group_not_supported(oneof.fully_qualified_name())),
         }
     }
     /// The jstype option determines the JavaScript type used for values of the
@@ -367,7 +359,7 @@ impl<'a> OneofField<'a> {
     }
 
     /// Options the parser does not recognize.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         self.descriptor().options().uninterpreted_options()
     }
 
@@ -381,60 +373,57 @@ impl<'a> OneofField<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct OneofEnumFieldDetail<'a> {
-    detail: OneofFieldDetail<'a>,
-    enumeration: RefCell<WeakEnum<'a>>,
+pub(crate) struct OneofEnumFieldDetail {
+    detail: OneofFieldDetail,
+    enum_: RefCell<WeakEnum>,
 }
 #[derive(Debug, Clone)]
-pub struct OneofEnumField<'a>(Rc<OneofEnumFieldDetail<'a>>);
+pub struct OneofEnumField(Rc<OneofEnumFieldDetail>);
 
-impl<'a> OneofEnumField<'a> {
-    pub fn name(&self) -> &Name {
+impl OneofEnumField {
+    pub fn name(&self) -> &str {
         self.0.detail.name()
     }
 
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         self.0.detail.fully_qualified_name()
     }
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.0.detail.message()
     }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         self.0.detail.comments()
     }
-    pub fn enum_(&self) -> Enum<'a> {
-        self.0.enumeration.borrow().clone().into()
+    pub fn enum_(&self) -> Enum {
+        self.0.enum_.borrow().clone().into()
     }
-    pub fn enumeration(&self) -> Enum<'a> {
-        self.enum_()
-    }
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.0.detail.file()
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.0.detail.package()
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.0.detail.set_comments(comments);
     }
-    pub fn imports(&self) -> FileRefs<'a> {
+    pub fn imports(&self) -> FileRefs {
         if self.has_import() {
-            FileRefs::from(self.0.enumeration.borrow().weak_file())
+            FileRefs::from(self.0.enum_.borrow().weak_file())
         } else {
             FileRefs::empty()
         }
     }
 
     pub fn has_import(&self) -> bool {
-        self.enumeration().file() != self.file()
+        self.enum_().file() != self.file()
     }
 
     pub fn build_target(&self) -> bool {
         self.file().build_target()
     }
 
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+    pub fn descriptor(&self) -> FieldDescriptor {
         self.0.detail.descriptor()
     }
 
@@ -455,7 +444,7 @@ impl<'a> OneofEnumField<'a> {
     }
 
     pub fn is_well_known_type(&self) -> bool {
-        self.enumeration().is_well_known_type()
+        self.enum_().is_well_known_type()
     }
     pub fn well_known_type(&self) -> Option<WellKnownType> {
         self.enum_().well_known_type()
@@ -465,13 +454,16 @@ impl<'a> OneofEnumField<'a> {
         true
     }
 
-    fn set_value(&self, value: crate::Node<'a>) -> Result<(), anyhow::Error> {
-        match value {
+    fn set_value(&self, node: Node) -> Result<(), Error> {
+        match node {
             Node::Enum(v) => {
-                self.0.enumeration.replace(v.into());
+                self.0.enum_.replace(v.into());
                 Ok(())
             }
-            _ => bail!("expected Enum, received {}", value),
+            _ => Err(Error::InvalidNode {
+                expected: Kind::Enum,
+                node,
+            }),
         }
     }
 
@@ -545,43 +537,43 @@ impl<'a> OneofEnumField<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct OneofScalarFieldDetail<'a> {
+pub struct OneofScalarFieldDetail {
     scalar: Scalar,
-    detail: OneofFieldDetail<'a>,
+    detail: OneofFieldDetail,
 }
 
 #[derive(Debug, Clone)]
-pub struct OneofScalarField<'a>(Rc<OneofScalarFieldDetail<'a>>);
+pub struct OneofScalarField(Rc<OneofScalarFieldDetail>);
 
-impl<'a> OneofScalarField<'a> {
-    pub fn name(&self) -> &Name {
+impl OneofScalarField {
+    pub fn name(&self) -> &str {
         self.0.detail.name()
     }
-    pub fn oneof(&self) -> Oneof<'a> {
+    pub fn oneof(&self) -> Oneof {
         self.0.detail.oneof()
     }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         self.0.detail.fully_qualified_name()
     }
 
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.0.detail.message()
     }
 
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         self.0.detail.comments()
     }
 
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.0.detail.file()
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.0.detail.package()
     }
     pub fn scalar(&self) -> Scalar {
         self.0.scalar
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.0.detail.set_comments(comments);
     }
 
@@ -589,7 +581,7 @@ impl<'a> OneofScalarField<'a> {
         self.file().build_target()
     }
 
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+    pub fn descriptor(&self) -> FieldDescriptor {
         self.0.detail.descriptor()
     }
 
@@ -683,41 +675,41 @@ impl<'a> OneofScalarField<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct OneofEmbedFieldDetail<'a> {
-    detail: OneofFieldDetail<'a>,
-    embed: RefCell<WeakMessage<'a>>,
+pub(crate) struct OneofEmbedFieldDetail {
+    detail: OneofFieldDetail,
+    embed: RefCell<WeakMessage>,
 }
 
 #[derive(Debug, Clone)]
-pub struct OneofEmbedField<'a>(Rc<OneofEmbedFieldDetail<'a>>);
-impl<'a> OneofEmbedField<'a> {
-    pub fn name(&self) -> &Name {
+pub struct OneofEmbedField(Rc<OneofEmbedFieldDetail>);
+impl OneofEmbedField {
+    pub fn name(&self) -> &str {
         self.0.detail.name()
     }
-    pub fn fully_qualified_name(&self) -> String {
+    pub fn fully_qualified_name(&self) -> &str {
         self.0.detail.fully_qualified_name()
     }
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.0.detail.message()
     }
 
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         self.0.detail.comments()
     }
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.0.detail.file()
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.0.detail.package()
     }
 
-    pub fn embed(&self) -> Message<'a> {
+    pub fn embed(&self) -> Message {
         self.0.embed.borrow().clone().into()
     }
     pub fn has_import(&self) -> bool {
         self.0.embed.borrow().file() != self.file()
     }
-    pub fn imports(&self) -> FileRefs<'a> {
+    pub fn imports(&self) -> FileRefs {
         if self.has_import() {
             FileRefs::from(self.0.embed.borrow().weak_file())
         } else {
@@ -728,11 +720,11 @@ impl<'a> OneofEmbedField<'a> {
         self.file().build_target()
     }
 
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.0.detail.set_comments(comments);
     }
 
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+    pub fn descriptor(&self) -> FieldDescriptor {
         self.0.detail.descriptor()
     }
 
@@ -762,13 +754,16 @@ impl<'a> OneofEmbedField<'a> {
         true
     }
 
-    fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
-        match value {
+    fn set_value(&self, node: Node) -> Result<(), Error> {
+        match node {
             Node::Message(v) => {
                 self.0.embed.replace(v.into());
                 Ok(())
             }
-            _ => bail!("expected Message, received {}", value),
+            _ => Err(Error::InvalidNode {
+                expected: Kind::Message,
+                node,
+            }),
         }
     }
 

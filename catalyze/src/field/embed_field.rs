@@ -2,25 +2,26 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use anyhow::bail;
+use protobuf::reflect::FieldDescriptor;
 
 use crate::{
-    proto::FieldDescriptor, proto::Syntax, Comments, Field, File, FileRefs, JsType, Message, Name,
-    Node, Package, Type, UninterpretedOptions, WeakMessage, WellKnownMessage, WellKnownType,
+    uninterpreted_option::UninterpretedOption, Comments, Error, Field, File, FileRefs, JsType,
+    Kind, Message, Node, Package, Syntax, Type, WeakMessage, WellKnownMessage, WellKnownType,
 };
 
 use super::FieldDetail;
 
 #[derive(Debug, Clone)]
-pub(crate) struct EmbedFieldDetail<'a> {
-    pub detail: FieldDetail<'a>,
-    pub embed: RefCell<WeakMessage<'a>>,
+pub(crate) struct Detail {
+    pub detail: FieldDetail,
+    pub embed: RefCell<WeakMessage>,
 }
-impl<'a> EmbedFieldDetail<'a> {
-    pub fn name(&self) -> &Name {
+
+impl Detail {
+    pub fn name(&self) -> &str {
         self.detail.name()
     }
-    pub fn embed(&self) -> Message<'a> {
+    pub fn embed(&self) -> Message {
         self.embed.borrow().clone().into()
     }
     pub fn is_repeated(&self) -> bool {
@@ -29,7 +30,7 @@ impl<'a> EmbedFieldDetail<'a> {
     pub fn is_map(&self) -> bool {
         self.detail.is_map()
     }
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.detail.message()
     }
     pub fn well_known_message(&self) -> Option<WellKnownMessage> {
@@ -38,11 +39,8 @@ impl<'a> EmbedFieldDetail<'a> {
     pub fn syntax(&self) -> Syntax {
         self.detail.syntax()
     }
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
-        self.detail.descriptor()
-    }
 
-    pub fn imports(&self) -> FileRefs<'a> {
+    pub fn imports(&self) -> FileRefs {
         if self.embed.borrow().file() != self.detail.file() {
             FileRefs::from(self.embed.borrow().weak_file())
         } else {
@@ -62,45 +60,46 @@ impl<'a> EmbedFieldDetail<'a> {
     pub fn has_import(&self) -> bool {
         self.embed.borrow().file() != self.detail.file()
     }
-    pub(crate) fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
-        match value {
+
+    pub(crate) fn set_value(&self, node: Node) -> Result<(), Error> {
+        match node {
             Node::Message(m) => {
                 self.embed.replace(m.into());
                 Ok(())
             }
-            _ => bail!("expected Message, received {}", value),
+            _ => Err(Error::invalid_node(Kind::Message, node)),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct EmbedField<'a>(Rc<EmbedFieldDetail<'a>>);
+pub struct EmbedField(Rc<Detail>);
 
-impl<'a> EmbedField<'a> {
-    pub fn name(&self) -> &Name {
-        self.0.name()
+impl EmbedField {
+    pub fn name(&self) -> &str {
+        self.0.descriptor().name()
     }
-    pub fn comments(&self) -> Comments<'a> {
+    pub fn comments(&self) -> Comments {
         self.0.detail.comments()
     }
-    pub(crate) fn set_comments(&self, comments: Comments<'a>) {
+    pub(crate) fn set_comments(&self, comments: Comments) {
         self.0.detail.set_comments(comments);
     }
 
-    pub fn embed(&self) -> Message<'a> {
+    pub fn embed(&self) -> Message {
         self.0.embed()
     }
     pub fn build_target(&self) -> bool {
         self.0.build_target()
     }
-    pub fn file(&self) -> File<'a> {
+    pub fn file(&self) -> File {
         self.0.detail.file()
     }
-    pub fn package(&self) -> Package<'a> {
+    pub fn package(&self) -> Package {
         self.0.detail.package()
     }
-    pub fn fully_qualified_name(&self) -> String {
-        self.0.detail.fqn.clone()
+    pub fn fully_qualified_name(&self) -> &str {
+        &self.0.detail.fqn
     }
 
     /// Indicates whether or not the field is labeled as a required field. This
@@ -120,7 +119,7 @@ impl<'a> EmbedField<'a> {
         self.0.has_import()
     }
 
-    pub fn imports(&self) -> FileRefs<'a> {
+    pub fn imports(&self) -> FileRefs {
         self.0.imports()
     }
 
@@ -130,14 +129,14 @@ impl<'a> EmbedField<'a> {
     pub fn is_map(&self) -> bool {
         self.0.is_map()
     }
-    pub fn message(&self) -> Message<'a> {
+    pub fn message(&self) -> Message {
         self.0.message()
     }
     pub fn well_known_message(&self) -> Option<WellKnownMessage> {
         self.0.well_known_message()
     }
 
-    pub fn descriptor(&self) -> FieldDescriptor<'a> {
+    pub fn descriptor(&self) -> FieldDescriptor {
         self.0.descriptor()
     }
 
@@ -153,21 +152,22 @@ impl<'a> EmbedField<'a> {
         self.0.well_known_type()
     }
 
-    pub(crate) fn set_value(&self, value: Node<'a>) -> Result<(), anyhow::Error> {
+    pub(crate) fn set_value(&self, value: Node) -> Result<(), Error> {
         self.0.set_value(value)
     }
 
-    pub fn value_type(&self) -> Type<'a> {
-        self.0.descriptor().proto_type()
+    pub fn value_type(&self) -> Type {
+        self.0.descriptor().type_()
     }
 
-    pub(crate) fn new(detail: FieldDetail<'a>) -> Result<Field<'a>, anyhow::Error> {
-        let detail = Rc::new(EmbedFieldDetail {
+    pub(crate) fn new(detail: FieldDetail) -> Field {
+        let detail = Rc::new(Detail {
             detail,
             embed: RefCell::new(WeakMessage::new()),
         });
-        Ok(Field::Embed(EmbedField(detail)))
+        Field::Embed(EmbedField(detail))
     }
+
     /// The jstype option determines the JavaScript type used for values of the
     /// field.  The option is permitted only for 64 bit integral and fixed types
     /// (int64, uint64, sint64, fixed64, sfixed64).  A field with jstype JS_STRING
@@ -228,8 +228,9 @@ impl<'a> EmbedField<'a> {
     pub fn is_deprecated(&self) -> bool {
         self.descriptor().options().is_deprecated()
     }
+
     /// Options the parser does not recognize.
-    pub fn uninterpreted_options(&self) -> UninterpretedOptions<'a> {
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         self.descriptor().options().uninterpreted_options()
     }
 

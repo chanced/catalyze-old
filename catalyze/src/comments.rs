@@ -1,66 +1,58 @@
-use crate::{iter::Iter, File, Location, Package};
+use std::rc::Rc;
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct Comments<'a> {
-    loc: Location<'a>,
+use protobuf::descriptor::source_code_info::Location;
+
+use crate::{iter::Iter, File, Package};
+
+#[derive(Debug, Default, Clone)]
+pub struct Comments {
+    loc: Rc<Location>,
 }
 
-impl<'a> From<&Location<'a>> for Comments<'a> {
-    fn from(loc: &Location<'a>) -> Self {
-        Comments { loc: *loc }
-    }
-}
-
-impl<'a> From<&'a protobuf::descriptor::source_code_info::Location> for Comments<'a> {
-    fn from(loc: &'a protobuf::descriptor::source_code_info::Location) -> Self {
-        Comments { loc: loc.into() }
-    }
-}
-
-impl<'a> Comments<'a> {
-    /// Returns any comment immediately preceding the node, without any
-    /// whitespace between it and the comment.
-    pub fn leading(&self) -> &'a str {
-        self.loc.leading_comments()
-    }
-    pub fn location(&self) -> Location<'a> {
+impl Comments {
+    pub fn location(&self) -> Location {
         self.loc
     }
     pub fn is_empty(&self) -> bool {
         !self.loc.has_comments()
     }
-    /// Returns each comment block or line above the
-    /// entity but separated by whitespace.a
-    pub fn leading_detached(&self) -> std::slice::Iter<'a, String> {
-        self.loc.leading_detached_comments()
+    /// Returns any comment immediately preceding the node, without any
+    /// whitespace between it and the comment.
+    pub fn leading(&self) -> &str {
+        self.loc.leading_comments()
     }
     /// Returns any comment immediately following the entity, without any
     /// whitespace between it and the comment. If the comment would be a leading
     /// comment for another entity, it won't be considered a trailing comment.
-    pub fn trailing(&self) -> &'a str {
+    pub fn trailing(&self) -> &str {
         self.loc.trailing_comments()
+    }
+    /// Returns each comment block or line above the
+    /// entity but separated by whitespace.a
+    pub fn leading_detached(&self) -> std::slice::Iter<'_, String> {
+        self.loc.leading_detached_comments()
     }
 }
 
-impl<'a> From<Location<'a>> for Comments<'a> {
-    fn from(loc: Location<'a>) -> Self {
+impl From<Location> for Comments {
+    fn from(loc: Location) -> Self {
         Comments { loc }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct PackageComments<'a> {
-    files: Iter<File<'a>>,
+pub struct PackageComments {
+    files: Iter<File>,
 }
-impl<'a> PackageComments<'a> {
-    pub fn new(package: Package<'a>) -> Self {
+impl PackageComments {
+    pub fn new(package: Package) -> Self {
         Self {
             files: package.files(),
         }
     }
 }
-impl<'a> Iterator for PackageComments<'a> {
-    type Item = (File<'a>, Comments<'a>);
+impl Iterator for PackageComments {
+    type Item = (File, Comments);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.files
@@ -71,12 +63,12 @@ impl<'a> Iterator for PackageComments<'a> {
 }
 
 // #[derive(Debug, Clone)]
-// pub struct CommentsIter<'a> {
+// pub struct CommentsIter {
 //     iter: std::slice::Iter<'a, protobuf::descriptor::source_code_info::Location>,
 //     phantom: PhantomData<U>,
 // }
 
-// impl<'a> CommentsIter<'a> {
+// impl CommentsIter {
 //     pub fn len(&self) -> usize {
 //         self.iter.len()
 //     }
@@ -84,23 +76,23 @@ impl<'a> Iterator for PackageComments<'a> {
 //         self.len() == 0
 //     }
 // }
-// impl<'a> Iterator for CommentsIter<'a> {
-//     type Item = Comments<'a>;
+// impl Iterator for CommentsIter {
+//     type Item = Comments;
 
 //     fn next(&mut self) -> Option<Self::Item> {
 //         self.iter.next().map(Into::into)
 //     }
 // }
-// impl<'a> From<SourceCodeInfo<'a>> for CommentsIter<'a> {
-//     fn from(info: SourceCodeInfo<'a>) -> Self {
+// impl From<SourceCodeInfo> for CommentsIter {
+//     fn from(info: SourceCodeInfo) -> Self {
 //         CommentsIter {
 //             iter: info.info.location.iter(),
 //             phantom: PhantomData,
 //         }
 //     }
 // }
-// impl<'a> From<&SourceCodeInfo<'a>> for CommentsIter<'a> {
-//     fn from(info: &SourceCodeInfo<'a>) -> Self {
+// impl From<&SourceCodeInfo> for CommentsIter {
+//     fn from(info: &SourceCodeInfo) -> Self {
 //         CommentsIter {
 //             iter: info.info.location.iter(),
 //             phantom: PhantomData,
