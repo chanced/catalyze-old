@@ -1,6 +1,9 @@
 use crate::iter::Iter;
-pub use crate::File;
-use crate::{AllNodes, IntoNode, Node, Nodes, WELL_KNNOWN_TYPE_PACKAGE};
+use crate::well_known;
+use crate::{
+    file::File,
+    node::{AllNodes, IntoNode, Node, Nodes},
+};
 
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
@@ -37,7 +40,7 @@ impl Package {
         Self(Rc::new(PackageDetail {
             fqn,
             files: Rc::new(RefCell::new(vec![])),
-            is_well_known: name == WELL_KNNOWN_TYPE_PACKAGE,
+            is_well_known: name == well_known::PACKAGE,
         }))
     }
 

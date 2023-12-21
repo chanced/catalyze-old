@@ -5,9 +5,16 @@ use protobuf::reflect::FieldDescriptor;
 
 use super::FieldDetail;
 use crate::{
-    uninterpreted_option::UninterpretedOption, Comments, Enum, Error, Field, File, FileRefs,
-    InvalidMapEntryReason, JsType, Kind, Message, Node, Package, Scalar, Syntax, Type, WeakEnum,
-    WeakMessage, WellKnownEnum, WellKnownMessage, WellKnownType,
+    comments::Comments,
+    enum_::{Enum, WeakEnum},
+    error::{Error, InvalidMapEntryReason},
+    field::{Field, JsType, Scalar, Type},
+    file::{File, FileRefs, Syntax},
+    message::{Message, WeakMessage},
+    node::{Kind, Node},
+    package::Package,
+    uninterpreted_option::UninterpretedOption,
+    well_known::{WellKnownEnum, WellKnownMessage, WellKnownType},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

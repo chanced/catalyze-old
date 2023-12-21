@@ -2,9 +2,16 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    uninterpreted_option::UninterpretedOption, Comments, Enum, Error, Field, FieldDetail, File,
-    FileRefs, Message, Node, Package, Scalar, Syntax, Type, WeakEnum, WeakMessage, WellKnownEnum,
-    WellKnownMessage, WellKnownType,
+    comments::Comments,
+    enum_::{Enum, WeakEnum},
+    error::Error,
+    field::{Field, FieldDetail, JsType, Scalar, Type},
+    file::{File, FileRefs, Syntax},
+    message::{Message, WeakMessage},
+    node::Node,
+    package::Package,
+    uninterpreted_option::UninterpretedOption,
+    well_known::{WellKnownEnum, WellKnownMessage, WellKnownType},
 };
 
 /// Represents a field marked as `repeated`. The field can hold
@@ -217,7 +224,7 @@ impl RepeatedField {
     ///
     /// This option is an enum to permit additional types to be added, e.g.
     /// goog.math.Integer.
-    pub fn jstype(&self) -> crate::JsType {
+    pub fn jstype(&self) -> JsType {
         match self {
             RepeatedField::Scalar(f) => f.jstype(),
             RepeatedField::Enum(f) => f.jstype(),
@@ -424,7 +431,7 @@ impl RepeatedEmbedField {
     ///
     /// This option is an enum to permit additional types to be added, e.g.
     /// goog.math.Integer.
-    pub fn jstype(&self) -> crate::JsType {
+    pub fn jstype(&self) -> JsType {
         self.descriptor().options().jstype()
     }
 
@@ -569,7 +576,7 @@ impl RepeatedEnumField {
     ///
     /// This option is an enum to permit additional types to be added, e.g.
     /// goog.math.Integer.
-    pub fn jstype(&self) -> crate::JsType {
+    pub fn jstype(&self) -> JsType {
         self.descriptor().options().jstype()
     }
 
@@ -692,7 +699,7 @@ impl RepeatedScalarField {
     ///
     /// This option is an enum to permit additional types to be added, e.g.
     /// goog.math.Integer.
-    pub fn jstype(&self) -> crate::JsType {
+    pub fn jstype(&self) -> JsType {
         self.descriptor().options().jstype()
     }
 

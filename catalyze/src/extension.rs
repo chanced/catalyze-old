@@ -7,9 +7,12 @@ use std::{
 use protobuf::reflect::FieldDescriptor;
 
 use crate::{
-    container::{Container, WeakContainer},
+    comments::Comments,
+    file::File,
     iter::Iter,
-    Comments, File, Message, Node, Package, WeakMessage,
+    message::{Message, WeakMessage},
+    node::{Container, Node, WeakContainer},
+    package::Package,
 };
 
 #[derive(Debug, Clone)]

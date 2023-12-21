@@ -14,15 +14,188 @@ use protobuf::reflect::FieldDescriptor;
 pub use repeated_field::*;
 pub use scalar_field::*;
 
-use crate::{
-    uninterpreted_option::UninterpretedOption, CType, Comments, Enum, Error, File, FileRefs,
-    InvalidMapEntryReason, JsType, Kind, Message, Node, Oneof, Package, Scalar, Syntax, Type,
-    WeakMessage, WellKnownType,
-};
 use ::std::option::Option;
-use std::{cell::RefCell, convert::From};
+use std::{cell::RefCell, convert::From, fmt};
 
-#[derive(Debug, Clone, Copy)]
+use crate::{
+    comments::Comments,
+    enum_::Enum,
+    error::{Error, InvalidMapEntryReason},
+    file::{File, FileRefs, Syntax},
+    message::{Message, WeakMessage},
+    node::Node,
+    oneof::Oneof,
+    package::Package,
+    uninterpreted_option::UninterpretedOption,
+    well_known,
+};
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Type {
+    Scalar(Scalar),
+    Enum(String),    // 14,
+    Message(String), // 11,
+    /// Group is not supported
+    Group, //  = 10,
+}
+impl Type {
+    pub fn is_group(&self) -> bool {
+        matches!(self, Self::Group)
+    }
+    pub fn is_scalar(&self) -> bool {
+        matches!(self, Self::Scalar(_))
+    }
+    pub fn is_message(&self) -> bool {
+        matches!(self, Self::Message(_))
+    }
+    pub fn is_enum(&self) -> bool {
+        matches!(self, Self::Enum(_))
+    }
+}
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::Scalar(s) => fmt::Display::fmt(s, f),
+            Type::Enum(e) => fmt::Display::fmt(e, f),
+            Type::Message(m) => fmt::Display::fmt(m, f),
+            Type::Group => unreachable!("Group is not supported"),
+        }
+    }
+}
+
+use protobuf::descriptor::field_descriptor_proto::Type as FieldDescriptorType;
+impl From<FieldDescriptorType> for Type {
+    fn from(t: FieldDescriptorType) -> Self {
+        match t.type_() {
+            FieldDescriptorType::TYPE_DOUBLE => Type::Scalar(Scalar::Double),
+            FieldDescriptorType::TYPE_FLOAT => Type::Scalar(Scalar::Float),
+            FieldDescriptorType::TYPE_INT64 => Type::Scalar(Scalar::Int64),
+            FieldDescriptorType::TYPE_UINT64 => Type::Scalar(Scalar::Uint64),
+            FieldDescriptorType::TYPE_INT32 => Type::Scalar(Scalar::Int32),
+            FieldDescriptorType::TYPE_FIXED64 => Type::Scalar(Scalar::Fixed64),
+            FieldDescriptorType::TYPE_FIXED32 => Type::Scalar(Scalar::Fixed32),
+            FieldDescriptorType::TYPE_BOOL => Type::Scalar(Scalar::Bool),
+            FieldDescriptorType::TYPE_STRING => Type::Scalar(Scalar::String),
+            FieldDescriptorType::TYPE_BYTES => Type::Scalar(Scalar::Bytes),
+            FieldDescriptorType::TYPE_UINT32 => Type::Scalar(Scalar::Uint32),
+            FieldDescriptorType::TYPE_SFIXED32 => Type::Scalar(Scalar::Sfixed32),
+            FieldDescriptorType::TYPE_SFIXED64 => Type::Scalar(Scalar::Sfixed64),
+            FieldDescriptorType::TYPE_SINT32 => Type::Scalar(Scalar::Sint32),
+            FieldDescriptorType::TYPE_SINT64 => Type::Scalar(Scalar::Sint64),
+            FieldDescriptorType::TYPE_ENUM => Type::Enum(t.type_name()),
+            FieldDescriptorType::TYPE_MESSAGE => Type::Message(t.type_name()),
+            FieldDescriptorType::TYPE_GROUP => Type::Group,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Scalar {
+    Double = 1,
+    Float = 2,
+    /// Not ZigZag encoded.  Negative numbers take 10 bytes.  Use TYPE_SINT64 if
+    /// negative values are likely.
+    Int64 = 3,
+    Uint64 = 4,
+    /// Not ZigZag encoded.  Negative numbers take 10 bytes.  Use TYPE_SINT32 if
+    /// negative values are likely.
+    Int32 = 5,
+    Fixed64 = 6,
+    Fixed32 = 7,
+    Bool = 8,
+    String = 9,
+    /// New in version 2.
+    Bytes = 12,
+    Uint32 = 13,
+    Enum = 14,
+    Sfixed32 = 15,
+    Sfixed64 = 16,
+    /// Uses ZigZag encoding.
+    Sint32 = 17,
+    /// Uses ZigZag encoding.
+    Sint64 = 18,
+}
+
+impl fmt::Display for Scalar {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Scalar::Double => "double",
+            Scalar::Float => "float",
+            Scalar::Int64 => "int64",
+            Scalar::Uint64 => "uint64",
+            Scalar::Int32 => "int32",
+            Scalar::Fixed64 => "fixed64",
+            Scalar::Fixed32 => "fixed32",
+            Scalar::Bool => "bool",
+            Scalar::String => "string",
+            Scalar::Bytes => "bytes",
+            Scalar::Uint32 => "uint32",
+            Scalar::Enum => "enum",
+            Scalar::Sfixed32 => "sfixed32",
+            Scalar::Sfixed64 => "sfixed64",
+            Scalar::Sint32 => "sint32",
+            Scalar::Sint64 => "sint64",
+        };
+        write!(f, "{}", s)
+    }
+}
+impl TryFrom<i32> for Scalar {
+    type Error = crate::error::Error;
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(Scalar::Double),
+            2 => Ok(Scalar::Float),
+            3 => Ok(Scalar::Int64),
+            4 => Ok(Scalar::Uint64),
+            5 => Ok(Scalar::Int32),
+            6 => Ok(Scalar::Fixed64),
+            7 => Ok(Scalar::Fixed32),
+            8 => Ok(Scalar::Bool),
+            9 => Ok(Scalar::String),
+            12 => Ok(Scalar::Bytes),
+            13 => Ok(Scalar::Uint32),
+            14 => Ok(Scalar::Enum),
+            15 => Ok(Scalar::Sfixed32),
+            16 => Ok(Scalar::Sfixed64),
+            17 => Ok(Scalar::Sint32),
+            18 => Ok(Scalar::Sint64),
+            v => Err(Self::Error::invalid_scalar(value)),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[repr(i32)]
+pub enum CType {
+    /// Default mode.
+    String = 0,
+    Cord = 1,
+    StringPiece = 2,
+}
+
+impl From<protobuf::descriptor::field_options::CType> for CType {
+    fn from(t: protobuf::descriptor::field_options::CType) -> Self {
+        match t {
+            protobuf::descriptor::field_options::CType::STRING => CType::String,
+            protobuf::descriptor::field_options::CType::CORD => CType::Cord,
+            protobuf::descriptor::field_options::CType::STRING_PIECE => CType::StringPiece,
+        }
+    }
+}
+
+impl TryFrom<i32> for CType {
+    type Error = crate::error::Error;
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(CType::String),
+            1 => Ok(CType::Cord),
+            2 => Ok(CType::StringPiece),
+            _ => Err(Error::invalid_c_type(value)),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 struct Options {
     // message fields
     ///  The ctype option instructs the C++ code generator to use a different
@@ -93,17 +266,19 @@ struct Options {
     special_fields: protobuf::SpecialFields,
 }
 impl Options {
-    pub(crate) fn new(opts: Option<&'a protobuf::descriptor::FieldOptions>) -> Self {
+    pub(crate) fn new(opts: Option<&protobuf::descriptor::FieldOptions>) -> Self {
         let Some(opts) = opts else {
             return Self::default();
         };
-
         Self {
             ctype: opts.ctype,
             deprecated: opts.deprecated,
             jstype: opts.jstype,
             lazy: opts.lazy,
             packed: opts.packed,
+            special_fields: opts.special_fields,
+            uninterpreted_option: opts.uninterpreted_option.iter.map(Into::into),
+            weak: opts.weak,
         }
     }
     /// The ctype option instructs the C++ code generator to use a different
@@ -181,15 +356,6 @@ impl Options {
     /// Options the parser does not recognize.
     pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
         (&self.opts().uninterpreted_option).into()
-    }
-
-    fn opts(&self) -> Option<&protobuf::descriptor::FieldOptions> {
-        self.opts.unwrap_or(&DEFAULT_FIELD_OPTIONS)
-    }
-}
-impl From<Option<&'a protobuf::descriptor::FieldOptions>> for Options {
-    fn from(opts: Option<&'a protobuf::descriptor::FieldOptions>) -> Self {
-        Self { opts }
     }
 }
 
@@ -462,7 +628,7 @@ impl Field {
             _ => false,
         }
     }
-    pub fn well_known_type(&self) -> Option<WellKnownType> {
+    pub fn well_known_type(&self) -> Option<well_known::WellKnownType> {
         match self {
             Field::Embed(f) => f.well_known_type(),
             Field::Enum(f) => f.well_known_type(),
@@ -954,10 +1120,76 @@ impl FieldDetail {
         self.file().build_target()
     }
 
-    // pub fn map_value(&self) -> Result<Field, crate::Error> {
+    // pub fn map_value(&self) -> Result<Field, crate::error::Error> {
     //     self.map_entry()?
     //         .fields()
     //         .get(1)
     //         .ok_or_else(|| anyhow!("value_type field not found in map entry"))
     // }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(i32)]
+pub enum JsType {
+    /// Use the default type.
+    Normal = 0,
+    /// Use JavaScript strings.
+    String = 1,
+    /// Use JavaScript numbers.
+    Number = 2,
+
+    /// Unknown
+    Unknown(i32),
+}
+
+impl From<protobuf::descriptor::field_options::JSType> for JsType {
+    fn from(value: protobuf::descriptor::field_options::JSType) -> Self {
+        match value {
+            protobuf::descriptor::field_options::JSType::JS_NORMAL => JsType::Normal,
+            protobuf::descriptor::field_options::JSType::JS_STRING => JsType::String,
+            protobuf::descriptor::field_options::JSType::JS_NUMBER => JsType::Number,
+        }
+    }
+}
+
+impl TryFrom<i32> for JsType {
+    type Error = i32;
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(JsType::Normal),
+            1 => Ok(JsType::String),
+            2 => Ok(JsType::Number),
+            _ => Err(value),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[repr(i32)]
+pub enum Label {
+    Required = 1,
+    Optional = 2,
+    Repeated = 3,
+}
+
+impl From<protobuf::descriptor::field_descriptor_proto::Label> for Label {
+    fn from(value: protobuf::descriptor::field_descriptor_proto::Label) -> Self {
+        match value {
+            protobuf::descriptor::field_descriptor_proto::Label::LABEL_REQUIRED => Label::Required,
+            protobuf::descriptor::field_descriptor_proto::Label::LABEL_OPTIONAL => Label::Optional,
+            protobuf::descriptor::field_descriptor_proto::Label::LABEL_REPEATED => Label::Repeated,
+        }
+    }
+}
+
+impl TryFrom<i32> for Label {
+    type Error = crate::error::Error;
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(Label::Required),
+            2 => Ok(Label::Optional),
+            3 => Ok(Label::Repeated),
+            _ => Err(Error::invalid_label(value)),
+        }
+    }
 }

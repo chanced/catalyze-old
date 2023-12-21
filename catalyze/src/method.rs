@@ -1,14 +1,63 @@
-use crate::{Comments, File, Message, Node, Package, Service, WeakMessage, WeakService};
+use crate::comments::Comments;
+use crate::file::File;
+use crate::message::{Message, WeakMessage};
+use crate::node::Node;
+use crate::package::Package;
+use crate::service::{Service, WeakService};
+use crate::uninterpreted_option::UninterpretedOption;
 use protobuf::descriptor::MethodDescriptorProto as MethodDescriptor;
+use protobuf::SpecialFields;
 use std::fmt;
 use std::{cell::RefCell, rc::Rc};
+
 pub struct Io<'a> {
     pub input: &'a str,
     pub output: &'a str,
 }
 
+/// Is this method side-effect-free (or safe in HTTP parlance), or idempotent,
+/// or neither? HTTP based RPC implementation may choose GET verb for safe
+/// methods, and PUT verb for idempotent methods instead of the default POST.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[repr(i32)]
+pub enum IdempotencyLevel {
+    IdempotencyUnknown = 0,
+    /// implies idempotent
+    NoSideEffects = 1,
+    /// idempotent, but may have side effects
+    Idempotent = 2,
+
+    Unknown(i32),
+}
+impl From<protobuf::descriptor::method_options::IdempotencyLevel> for IdempotencyLevel {
+    fn from(value: protobuf::descriptor::method_options::IdempotencyLevel) -> Self {
+        match value {
+            protobuf::descriptor::method_options::IdempotencyLevel::IDEMPOTENT => {
+                IdempotencyLevel::Idempotent
+            }
+            protobuf::descriptor::method_options::IdempotencyLevel::NO_SIDE_EFFECTS => {
+                IdempotencyLevel::NoSideEffects
+            }
+            protobuf::descriptor::method_options::IdempotencyLevel::IDEMPOTENCY_UNKNOWN => {
+                IdempotencyLevel::IdempotencyUnknown
+            }
+        }
+    }
+}
+
+impl From<i32> for IdempotencyLevel {
+    fn from(value: i32) -> Self {
+        match value {
+            0 => IdempotencyLevel::IdempotencyUnknown,
+            1 => IdempotencyLevel::NoSideEffects,
+            2 => IdempotencyLevel::Idempotent,
+            _ => IdempotencyLevel::Unknown(value),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
-struct MethodDetail {
+struct Detail {
     descriptor: MethodDescriptor,
     fqn: String,
     comments: RefCell<Comments>,
@@ -18,14 +67,14 @@ struct MethodDetail {
 }
 
 #[derive(Debug, Clone)]
-pub struct Method(Rc<MethodDetail>);
+pub struct Method(Rc<Detail>);
 
 impl Method {
     pub(crate) fn new(descriptor: MethodDescriptor, svc: Service) -> Self {
         let input = Rc::new(RefCell::new(WeakMessage::new()));
         let output = Rc::new(RefCell::new(WeakMessage::new()));
         let fqn = format!("{}.{}", svc.fully_qualified_name(), descriptor.name());
-        Method(Rc::new(MethodDetail {
+        Method(Rc::new(Detail {
             descriptor,
             fqn,
             comments: RefCell::new(Comments::default()),
@@ -144,5 +193,46 @@ impl fmt::Display for MethodIo {
             MethodIo::Input(_) => write!(f, "input ({})", self.node_name()),
             MethodIo::Output(_) => write!(f, "output ({})", self.node_name()),
         }
+    }
+}
+
+/// Options for a Method.
+///
+/// Note:  Field numbers 1 through 32 are reserved for Google's internal RPC
+/// framework.
+pub struct MethodOptions {
+    ///  Is this method deprecated?
+    ///  Depending on the target platform, this can emit Deprecated annotations
+    ///  for the method, or it will be completely ignored; in the very least,
+    ///  this is a formalization for deprecating methods.
+    pub deprecated: Option<bool>,
+    pub idempotency_level: Option<IdempotencyLevel>,
+    ///  The parser stores options it doesn't recognize here. See above.
+    pub uninterpreted_option: Vec<UninterpretedOption>,
+    pub special_fields: SpecialFields,
+}
+impl MethodOptions {
+    // Note:  Field numbers 1 through 32 are reserved for Google's internal RPC
+    //   framework.  We apologize for hoarding these numbers to ourselves, but
+    //   we were already using them long before we decided to release Protocol
+    //   Buffers.
+
+    /// Is this method deprecated?
+    /// Depending on the target platform, this can emit Deprecated annotations
+    /// for the method, or it will be completely ignored; in the very least,
+    /// this is a formalization for deprecating methods.
+    pub fn deprecated(&self) -> bool {
+        self.opts().deprecated()
+    }
+    /// The parser stores options it doesn't recognize here. See above.
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
+        (&self.opts().uninterpreted_option).into()
+    }
+
+    /// Is this method side-effect-free (or safe in HTTP parlance), or idempotent,
+    /// or neither? HTTP based RPC implementation may choose GET verb for safe
+    /// methods, and PUT verb for idempotent methods instead of the default POST.
+    pub fn idempotency_level(&self) -> IdempotencyLevel {
+        self.opts().idempotency_level().into()
     }
 }

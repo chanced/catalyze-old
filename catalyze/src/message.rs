@@ -5,18 +5,20 @@ use std::str::FromStr;
 
 use protobuf::reflect::MessageDescriptor;
 
-use crate::extension::WeakExtension;
+use crate::comments::Comments;
+use crate::enum_::{AllEnums, Enum};
+use crate::error::Error;
+use crate::extension::{Extension, WeakExtension};
 
+use crate::field::Field;
+use crate::file::{File, Syntax, WeakFile};
 use crate::iter::Iter;
+use crate::node::{Container, Node, Nodes, WeakContainer};
+use crate::oneof::Oneof;
+use crate::package::Package;
 use crate::uninterpreted_option::UninterpretedOption;
+use crate::well_known::{WellKnownMessage, WellKnownType};
 use crate::DescriptorPath;
-use crate::{container::Container, container::WeakContainer};
-use crate::{
-    AllEnums, Comments, Enum, Extension, Field, File, Node, Nodes, Oneof, WeakFile,
-    WellKnownMessage,
-};
-use crate::{Error, Syntax};
-use crate::{Package, WellKnownType};
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -41,6 +43,13 @@ pub(crate) struct Detail {
     applied_extensions: Rc<RefCell<Rc<[WeakExtension]>>>,
     comments: RefCell<Comments>,
     wkt: Option<WellKnownMessage>,
+}
+
+impl From<Option<&protobuf::descriptor::MessageOptions>> for Options {
+    fn from(opts: Option<&protobuf::descriptor::MessageOptions>) -> Self {
+        // MessageOptions { opts }
+        todo!()
+    }
 }
 
 impl Detail {
@@ -487,7 +496,7 @@ impl Iterator for AllMessages {
 
 #[derive(Debug, Clone)]
 pub struct Dependents<T = Message> {
-    vec: RefCell<[WeakMessage]>,
+    vec: RefCell<Vec<WeakMessage>>,
     idx: usize,
     _marker: PhantomData<T>,
 }
@@ -520,11 +529,25 @@ impl From<WeakMessage> for Option<Message> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Options<'a> {
-    opts: Option<&'a protobuf::descriptor::MessageOptions>,
+#[derive(Debug, Clone)]
+pub struct Options {
+    // message fields
+    pub message_set_wire_format: Option<bool>,
+    ///  Disables the generation of the standard "descriptor()" accessor, which can
+    ///  conflict with a field of the same name.  This is meant to make migration
+    ///  from proto1 easier; new code should avoid fields named "descriptor".
+    pub no_standard_descriptor_accessor: Option<bool>,
+    ///  Is this message deprecated?
+    ///  Depending on the target platform, this can emit Deprecated annotations
+    ///  for the message, or it will be completely ignored; in the very least,
+    ///  this is a formalization for deprecating messages.
+    pub deprecated: Option<bool>,
+    pub map_entry: Option<bool>,
+    ///  The parser stores options it doesn't recognize here.
+    pub uninterpreted_option: ::std::vec::Vec<UninterpretedOption>,
+    pub special_fields: protobuf::SpecialFields,
 }
-impl Options<'_> {
+impl Options {
     /// Set true to use the old proto1 MessageSet wire format for extensions.
     /// This is provided for backwards-compatibility with the MessageSet wire
     /// format.  You should not use this for any other reason:  It's less

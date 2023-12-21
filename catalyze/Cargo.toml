@@ -4,6 +4,7 @@ name    = "catalyze"
 version = "0.1.0"
 
 [dependencies]
+itertools   = { version = "0.12" }
 petgraph    = { version = "0.6", optional = true }
 proc-macro2 = { version = "1.0" }
 protobuf    = { version = "3.3.0" }

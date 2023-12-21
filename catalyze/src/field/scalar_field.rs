@@ -3,8 +3,12 @@ use std::rc::Rc;
 
 use super::FieldDetail;
 use crate::{
-    uninterpreted_option::UninterpretedOption, Comments, Field, File, Message, Package, Scalar,
-    Syntax, Type,
+    comments::Comments,
+    field::{Field, JsType, Scalar, Syntax, Type},
+    file::File,
+    message::Message,
+    package::Package,
+    uninterpreted_option::UninterpretedOption,
 };
 
 #[derive(Debug, Clone)]
@@ -138,7 +142,7 @@ impl ScalarField {
     ///
     /// This option is an enum to permit additional types to be added, e.g.
     /// goog.math.Integer.
-    pub fn jstype(&self) -> crate::JsType {
+    pub fn jstype(&self) -> JsType {
         self.descriptor().options().jstype()
     }
 

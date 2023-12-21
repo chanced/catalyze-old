@@ -3,9 +3,19 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    uninterpreted_option::UninterpretedOption, Comments, Enum, Error, Field, FieldDetail, File,
-    FileRefs, Kind, Message, Node, Package, Syntax, Type, WeakEnum, WellKnownEnum, WellKnownType,
+    comments::Comments,
+    enum_::{Enum, WeakEnum},
+    error::Error,
+    field::{Field, FieldDetail, Type},
+    file::{File, FileRefs, Syntax},
+    message::Message,
+    node::{Kind, Node},
+    package::Package,
+    uninterpreted_option::UninterpretedOption,
+    well_known::{WellKnownEnum, WellKnownType},
 };
+
+use super::JsType;
 
 #[derive(Debug, Clone)]
 pub(crate) struct Detail {
@@ -199,7 +209,7 @@ impl EnumField {
     ///
     /// This option is an enum to permit additional types to be added, e.g.
     /// goog.math.Integer.
-    pub fn jstype(&self) -> crate::JsType {
+    pub fn jstype(&self) -> JsType {
         self.descriptor().options().jstype()
     }
     /// The packed option can be enabled for repeated primitive fields to enable

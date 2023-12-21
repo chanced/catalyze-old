@@ -4,9 +4,18 @@ use core::panic;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    uninterpreted_option::UninterpretedOption, Comments, Enum, Error, Field, File, FileRefs,
-    JsType, Kind, Message, Node, Oneof, Package, Scalar, Syntax, Type, WeakEnum, WeakMessage,
-    WeakOneof, WellKnownType,
+    comments::Comments,
+    enum_::{Enum, WeakEnum},
+    error::Error,
+    field::{Field, JsType, Scalar, Type},
+    file::{File, FileRefs, Syntax},
+    message::Message,
+    message::WeakMessage,
+    node::{Kind, Node},
+    oneof::{Oneof, WeakOneof},
+    package::Package,
+    uninterpreted_option::UninterpretedOption,
+    well_known::WellKnownType,
 };
 
 use super::FieldDetail;
@@ -236,7 +245,7 @@ impl OneofField {
         self.descriptor().type_()
     }
 
-    pub(crate) fn new(detail: FieldDetail, oneof: Oneof) -> Result<crate::Field, Error> {
+    pub(crate) fn new(detail: FieldDetail, oneof: Oneof) -> Result<Field, Error> {
         match detail.value_type() {
             Type::Scalar(scalar) => Ok(Field::Oneof(OneofField::Scalar(OneofScalarField(
                 Rc::new(OneofScalarFieldDetail {

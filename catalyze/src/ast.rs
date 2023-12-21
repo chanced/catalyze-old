@@ -1,24 +1,25 @@
 use protobuf::descriptor::field_descriptor_proto::Type;
 use protobuf::reflect::FileDescriptor;
 
-use crate::container::Container;
-use crate::AllNodes;
-use crate::Error;
-use crate::Extensions;
-use crate::Field;
-use crate::Iter;
-use crate::Kind;
-use crate::Method;
-use crate::MethodIo;
-use crate::Node;
-use crate::{File, Package};
-
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::slice;
+
+use crate::error::Error;
+use crate::extension::Extensions;
+use crate::field::Field;
+use crate::file::File;
+use crate::iter::Iter;
+use crate::method::Method;
+use crate::method::MethodIo;
+use crate::node::AllNodes;
+use crate::node::Container;
+use crate::node::Kind;
+use crate::node::Node;
+use crate::package::Package;
 
 /// Ast encapsulates the entirety of the input CodeGeneratorRequest from protoc,
 /// parsed to build the Node graph used by catalyze.

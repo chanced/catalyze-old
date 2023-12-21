@@ -2,18 +2,135 @@ use std::{
     cell::RefCell,
     collections::VecDeque,
     rc::{Rc, Weak},
-    str::FromStr,
 };
 
-use protobuf::reflect::EnumDescriptor;
+use protobuf::reflect::{EnumDescriptor, EnumValueDescriptor};
 
 use crate::{
-    container::{Container, WeakContainer},
+    comments::Comments,
+    file::{File, WeakFile},
     iter::Iter,
+    message::{Dependents, Message, WeakMessage},
+    node::{Container, Node, Nodes, WeakContainer},
+    package::Package,
     uninterpreted_option::UninterpretedOption,
-    Comments, Dependents, EnumDescriptorPath, EnumValue, File, Message, Node, Nodes, Package,
-    WeakFile, WeakMessage, WellKnownEnum, WellKnownType,
+    well_known::{WellKnownEnum, WellKnownType},
+    EnumDescriptorPath,
 };
+
+#[derive(Debug, Clone)]
+struct EnumValueDetail {
+    fqn: String,
+    descriptor: EnumValueDescriptor,
+    e: WeakEnum,
+    comments: RefCell<Comments>,
+}
+
+impl EnumValueDetail {
+    pub fn name(&self) -> &str {
+        &self.descriptor.name()
+    }
+    pub fn fully_qualified_name(&self) -> &str {
+        &self.fqn
+    }
+    pub fn descriptor(&self) -> EnumValueDescriptor {
+        self.descriptor
+    }
+
+    pub fn into_enum(&self) -> Enum {
+        self.e.clone().into()
+    }
+
+    pub fn comments(&self) -> Comments {
+        *self.comments.borrow()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments) {
+        self.comments.replace(comments);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct EnumValue(Rc<EnumValueDetail>);
+
+impl EnumValue {
+    pub(crate) fn new(desc: EnumValueDescriptor, e: Enum) -> Self {
+        let fqn = format!("{}.{}", e.fully_qualified_name(), desc.name());
+        EnumValue(Rc::new(EnumValueDetail {
+            fqn,
+            descriptor: desc,
+            e: e.clone().into(),
+            comments: RefCell::new(Comments::default()),
+        }))
+    }
+    pub fn name(&self) -> &str {
+        self.0.name()
+    }
+
+    pub fn descriptor(&self) -> EnumValueDescriptor {
+        self.0.descriptor()
+    }
+    /// Returns the `Enum` that contains this value.
+    pub fn enum_(&self) -> Enum {
+        self.0.into_enum()
+    }
+    pub fn container(&self) -> Container {
+        self.enum_().container()
+    }
+
+    pub fn file(&self) -> File {
+        self.enum_().file()
+    }
+
+    pub fn package(&self) -> Package {
+        self.enum_().package()
+    }
+    pub fn number(&self) -> i32 {
+        self.descriptor().number()
+    }
+    pub fn fully_qualified_name(&self) -> &str {
+        self.0.fully_qualified_name()
+    }
+    pub fn comments(&self) -> Comments {
+        self.0.comments()
+    }
+    pub(crate) fn set_comments(&self, comments: Comments) {
+        self.0.set_comments(comments);
+    }
+
+    pub(crate) fn node_at_path(&self, path: &[i32]) -> Option<Node> {
+        if path.is_empty() {
+            Some(self.to_owned().into())
+        } else {
+            None
+        }
+    }
+}
+
+impl PartialEq for EnumValue {
+    fn eq(&self, other: &Self) -> bool {
+        self.fully_qualified_name() == other.fully_qualified_name()
+    }
+}
+impl PartialEq<i32> for EnumValue {
+    fn eq(&self, other: &i32) -> bool {
+        self.number() == *other
+    }
+}
+impl PartialEq<EnumValue> for i32 {
+    fn eq(&self, other: &EnumValue) -> bool {
+        self == &other.number()
+    }
+}
+impl PartialEq<str> for EnumValue {
+    fn eq(&self, other: &str) -> bool {
+        self.fully_qualified_name() == other
+    }
+}
+impl PartialEq<EnumValue> for str {
+    fn eq(&self, other: &EnumValue) -> bool {
+        self == other.fully_qualified_name()
+    }
+}
 
 #[derive(Debug, Clone)]
 struct EnumDetail {
@@ -26,25 +143,25 @@ struct EnumDetail {
     wkt: Option<WellKnownEnum>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Options {
     // message fields
     ///  Set this option to true to allow mapping different tag names to the same
     ///  value.
     // @@protoc_insertion_point(field:google.protobuf.EnumOptions.allow_alias)
-    pub allow_alias: ::std::option::Option<bool>,
+    allow_alias: Option<bool>,
     ///  Is this enum deprecated?
     ///  Depending on the target platform, this can emit Deprecated annotations
     ///  for the enum, or it will be completely ignored; in the very least, this
     ///  is a formalization for deprecating enums.
     // @@protoc_insertion_point(field:google.protobuf.EnumOptions.deprecated)
-    pub deprecated: ::std::option::Option<bool>,
+    deprecated: Option<bool>,
     ///  The parser stores options it doesn't recognize here. See above.
     // @@protoc_insertion_point(field:google.protobuf.EnumOptions.uninterpreted_option)
-    pub uninterpreted_option: ::std::vec::Vec<UninterpretedOption>,
+    uninterpreted_option: Vec<UninterpretedOption>,
     // special fields
     // @@protoc_insertion_point(special_field:google.protobuf.EnumOptions.special_fields)
-    pub special_fields: crate::SpecialFields,
+    special_fields: protobuf::SpecialFields,
 }
 impl Options {
     /// Is this enum deprecated?
@@ -65,13 +182,18 @@ impl Options {
     pub fn allow_alias(&self) -> bool {
         self.opts().allow_alias()
     }
-    fn opts(&self) -> &'a protobuf::descriptor::EnumOptions {
-        self.opts.unwrap_or(&DEFAULT_ENUM_OPTIONS)
-    }
 }
-impl From<Option<&'a protobuf::descriptor::EnumOptions>> for Options {
-    fn from(opts: Option<&'a protobuf::descriptor::EnumOptions>) -> Self {
-        Self { opts }
+
+impl From<Option<protobuf::descriptor::EnumOptions>> for Options {
+    fn from(opts: Option<&protobuf::descriptor::EnumOptions>) -> Self {
+        Self {
+            allow_alias: opts.and_then(|o| o.allow_alias),
+            deprecated: opts.and_then(|o| o.deprecated),
+            special_fields: opts.map(|o| o.special_fields).unwrap_or_default(),
+            uninterpreted_option: opts
+                .map(|o| o.uninterpreted_option.iter().map(Into::into).collect())
+                .unwrap_or_default(),
+        }
     }
 }
 
@@ -113,7 +235,7 @@ impl Enum {
     pub(crate) fn new(desc: EnumDescriptor, container: Container) -> Self {
         let fully_qualified_name = format!("{}.{}", container.fully_qualified_name(), desc.name());
         let wkt = if container.package().is_well_known_type() {
-            WellKnownEnum::from_str(desc.name()).ok()
+            WellKnownType::from_str(desc.name()).ok()
         } else {
             None
         };

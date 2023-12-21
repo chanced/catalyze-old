@@ -6,8 +6,37 @@ use std::{
 use protobuf::reflect::OneofDescriptor;
 
 use crate::{
-    iter::Iter, Comments, Field, File, FileRefs, Message, Node, Package, WeakFile, WeakMessage,
+    comments::Comments,
+    field::Field,
+    file::{File, FileRefs, WeakFile},
+    iter::Iter,
+    message::{Message, WeakMessage},
+    node::Node,
+    package::Package,
+    uninterpreted_option::UninterpretedOption,
 };
+
+#[derive(Debug, Clone)]
+pub struct Options {
+    // message fields
+    ///  The parser stores options it doesn't recognize here. See above.
+    // @@protoc_insertion_point(field:google.protobuf.OneofOptions.uninterpreted_option)
+    pub uninterpreted_option: Vec<UninterpretedOption>,
+    // special fields
+    // @@protoc_insertion_point(special_field:google.protobuf.OneofOptions.special_fields)
+    pub special_fields: protobuf::SpecialFields,
+}
+impl Options {
+    /// The parser stores options it doesn't recognize here. See above.
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
+        (&self.opts().uninterpreted_option).into()
+    }
+}
+impl From<Option<&protobuf::descriptor::OneofOptions>> for Options {
+    fn from(opts: Option<&protobuf::descriptor::OneofOptions>) -> Self {
+        todo!()
+    }
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct OneofDetail {

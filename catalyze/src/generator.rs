@@ -96,7 +96,7 @@ use std::{
 //     I: Read,
 //     O: Write,
 // {
-//     pub fn render(mut self) -> Result<(), crate::Error> {
+//     pub fn render(mut self) -> Result<(), crate::error::Error> {
 //         let input = Self::parse_input(
 //             &mut self.input,
 //             self.output_path.clone(),

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use protobuf::descriptor::source_code_info::Location;
 
-use crate::{iter::Iter, File, Package};
+use crate::{file::File, iter::Iter, package::Package};
 
 #[derive(Debug, Default, Clone)]
 pub struct Comments {
@@ -33,13 +33,6 @@ impl Comments {
         self.loc.leading_detached_comments()
     }
 }
-
-impl From<Location> for Comments {
-    fn from(loc: Location) -> Self {
-        Comments { loc }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct PackageComments {
     files: Iter<File>,
@@ -59,6 +52,12 @@ impl Iterator for PackageComments {
             .next()
             .filter(|file| !file.package_comments().is_empty())
             .map(|file| (file.clone(), file.package_comments()))
+    }
+}
+
+impl From<Location> for Comments {
+    fn from(loc: Location) -> Self {
+        Comments { loc }
     }
 }
 

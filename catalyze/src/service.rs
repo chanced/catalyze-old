@@ -6,8 +6,46 @@ use std::{
 use protobuf::reflect::ServiceDescriptor;
 
 use crate::{
-    iter::Iter, Comments, File, Method, Node, Nodes, Package, ServiceDescriptorPath, WeakFile,
+    comments::Comments,
+    file::{File, WeakFile},
+    iter::Iter,
+    method::Method,
+    node::{Node, Nodes},
+    package::Package,
+    uninterpreted_option::UninterpretedOption,
+    ServiceDescriptorPath,
 };
+
+/// Options for a Service.
+///
+/// Note: Field numbers 1 through 32 are reserved for Google's internal RPC
+/// framework.
+#[derive(Debug, Clone, Copy)]
+pub struct ServiceOptions<'a> {
+    opts: Option<&'a protobuf::descriptor::ServiceOptions>,
+}
+impl<'a> ServiceOptions<'a> {
+    /// Is this service deprecated?
+    /// Depending on the target platform, this can emit Deprecated annotations
+    /// for the service, or it will be completely ignored; in the very least,
+    /// this is a formalization for deprecating services.
+    pub fn deprecated(&self) -> bool {
+        self.opts().deprecated()
+    }
+    pub fn is_deprecated(&self) -> bool {
+        self.opts().deprecated()
+    }
+    /// The parser stores options it doesn't recognize here. See above.
+    pub fn uninterpreted_options(&self) -> &[UninterpretedOption] {
+        (&self.opts().uninterpreted_option).into()
+    }
+}
+
+impl<'a> From<Option<&'a protobuf::descriptor::ServiceOptions>> for ServiceOptions<'a> {
+    fn from(opts: Option<&'a protobuf::descriptor::ServiceOptions>) -> Self {
+        Self { opts }
+    }
+}
 
 #[derive(Debug, Clone)]
 struct ServiceDetail {

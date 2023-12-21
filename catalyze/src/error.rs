@@ -1,5 +1,11 @@
-use crate::{Field, File, Kind, MethodIo, Node, Syntax};
 use snafu::Snafu;
+
+use crate::{
+    field::Field,
+    file::{File, Syntax},
+    method::MethodIo,
+    node::{Kind, Node},
+};
 
 #[derive(Snafu, Debug)]
 pub enum Error {

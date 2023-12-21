@@ -1,6 +1,7 @@
-use crate::Error;
+use crate::error::Error;
 
-pub const WELL_KNNOWN_TYPE_PACKAGE: &str = "google.protobuf";
+pub const PACKAGE: &str = "google.protobuf";
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WellKnownType {
     Enum(WellKnownEnum),
@@ -8,7 +9,7 @@ pub enum WellKnownType {
 }
 
 impl std::str::FromStr for WellKnownType {
-    type Err = crate::Error;
+    type Err = crate::error::Error;
 
     fn from_str(s: &str) -> ::std::result::Result<WellKnownType, Self::Err> {
         match s {

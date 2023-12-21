@@ -5,11 +5,18 @@ use std::{cell::RefCell, rc::Rc};
 use protobuf::reflect::FieldDescriptor;
 
 use crate::{
-    uninterpreted_option::UninterpretedOption, Comments, Error, Field, File, FileRefs, JsType,
-    Kind, Message, Node, Package, Syntax, Type, WeakMessage, WellKnownMessage, WellKnownType,
+    comments::Comments,
+    error::Error,
+    field::{Field, JsType},
+    file::{File, FileRefs, Syntax},
+    message::{Message, WeakMessage},
+    node::{Kind, Node},
+    package::Package,
+    uninterpreted_option::UninterpretedOption,
+    well_known::{self, WellKnownMessage, WellKnownType},
 };
 
-use super::FieldDetail;
+use super::{FieldDetail, Type};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Detail {
